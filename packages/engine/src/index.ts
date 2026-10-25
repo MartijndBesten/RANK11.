@@ -14,3 +14,4 @@ export * from './achievements.ts';
 export * from './academy.ts';
 export * from './gradeLeague.ts';
 export * from './simulate.ts';
+export * from './market.ts';

@@ -1,0 +1,64 @@
+# RANK11. API — Cloudflare Worker + D1 + Durable Objects.
+#
+# LET OP: dit bestand bevat bewust GEEN echte account-id of database-id's.
+# - account_id: niet ingevuld; wrangler gebruikt het account van de ingelogde gebruiker of CLOUDFLARE_ACCOUNT_ID.
+# - database_id: placeholders (nullen). Voor `wrangler dev --local` is dat genoeg (lokale SQLite).
+#   Voor een echte uitrol eerst een D1-database aanmaken en het id hier invullen (zie README, "Uitrol").
+# Gebruik altijd een omgeving: `--env dev` (lokaal) of `--env test` (Cloudflare-testomgeving).
+# Productie bestaat nog niet (pas na expliciete goedkeuring en DPIA, zie docs/ARCHITECTUUR.md).
+
+name = "rank11-api"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+workers_dev = false
+
+# Durable Object-migraties (gelden voor alle omgevingen). SQLite-backed: past in het gratis plan.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["MatchDO"]
+
+# ---------------------------------------------------------------------------------------------
+[env.dev]
+name = "rank11-api-dev"
+
+[env.dev.vars]
+ENVIRONMENT = "dev"
+ALLOWED_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173"
+PBKDF2_ITERATIONS = "100000"
+SESSION_TTL_DAYS = "30"
+POOL_MAX_MEMBERS_DEFAULT = "20"
+LOGIN_MAX_FAILURES = "5"
+LOGIN_MAX_FAILURES_IP = "30"
+
+[[env.dev.d1_databases]]
+binding = "DB"
+database_name = "rank11-dev"
+database_id = "00000000-0000-0000-0000-000000000000" # placeholder, alleen lokaal
+migrations_dir = "migrations"
+
+[[env.dev.durable_objects.bindings]]
+name = "MATCH"
+class_name = "MatchDO"
+
+# ---------------------------------------------------------------------------------------------
+[env.test]
+name = "rank11-api-test"
+
+[env.test.vars]
+ENVIRONMENT = "test"
+ALLOWED_ORIGINS = "" # invullen met de origin van de testfrontend bij uitrol
+PBKDF2_ITERATIONS = "100000"
+SESSION_TTL_DAYS = "30"
+POOL_MAX_MEMBERS_DEFAULT = "20"
+LOGIN_MAX_FAILURES = "5"
+LOGIN_MAX_FAILURES_IP = "30"
+
+[[env.test.d1_databases]]
+binding = "DB"
+database_name = "rank11-test"
+database_id = "00000000-0000-0000-0000-000000000000" # PLACEHOLDER: vervangen door het echte id na `wrangler d1 create rank11-test --jurisdiction eu`
+migrations_dir = "migrations"
+
+[[env.test.durable_objects.bindings]]
+name = "MATCH"
+class_name = "MatchDO"

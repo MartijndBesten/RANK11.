@@ -1,0 +1,24 @@
+{
+  "name": "@rank11/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "RANK11. multiplayer-backend: Cloudflare Worker + D1 + Durable Objects (server-authoritative, regels uit @rank11/engine).",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p test/tsconfig.json",
+    "dev": "wrangler dev --local --env dev",
+    "migrate:local": "wrangler d1 migrations apply DB --local --env dev",
+    "deploy:dry": "wrangler deploy --dry-run --env test --outdir .wrangler/dry-run"
+  },
+  "dependencies": {
+    "@rank11/engine": "0.1.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260702.1",
+    "@types/node": "^22.20.5",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5",
+    "wrangler": "^4.152.0"
+  }
+}

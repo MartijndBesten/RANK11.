@@ -8,7 +8,7 @@
     "dev": "npm run dev -w apps/web",
     "build": "npm run build -w apps/web",
     "build:single": "npm run build:single -w apps/web",
-    "test": "npm test -w packages/engine",
+    "test": "npm test -w packages/engine && npm test -w apps/api",
     "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "engines": { "node": ">=22" }

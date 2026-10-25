@@ -44,6 +44,8 @@ export interface GameState {
   pending: PendingGrade[];
   rewards: Record<string, RewardResult>;
   rewardLog: { key: string; date: string }[];
+  /** Cijfers waarvoor de melding "nieuw cijfer" al getoond is (precies één keer per cijfer). */
+  notified: string[];
   settings: { sound: boolean; reducedMotion: boolean };
 }
 
@@ -116,6 +118,7 @@ function initialState(): GameState {
     pending,
     rewards: {},
     rewardLog: [],
+    notified: [],
     settings: { sound: true, reducedMotion: false },
   };
 }
@@ -125,7 +128,7 @@ function load(): GameState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as GameState;
-      if (parsed.version === 1) return parsed;
+      if (parsed.version === 1) return { ...parsed, notified: parsed.notified ?? [] };
     }
   } catch {
     /* privémodus of geblokkeerde opslag: gewoon met demo-data starten */
@@ -181,6 +184,7 @@ interface Store {
   setLineup: (formationId: string, lineup: Record<string, string>) => void;
   quickSell: (cardIds: string[]) => number;
   setSetting: (key: keyof GameState['settings'], value: boolean) => void;
+  markNotified: (gradeIds: string[]) => void;
   reset: () => void;
 }
 
@@ -311,6 +315,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     update((s) => ({ ...s, settings: { ...s.settings, [key]: value } }));
   }, [update]);
 
+  const markNotified = useCallback((gradeIds: string[]) => {
+    update((s) => ({ ...s, notified: [...new Set([...s.notified, ...gradeIds])] }));
+  }, [update]);
+
   const reset = useCallback(() => {
     const fresh = initialState();
     save(fresh);
@@ -318,8 +326,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<Store>(
-    () => ({ state, owned, openPackFromInventory, buyPack, startDraft, revealGrade, claimPick, setLineup, quickSell, setSetting, reset }),
-    [state, owned, openPackFromInventory, buyPack, startDraft, revealGrade, claimPick, setLineup, quickSell, setSetting, reset],
+    () => ({ state, owned, openPackFromInventory, buyPack, startDraft, revealGrade, claimPick, setLineup, quickSell, setSetting, markNotified, reset }),
+    [state, owned, openPackFromInventory, buyPack, startDraft, revealGrade, claimPick, setLineup, quickSell, setSetting, markNotified, reset],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

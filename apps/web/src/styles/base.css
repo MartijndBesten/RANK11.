@@ -105,7 +105,8 @@ button:disabled { cursor: not-allowed; }
   z-index: 1;
   height: 100%;
   display: grid;
-  grid-template-rows: calc(var(--top-h) + var(--safe-t)) 1fr calc(var(--nav-h) + var(--safe-b));
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: calc(var(--top-h) + var(--safe-t)) minmax(0, 1fr) calc(var(--nav-h) + var(--safe-b));
   grid-template-areas: 'top' 'main' 'nav';
 }
 .shell.immersive { grid-template-rows: 0 1fr 0; }
@@ -114,10 +115,10 @@ button:disabled { cursor: not-allowed; }
 .main { grid-area: main; position: relative; overflow: hidden auto; min-height: 0; scrollbar-width: none; }
 .main::-webkit-scrollbar { display: none; }
 
-@media (min-width: 900px) and (min-aspect-ratio: 1/1) {
+@media (min-width: 900px) and (min-aspect-ratio: 1/1), (orientation: landscape) and (max-height: 600px) {
   .shell {
-    grid-template-columns: var(--rail-w) 1fr;
-    grid-template-rows: var(--top-h) 1fr;
+    grid-template-columns: var(--rail-w) minmax(0, 1fr);
+    grid-template-rows: var(--top-h) minmax(0, 1fr);
     grid-template-areas: 'nav top' 'nav main';
   }
   .shell.immersive { grid-template-columns: 0 1fr; grid-template-rows: 0 1fr; }
@@ -135,11 +136,12 @@ button:disabled { cursor: not-allowed; }
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
 }
-.topbar .club { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.topbar .club { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; overflow: hidden; }
 .topbar .club-name { font-family: var(--font-display); font-weight: 800; font-size: 19px; text-transform: uppercase; letter-spacing: 0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .topbar .lvl { font-size: 11px; color: var(--text-dim); letter-spacing: 0.06em; text-transform: uppercase; }
-.topbar .spacer { flex: 1; }
-.wallet { display: flex; align-items: center; gap: 6px; }
+.topbar .spacer { flex: 0 0 4px; }
+.topbar { min-width: 0; overflow: hidden; }
+.wallet { display: flex; align-items: center; gap: 6px; flex: none; }
 .chip {
   display: inline-flex;
   align-items: center;
@@ -160,6 +162,9 @@ button:disabled { cursor: not-allowed; }
 .icon-btn:hover { color: var(--text); background: rgba(255, 255, 255, 0.06); }
 .icon-btn svg { width: 20px; height: 20px; }
 
+@media (max-width: 480px) {
+  .wallet .chip.xp { display: none; }
+}
 @media (max-width: 420px) {
   .topbar { gap: 6px; padding-inline: 12px; }
   .topbar .club-name { font-size: 16px; }
@@ -222,7 +227,7 @@ button:disabled { cursor: not-allowed; }
   letter-spacing: 0;
 }
 
-@media (min-width: 900px) and (min-aspect-ratio: 1/1) {
+@media (min-width: 900px) and (min-aspect-ratio: 1/1), (orientation: landscape) and (max-height: 600px) {
   .nav {
     flex-direction: column;
     justify-content: flex-start;
@@ -238,7 +243,7 @@ button:disabled { cursor: not-allowed; }
   .nav .badge { top: 10px; }
 }
 .nav .brand { display: none; }
-@media (min-width: 900px) and (min-aspect-ratio: 1/1) { .nav .brand { display: grid; } }
+@media (min-width: 900px) and (min-aspect-ratio: 1/1), (orientation: landscape) and (max-height: 600px) { .nav .brand { display: grid; } }
 
 /* ——— Knoppen ——— */
 .btn {

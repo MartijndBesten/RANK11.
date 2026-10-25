@@ -101,7 +101,7 @@
 .dp-offer.top-group .pc-wrap::after { content: ''; position: absolute; inset: -6%; z-index: -2; background: radial-gradient(circle, rgba(242, 207, 115, 0.6), transparent 65%); animation: tell 1.4s ease-in-out infinite; }
 .dp-offer.sel .pc-wrap { transform: translateY(-8px); transition: transform 0.2s var(--ease-out); }
 .dp-choose { position: absolute; bottom: -6px; z-index: 4; }
-@media (min-width: 900px) and (min-aspect-ratio: 1/1) {
+@media (min-width: 900px) and (min-aspect-ratio: 1/1), (orientation: landscape) and (max-height: 600px) {
   .dp-body { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); grid-template-rows: 1fr; }
   .dp-offers { flex-wrap: wrap; justify-content: center; align-content: center; overflow: visible; background: none; padding: 30px 28px; gap: 26px 14px; }
   .dp-offer .pc-wrap.size-md { --w: clamp(120px, 12vw, 170px); }
@@ -114,3 +114,12 @@
 .dd-sub { font: 700 15px var(--font-display); letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-dim); }
 .dd-pitch { width: min(100%, 460px); }
 .dd-actions { display: grid; justify-items: center; gap: 10px; }
+
+@media (orientation: landscape) and (max-height: 600px) {
+  .dp-head { padding-top: 6px; padding-bottom: 6px; }
+  .dp-step h2 { font-size: 20px; }
+  .dp-offers { padding: 22px 16px 10px; gap: 16px 8px; }
+  .dp-offer .pc-wrap.size-md { --w: clamp(70px, 26dvh, 110px); }
+  .df-card .pc-wrap.size-lg { --w: clamp(110px, 38dvh, 170px); }
+  .draft-featured { min-height: 52dvh; }
+}

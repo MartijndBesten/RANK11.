@@ -36,25 +36,21 @@ function initialScreen(): Screen {
 }
 
 export function App() {
-  const { state, setSetting } = useStore();
+  const { state, setSetting, markNotified } = useStore();
   const [screen, setScreen] = useState<Screen>(initialScreen);
   const [immersive, setImmersive] = useState(false);
   const [opening, setOpening] = useState<string | null>(null);
-  const [toast, setToast] = useState(() => {
-    // Eén keer per sessie tonen.
-    try {
-      if (sessionStorage.getItem('rank11-toast')) return false;
-      sessionStorage.setItem('rank11-toast', '1');
-    } catch { /* geen opslag: gewoon tonen */ }
-    return state.pending.length > 0;
-  });
+  // Melding alleen voor cijfers die nog niet gemeld zijn; opgeslagen in de speltoestand (niet per sessie).
+  const [toastIds] = useState(() => state.pending.map((p) => p.grade.id).filter((id) => !state.notified.includes(id)));
+  const [toast, setToast] = useState(toastIds.length > 0);
   const reduced = useReducedMotion();
 
   useEffect(() => setSoundEnabled(state.settings.sound), [state.settings.sound]);
   useEffect(() => {
+    if (toastIds.length) markNotified(toastIds);
     const t = setTimeout(() => setToast(false), 5200);
     return () => clearTimeout(t);
-  }, []);
+  }, [toastIds, markNotified]);
   useEffect(() => {
     const onHash = () => setScreen(initialScreen());
     addEventListener('hashchange', onHash);
@@ -124,7 +120,7 @@ export function App() {
         <button className="toast" onClick={() => { setToast(false); go('vault'); }}>
           <IconVault width={28} height={28} />
           <div style={{ textAlign: 'left' }}>
-            <b>Je hebt {state.pending.length === 1 ? 'een nieuw cijfer' : `${state.pending.length} nieuwe cijfers`} binnen!</b>
+            <b>Je hebt {toastIds.length === 1 ? 'een nieuw cijfer' : `${toastIds.length} nieuwe cijfers`} binnen!</b>
             <span>Open de Cijferkluis en ontdek je beloning</span>
           </div>
         </button>

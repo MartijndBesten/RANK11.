@@ -393,3 +393,8 @@ button:disabled { cursor: not-allowed; }
 .reduce-motion *, .reduce-motion *::before, .reduce-motion *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 
 .confirm-inline { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+
+/* Ontwikkelpagina ?gallery */
+.gallery { position: relative; z-index: 1; height: 100%; overflow: auto; padding: 24px max(16px, env(safe-area-inset-left)) 48px; display: grid; gap: 18px; align-content: start; }
+.gallery h2 { margin: 8px 0 0; font-size: 22px; color: var(--text-dim); }
+.gallery-row { display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start; }

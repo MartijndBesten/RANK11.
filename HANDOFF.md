@@ -1,10 +1,29 @@
 # HANDOFF — RANK11.
 
-**Status:** `wacht-op-review` — stap 1–3 afgerond, stap 4 (goedkeuring visuele richting) ligt bij Martijn
-**Bijgewerkt:** 25-10-2026, ±20:35 (Claude Code, cloudsessie)
-**Branch:** `main` (eerste import in een lege repository)
+**Status:** `wacht-op-review`. Ronde 2 is klaar: onderzoek naar echte spelers, twee voorbeeldkaarten met fotoportret en twee bugs opgelost.
+**Bijgewerkt:** 25-10-2026, ±22:00 (Claude Code, cloudsessie)
+**Branch:** `main`
 **Volgende actor:** Martijn
-**Volgende stap:** de preview en `docs/review/` beoordelen en V-001 t/m V-008 in `VRAGEN.md` beantwoorden. Daarna start Claude met R1 (zie `docs/ARCHITECTUUR.md`).
+**Volgende stap:** de twee voorbeeldkaarten beoordelen (preview en `docs/review/v2/`) en V-009 en V-010 beantwoorden. Na akkoord vervangt Claude de portretten van de volledige catalogus (zie `docs/portretten/README.md`). V-001 t/m V-008 staan ook nog open.
+
+## Ronde 2 (25-10-2026, avond)
+
+| Onderdeel | Status |
+|---|---|
+| Onderzoek echte spelers, foto's, licenties, data-API's, Wikimedia Commons, kosten | Afgerond: `docs/onderzoek/ECHTE_SPELERS.md`, met GO/NO-GO per optie. Twee kernclaims zelf nagecontroleerd (Getty-licentie sluit gaming en merchandise uit; Hoge Raad 2022: een lookalike kan een portret zijn). |
+| Fotorealistische portretten van fictieve spelers | GEBOUWD: S01 Jesse Hoekstra (Gold) en L01 Marco Steenhuis (Legend). Lokaal gegenereerd met FLUX.2 [klein] 4B (Apache-2.0), uitgesneden met BiRefNet-portrait (MIT), €0. Werkwijze: `docs/portretten/`, scripts in `tools/portretten/`. |
+| Nieuw kaartframe | GEBOUWD: eigen silhouet met inkeping, metalen rand, gegraveerde SVG-binnenrand, groot portret, naamplaat. Gold, Rare (zwart-goud), Electric en Legend (parelmoer met goud) verschillen sterk. AI-label op fotokaarten. |
+| Vervangbare portretten | GEBOUWD: `Player.photo` (bron, soort, licentie, credit, aiGenerated) plus `apps/web/src/portraits/registry.ts`. Gelicentieerde foto's vervangen alleen dit register. |
+| Voorbeeldkaarten in draft, collectie en elftal | Gedaan: draft-lobby (uitgelicht), collectie (bovenaan), elftal (4-4-2 met beide spitsen). |
+| Walkout | Uitgebreid: echt fotosilhouet met randlicht, daarna licht de speler op en volgt de kaart. |
+| Bug: overlopend veld in de elftalbouwer | Opgelost: de reservebank rekte het raster op; liggende telefoons hebben een eigen indeling. Getest op 8 schermmaten × 5 schermen, geen horizontale overloop. |
+| Bug: melding bij elke laadbeurt | Opgelost: de melding verschijnt één keer per nieuw cijfer, opgeslagen in de speltoestand (de preview start elke keer een nieuwe sessie, dus sessionStorage werkte niet). Getest: laadbeurten 1/2/3 geven 1/0/0 meldingen. |
+| Bestaande functionaliteit | Volledige doorloop op 390×844 en 360×740 zonder fouten; eindstand nagerekend. Engine 67/67 tests. |
+
+**Niet gelukt of niet gedaan:**
+- Een tijdelijke generator-Worker op het Cloudflare-account is door de permissiecontrole geweigerd (wijziging aan een gedeelde omgeving). Daarom is lokaal gegenereerd, met hetzelfde model en dezelfde licentie.
+- De volledige catalogus is bewust nog niet vervangen; dat wacht op V-009.
+- Er is geen gelijkeniscontrole met software gedaan, alleen een visuele controle.
 
 ## Huidige opdracht
 
@@ -25,7 +44,14 @@ Statusladder: BESLOTEN → GEBOUWD → OFFLINE GETEST → PRAKTIJKGETEST → LIV
 
 **Belangrijk:** het prototype draait volledig in de browser, met lokale demo-data en fictieve spelers. Er is nog geen server, geen account en geen multiplayer; dat is fase 5.
 
-## Bestanden
+## Bestanden (ronde 2 aanvullend)
+
+- `docs/onderzoek/ECHTE_SPELERS.md`, `docs/portretten/README.md`, `docs/portretten/PROMPTS.md`, `docs/review/v2/*.jpg`
+- `tools/portretten/{gen.py,cutout.py,requirements.txt,voorbeeld-jobs.json}`
+- `packages/engine/src/catalog.ts` (PortraitAsset, `photos`-optie, voorbeeldspeler S01), `packages/engine/src/draft.ts` (uitgelicht)
+- `apps/web/src/components/{PlayerCard.tsx,CardFrame.tsx,card.css,Walkout.tsx,walkout.css}`, `apps/web/src/portraits/*`, `apps/web/src/state/store.tsx`, `apps/web/src/App.tsx`, CSS van schermen
+
+## Bestanden (ronde 1)
 
 - **Project:** `PROJECT.md`, `HANDOFF.md`, `VRAGEN.md`, `README.md`
 - **Documentatie:**
@@ -63,11 +89,14 @@ npm run build:single  # één HTML-bestand in apps/web/dist-single
 - **V-006:** Cloudflare-testomgeving aanmaken. Blokkeert de multiplayer-e2e in fase 5.
 - **V-007:** minimumleeftijd.
 - **V-008:** namen van spelmodi (merkrisico).
+- **V-009:** voorbeeldkaarten goedgekeurd → volledige catalogus vervangen?
+- **V-010:** AI-portretten en de plek van de AI-vermelding.
 
 ## Registratie en bibliotheek
 
 - **Projectregister:** RANK11. staat nog niet in `PROJECTS.md` van de workbench. Volgens de werkwijze vult alleen ChatGPT dat aan; daarom heeft Claude het niet gewijzigd.
-- **Bouwstenenbibliotheek:** beoordeeld, **geen wijziging nu**. Mogelijke nieuwe bouwstenen zijn:
+- **Bouwstenenbibliotheek (ronde 2):** nieuwe kandidaat: lokale, kosteloze pijplijn voor fotorealistische AI-portretten met een Apache-2.0-model en uitsnede (`tools/portretten/`). Die wordt aangemeld als KANDIDAAT via een aparte `bibliotheek/*`-PR, zodra het gebruik voor de volledige catalogus bewezen is. Nu nog niet toegevoegd.
+- **Bouwstenenbibliotheek (ronde 1):** beoordeeld, **geen wijziging nu**. Mogelijke nieuwe bouwstenen zijn:
   - transparante packkansen met een kansentabel per plek en "minstens één", reproduceerbaar met seed;
   - een draft met een garantieteller die aantoonbaar ingrijpt;
   - een beloningsengine met configuratieversie, ontdubbelen en correcties;

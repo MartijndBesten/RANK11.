@@ -23,6 +23,21 @@ describe('catalogus', () => {
   });
 });
 
+describe('portretten', () => {
+  it('foto per baseId gaat mee naar alle edities, overige spelers houden hun parametrische portret', () => {
+    const photo = { src: 'x.webp', kind: 'ai-fictional' as const, license: 'Apache-2.0', credit: 'test', aiGenerated: true };
+    const c = generateCatalog({ photos: { S01: photo, L01: photo } });
+    expect(c.find((p) => p.id === 'S01')!.photo).toEqual(photo);
+    expect(c.find((p) => p.id === 'L01')!.photo?.src).toBe('x.webp');
+    expect(c.filter((p) => p.photo).length).toBe(2);
+    expect(generateCatalog().some((p) => p.photo)).toBe(false);
+  });
+  it('voorbeeldspeler S01 is een Gold-spits', () => {
+    const s01 = catalog.find((p) => p.id === 'S01')!;
+    expect([s01.rarity, s01.position, s01.rating]).toEqual(['gold', 'ST', 86]);
+  });
+});
+
 describe('packs', () => {
   it('alle standaardpacks zijn geldig tegen de catalogus', () => {
     for (const def of Object.values(PACKS)) expect(validatePack(def, catalog)).toEqual([]);

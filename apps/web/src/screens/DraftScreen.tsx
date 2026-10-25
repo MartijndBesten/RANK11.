@@ -62,7 +62,7 @@ export function DraftScreen({ nav }: { nav: Nav }) {
           </div>
         </div>
 
-        <div className="draft-featured" aria-label="Uitgelichte sterspelers">
+        <div className="draft-featured" aria-label="Uitgelichte spelers">
           {featured.map((p, i) => (
             <div key={p.id} className={`df-card df-${i}`}>
               <div className="df-name display" aria-hidden="true">{p.lastName}</div>
@@ -235,7 +235,7 @@ function DraftDone({ session, onExit, rating, chem }: { session: DraftSession; o
         <Pitch formation={formation} lineup={lineup} cardSize="sm" />
       </div>
       <div className="dd-actions">
-        <button className="btn" disabled title="Toernooien worden gebouwd na goedkeuring van het ontwerp">Draft-toernooi · volgt in fase 5</button>
+        <button className="btn" disabled title="Toernooien worden gebouwd na goedkeuring van het ontwerp">Toernooi · volgt in fase 5</button>
         <button className="btn ghost small" onClick={onExit}>Terug naar lobby</button>
       </div>
       <p className="dim small" style={{ textAlign: 'center', maxWidth: 420 }}>

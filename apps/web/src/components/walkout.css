@@ -26,7 +26,8 @@
 .wo-beams i:nth-child(3) { right: 20%; rotate: 10deg; animation-delay: 0.2s; }
 .wo-beams i:nth-child(4) { right: -8%; rotate: 28deg; animation-delay: 0.6s; }
 .walkout:not(.stage-0) .wo-beams i { opacity: 0.55; }
-.stage-5 .wo-beams i { opacity: 0.9; animation-duration: 1.6s; }
+.stage-card .wo-beams i { opacity: 0.9; animation-duration: 1.6s; }
+.stage-5:not(.stage-card) .wo-clue { opacity: 0; transition: opacity 0.4s; }
 @keyframes beam { from { transform: rotate(-9deg); } to { transform: rotate(9deg); } }
 
 .wo-floor {
@@ -71,6 +72,21 @@
 
 .wo-silhouette { width: min(72vw, 360px); animation: sil-in 1.2s var(--ease-out) both; filter: drop-shadow(0 0 30px color-mix(in srgb, var(--accent) 60%, transparent)); }
 .wo-silhouette svg { width: 100%; height: auto; }
+.wo-silhouette.photo { width: min(64vw, 300px); filter: none; }
+.wo-silhouette.photo.lit img { animation: light-up 1.3s var(--ease-out) forwards; }
+@keyframes light-up {
+  0% { filter: brightness(0) drop-shadow(0 0 1.5px var(--accent)) drop-shadow(0 0 14px var(--accent)); transform: scale(1); }
+  100% { filter: brightness(1.05) drop-shadow(0 0 22px color-mix(in srgb, var(--accent) 55%, transparent)); transform: scale(1.04); }
+}
+.wo-silhouette.photo img {
+  /* echte omtrek van de speler als silhouet, met randlicht in de kleur van de serie */
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: brightness(0) drop-shadow(0 0 1.5px var(--accent)) drop-shadow(0 0 14px color-mix(in srgb, var(--accent) 70%, transparent));
+  -webkit-mask: linear-gradient(180deg, #000 70%, transparent 100%);
+  mask: linear-gradient(180deg, #000 70%, transparent 100%);
+}
 
 .wo-reveal { display: grid; justify-items: center; gap: 14px; animation: card-in 0.9s var(--ease-spring) both; }
 .wo-card .pc { animation: card-flip 1s var(--ease-out) backwards; }

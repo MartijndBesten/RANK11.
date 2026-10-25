@@ -47,7 +47,7 @@ export const DRAFT_EVENTS: Record<string, DraftEventDef> = {
     formationId: '4-3-3',
     offersPerSlot: 5,
     voucherCost: 1,
-    featured: ['L06', 'L01', 'L03'],
+    featured: ['L01', 'S01', 'L06'],
     // Gewicht per aangeboden kaart. Een draft biedt 55 kaarten, dus per-kaart-kansen zijn bewust klein.
     groups: [
       { id: 'A', label: 'Groep A · Sterspelers', rank: 0, weight: 0.03, minRating: 0, ids: ['L06', 'L01', 'L03'] },

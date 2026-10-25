@@ -7,10 +7,10 @@
   padding: 16px 16px 28px;
   max-width: 1180px;
   margin: 0 auto;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
 }
 @media (min-width: 900px) {
-  .hub { grid-template-columns: 1.15fr 1fr; grid-template-rows: auto auto 1fr; padding: 24px; gap: 18px; }
+  .hub { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); grid-template-rows: auto auto 1fr; padding: 24px; gap: 18px; }
   .hub-vault { grid-row: span 2; }
   .hub-foot { grid-column: 1 / -1; }
 }
@@ -24,7 +24,7 @@
   overflow: hidden;
   min-height: 210px;
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   align-items: end;
   padding: 22px;
   border-radius: 18px;
@@ -41,7 +41,7 @@
   background: repeating-linear-gradient(118deg, transparent 0 22px, rgba(255,255,255,.025) 22px 23px);
 }
 .hub-vault-copy { position: relative; z-index: 1; display: grid; gap: 6px; justify-items: start; max-width: 62%; }
-.hub-vault h2 { margin: 0; font-size: clamp(34px, 9vw, 54px); }
+.hub-vault h2 { margin: 0; font-size: clamp(32px, 9vw, 54px); overflow-wrap: anywhere; }
 .hub-vault p { margin: 0 0 8px; }
 .hub-vault-door {
   position: absolute;
@@ -122,7 +122,7 @@
 .fan-2 { transform: translate(15%, -48%) rotate(12deg); }
 
 /* Tegels */
-.hub-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.hub-tiles { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
 .hub-tile {
   padding: 16px;
   border-radius: 16px;

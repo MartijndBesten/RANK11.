@@ -60,3 +60,21 @@ Script: een volledige doorloop op **telefoon (390×844)** en **tablet landscape 
 - **Toegankelijkheid.** Er is geen audit gedaan (screenreader, contrastmeting). Wel gebouwd: knoppen met labels, toetsenbordbediening van de kluis, systeeminstelling voor verminderde beweging plus een eigen schakelaar, en overslaan overal.
 - **Prestaties** op een instapapparaat, en het gedrag zonder netwerk (er is nog geen serviceworker).
 - **Alles wat met de server te maken heeft.** Multiplayer, accounts, pools, battles, transfermarkt en beheer zijn nog niet gebouwd; dat volgt in fase 5. In het prototype draait de beloningslogica in de browser (lokale demo), zonder server-gezag.
+
+
+## Ronde 2: voorbeeldkaarten en bugfixes (25-10-2026, avond)
+
+- **Engine:** 67 van 67 tests geslaagd. Nieuw: een foto per baseId gaat mee naar alle edities; voorbeeldspeler S01.
+- **Typecheck:** engine en web geslaagd.
+- **Overloopcontrole (Playwright):**
+  - schermen: home, kluis, draft, packs en elftal;
+  - schermmaten: 360×740, 375×667, 390×844, 430×932, 844×390, 740×360, 820×1180 en 1180×820;
+  - resultaat: **geen horizontale overloop en geen paginafouten**.
+  - Vóór de fix liep het elftalscherm op alle telefoonbreedtes over (490 px inhoud door de reservebank). Daarnaast liepen de topbalk en de kluisbanner op 360 en 430 px over.
+- **Melding:** drie laadbeurten in nieuwe sessies met dezelfde opslag gaven 1, 0 en 0 meldingen (eerst gaf de testopzet zelf een race; die is gecorrigeerd).
+- **Functionele doorloop** op 390×844 en 360×740: kluis, pack en walkout, spelerskeuze, onvoldoende, draft (11 keuzes) en elftal. Geen consolefouten. De eindstand is nagerekend: coins 14.150, XP 2.955, vouchers 3, collectie 43 (35 + 2 voorbeeldkaarten + 5 + 1).
+- **Walkout met foto:** de volgorde licht, vlag, positie, club, silhouet, speler licht op, kaart is met screenshots op vaste tijdstippen bevestigd.
+- **Niet getest:**
+  - echte toestellen;
+  - een geautomatiseerde gelijkeniscontrole van de AI-gezichten (alleen visueel gecontroleerd);
+  - prestaties bij ±400 fotoportretten (verwachting: lazy loading vanaf CDN is nodig).

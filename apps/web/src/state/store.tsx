@@ -10,8 +10,9 @@ import {
   type DraftSession, type Grade, type PackResult, type Player, type PityState, type RewardResult,
 } from '@rank11/engine';
 import type { CrestData } from '../components/Crest';
+import { PORTRAITS } from '../portraits/registry';
 
-export const CATALOG: Player[] = generateCatalog();
+export const CATALOG: Player[] = generateCatalog({ photos: PORTRAITS });
 export const CARD_BY_ID = new Map(CATALOG.map((p) => [p.id, p]));
 
 export interface Subject { id: string; name: string; short: string; color: string }
@@ -49,7 +50,7 @@ export interface GameState {
   settings: { sound: boolean; reducedMotion: boolean };
 }
 
-const STORAGE_KEY = 'rank11-proto-v1';
+const STORAGE_KEY = 'rank11-proto-v2';
 const today = () => new Date().toISOString().slice(0, 10);
 
 function grade(id: string, subjectId: string, testName: string, value: number, weight: number, date: string): Grade {
@@ -65,10 +66,13 @@ function initialState(): GameState {
     ...pool((p) => p.rarity === 'gold' && p.rating < 80, 14),
     ...pool((p) => p.rarity === 'gold' && p.rating >= 80 && p.rating < 84, 3),
     ...pool((p) => p.position === 'GK' && (p.rarity === 'gold' || p.rarity === 'silver') && p.rating >= 70 && p.rating < 80, 2),
+    // Voorbeeldkaarten met fotoportret (Gold en Legend)
+    'S01',
+    'L01',
   ];
   if (!collection.some((id) => CARD_BY_ID.get(id)?.position === 'GK')) throw new Error('Demo-collectie zonder keeper');
   const owned = collection.map((id) => CARD_BY_ID.get(id)!).filter(Boolean);
-  const formation = FORMATIONS['4-3-3']!;
+  const formation = FORMATIONS['4-4-2']!;
   const best = autoBestLineup(formation, owned);
   const lineup: Record<string, string> = {};
   for (const [slot, p] of Object.entries(best)) if (p) lineup[slot] = p.id;
@@ -111,7 +115,7 @@ function initialState(): GameState {
     vouchers: 2,
     packs: { gold: 1, exam: 1 },
     collection,
-    formationId: '4-3-3',
+    formationId: '4-4-2',
     lineup,
     pity: { B: 1, A: 2 },
     grades,

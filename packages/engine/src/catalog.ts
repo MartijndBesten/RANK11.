@@ -106,6 +106,26 @@ export interface Portrait {
 
 export type Stats = Record<StatKey, number>;
 
+/**
+ * Portretfoto van een kaart. Bewust los van de speler gedefinieerd, zodat een gelicentieerde foto
+ * later alleen deze verwijzing vervangt (bron, licentie en vermelding gaan mee naar de UI en audit).
+ */
+export type PortraitKind = 'ai-fictional' | 'licensed-photo' | 'commissioned-photo';
+
+export interface PortraitAsset {
+  /** Uitgesneden beeld (transparante achtergrond), URL of asset-sleutel. */
+  src: string;
+  kind: PortraitKind;
+  /** Licentie van het beeld, bijv. "Eigen AI-generatie met FLUX.2 [klein] 4B (Apache-2.0)". */
+  license: string;
+  /** Vermelding/bron die in de app getoond moet worden. */
+  credit: string;
+  /** Verplichte AI-vermelding bij gegenereerde beelden. */
+  aiGenerated: boolean;
+  /** Verticale positie van de bovenkant van het hoofd in het beeld (0-1), voor uitsnede op de kaart. */
+  headTop?: number;
+}
+
 export interface Player {
   id: string;
   /** Catalogus-ID van de onderliggende speler (meerdere kaarten kunnen dezelfde speler zijn). */
@@ -124,6 +144,8 @@ export interface Player {
   portrait: Portrait;
   /** Draftkaarten zijn tijdelijk en worden nooit permanent eigendom. */
   temporary?: boolean;
+  /** Fotoportret; ontbreekt het, dan toont de UI het parametrische portret. */
+  photo?: PortraitAsset;
 }
 
 const NAME_POOLS: Record<string, { first: string[]; last: string[] }> = {
@@ -237,11 +259,13 @@ export interface CatalogOptions {
   seed?: string;
   size?: number;
   scale?: RatingScale;
+  /** Portretten per baseId; wordt op alle kaarten van die speler gezet (ook speciale edities). */
+  photos?: Record<string, PortraitAsset>;
 }
 
 /** Deterministische fictieve catalogus. Zelfde seed = zelfde spelers. */
 export function generateCatalog(options: CatalogOptions = {}): Player[] {
-  const { seed = 'rank11-catalog-v1', size = 360, scale = DEFAULT_RATING_SCALE } = options;
+  const { seed = 'rank11-catalog-v1', size = 360, scale = DEFAULT_RATING_SCALE, photos = {} } = options;
   const rng = createRng(seed);
   const regularClubs = CLUBS.filter((c) => c.id !== 'leg');
   const players: Player[] = [];
@@ -292,6 +316,25 @@ export function generateCatalog(options: CatalogOptions = {}): Player[] {
     });
   });
 
+  for (const f of FEATURED) {
+    const frng = createRng(`${seed}:${f.id}`);
+    players.push({
+      id: f.id,
+      baseId: f.id,
+      firstName: f.firstName,
+      lastName: f.lastName,
+      cardName: f.lastName.toUpperCase(),
+      nation: f.nation,
+      clubId: f.clubId,
+      position: f.position,
+      altPositions: RELATED_POSITIONS[f.position].slice(0, 1),
+      rating: f.rating,
+      rarity: f.rarity,
+      stats: deriveStats(f.position, f.rating, frng, scale),
+      portrait: f.portrait,
+    });
+  }
+
   for (const legend of LEGENDS) {
     const lrng = createRng(`${seed}:${legend.id}`);
     players.push({
@@ -310,8 +353,13 @@ export function generateCatalog(options: CatalogOptions = {}): Player[] {
       portrait: legend.portrait,
     });
   }
-  return players;
+  return players.map((p) => (photos[p.baseId] ? { ...p, photo: photos[p.baseId] } : p));
 }
+
+/** Vaste, fictieve voorbeeldspelers (onder meer voor de reviewkaarten). */
+const FEATURED: { id: string; firstName: string; lastName: string; nation: string; clubId: string; position: Position; rating: number; rarity: Rarity; portrait: Portrait }[] = [
+  { id: 'S01', firstName: 'Jesse', lastName: 'Hoekstra', nation: 'NL', clubId: 'hvs', position: 'ST', rating: 86, rarity: 'gold', portrait: { skin: 0, hair: 'fade', hairColor: '#b88a4a', beard: 1, build: 2 } },
+];
 
 const LEGENDS: { id: string; firstName: string; lastName: string; nation: string; position: Position; rating: number; portrait: Portrait }[] = [
   { id: 'L01', firstName: 'Marco', lastName: 'Steenhuis', nation: 'NL', position: 'ST', rating: 97, portrait: { skin: 1, hair: 'short', hairColor: '#4a2f1d', beard: 0, build: 1 } },

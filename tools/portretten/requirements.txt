@@ -1,0 +1,9 @@
+# CPU-installatie: pip install --index-url https://download.pytorch.org/whl/cpu torch
+torch
+diffusers>=0.42
+transformers>=5
+accelerate
+safetensors
+huggingface_hub
+pillow
+rembg[cpu]

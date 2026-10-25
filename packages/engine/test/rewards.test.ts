@@ -33,6 +33,11 @@ describe('beloningen', () => {
     expect(computeReward(C, { ...base, grade: grade(9.7) }).pick).toEqual({ options: 3, minRating: 90 });
   });
 
+  it('sterke cijfers leveren een draft-voucher op, een voldoende niet', () => {
+    expect(computeReward(C, { ...base, grade: grade(7.6) }).vouchers).toBe(1);
+    expect(computeReward(C, { ...base, grade: grade(6.0) }).vouchers).toBe(0);
+  });
+
   it('gesimuleerde cijfers leveren nooit iets op', () => {
     const r = computeReward(C, { ...base, grade: grade(10, { status: 'simulated' }) });
     expect(r.status).toBe('simulated');

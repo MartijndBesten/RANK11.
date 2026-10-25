@@ -16,6 +16,8 @@ export interface RewardTier {
   coins: number;
   packId?: string;
   pick?: { options: number; minRating: number };
+  /** Draft-vouchers. */
+  vouchers?: number;
 }
 
 export interface RewardConfig {
@@ -46,9 +48,9 @@ export const DEFAULT_REWARD_CONFIG: RewardConfig = {
     { id: 'support', label: 'Herstelkans', minGrade: 1, tone: 'support', xp: 15, coins: 0 },
     { id: 'pass', label: 'Voldoende', minGrade: 5.5, tone: 'pass', xp: 50, coins: 150, packId: 'starter' },
     { id: 'good', label: 'Goed', minGrade: 6.5, tone: 'good', xp: 90, coins: 250, packId: 'gold' },
-    { id: 'great', label: 'Sterk', minGrade: 7.5, tone: 'great', xp: 140, coins: 400, packId: 'exam' },
-    { id: 'elite', label: 'Uitstekend', minGrade: 8.5, tone: 'elite', xp: 200, coins: 600, packId: 'elite' },
-    { id: 'legendary', label: 'Legendarisch', minGrade: 9.5, tone: 'legendary', xp: 300, coins: 900, pick: { options: 3, minRating: 90 } },
+    { id: 'great', label: 'Sterk', minGrade: 7.5, tone: 'great', xp: 140, coins: 400, packId: 'exam', vouchers: 1 },
+    { id: 'elite', label: 'Uitstekend', minGrade: 8.5, tone: 'elite', xp: 200, coins: 600, packId: 'elite', vouchers: 1 },
+    { id: 'legendary', label: 'Legendarisch', minGrade: 9.5, tone: 'legendary', xp: 300, coins: 900, pick: { options: 3, minRating: 90 }, vouchers: 1 },
   ],
   weight: { xpPerExtraWeight: 20, tierBumpFromWeight: null },
   improvement: { minDelta: 0.25, xp: 60, coins: 200 },
@@ -73,6 +75,7 @@ export interface RewardResult {
   coins: number;
   packId?: string;
   pick?: { options: number; minRating: number };
+  vouchers: number;
   bonuses: RewardBonus[];
   reason?: string;
 }
@@ -100,7 +103,7 @@ export function tierFor(config: RewardConfig, value: number): RewardTier {
 }
 
 function empty(status: RewardStatus, key: string, config: RewardConfig, reason: string): RewardResult {
-  return { status, key, configVersion: config.version, tier: null, xp: 0, coins: 0, bonuses: [], reason };
+  return { status, key, configVersion: config.version, tier: null, xp: 0, coins: 0, vouchers: 0, bonuses: [], reason };
 }
 
 export function computeReward(config: RewardConfig, input: RewardInput): RewardResult {
@@ -141,6 +144,7 @@ export function computeReward(config: RewardConfig, input: RewardInput): RewardR
       coins: Math.max(0, tier.coins - (prev?.coins ?? 0)),
       packId: tier.packId,
       pick: tier.pick,
+      vouchers: Math.max(0, (tier.vouchers ?? 0) - (prev?.vouchers ?? 0)),
       bonuses: [],
       reason: 'Cijfer gecorrigeerd: alleen het verschil wordt bijgeschreven.',
     };
@@ -171,6 +175,7 @@ export function computeReward(config: RewardConfig, input: RewardInput): RewardR
     coins: tier.coins + bonuses.reduce((s, b) => s + b.coins, 0),
     packId: tier.packId,
     pick: tier.pick,
+    vouchers: passed ? tier.vouchers ?? 0 : 0,
     bonuses,
     reason: passed ? undefined : 'Geen pack, wel XP en een herstelchallenge.',
   };

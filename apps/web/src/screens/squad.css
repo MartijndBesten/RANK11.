@@ -1,0 +1,54 @@
+.squad-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.squad-head h1 { margin: 4px 0 0; font-size: clamp(34px, 9vw, 52px); }
+.squad-meters { display: flex; gap: 10px; }
+.meter { position: relative; display: grid; padding: 8px 14px; border-radius: 12px; background: rgba(10, 15, 27, 0.75); border: 1px solid var(--line); min-width: 96px; }
+.meter b { font: 800 34px/0.95 var(--font-display); }
+.meter small { font-size: 18px; color: var(--text-dim); }
+.meter span { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-dim); }
+.chem-bar { height: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.1); margin-top: 5px; overflow: hidden; }
+.chem-bar i { display: block; height: 100%; background: var(--up); box-shadow: 0 0 8px var(--up); transition: width 0.5s var(--ease-out); }
+
+.squad-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+@media (min-width: 900px) { .squad-layout { grid-template-columns: minmax(0, 560px) 1fr; align-items: start; } }
+.squad-pitch-col { display: grid; gap: 10px; min-width: 0; max-width: 560px; width: 100%; justify-self: center; }
+@media (min-width: 900px) and (min-aspect-ratio: 1/1) {
+  /* Landscape: veld past in de hoogte */
+  .squad-pitch-col { max-width: min(560px, calc((100dvh - 250px) * 100 / 132)); }
+}
+.squad-pitch-col .pitch .pc-wrap.size-sm { --w: clamp(54px, 14.5vw, 82px); }
+.formations { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.formations button, .filters button { flex: none; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line-strong); font: 700 15px var(--font-display); letter-spacing: 0.06em; color: var(--text-dim); }
+.formations button.on, .filters button.on { color: #1d1304; background: linear-gradient(180deg, var(--gold-1), var(--gold-2)); border-color: transparent; }
+
+.squad-side { display: grid; gap: 14px; align-content: start; }
+.squad-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.bench-row { display: flex; gap: 6px; overflow-x: auto; padding: 8px 2px; scrollbar-width: none; }
+.bench-slot .pitch-empty { width: 62px; }
+
+.cur-row { display: flex; align-items: center; gap: 12px; padding: 8px 0 12px; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
+.cand-list { display: grid; }
+.cand-wrap { border-bottom: 1px solid var(--line); }
+.cand { width: 100%; display: flex; align-items: center; gap: 12px; padding: 8px 4px; text-align: left; }
+.cand:hover { background: rgba(255, 255, 255, 0.03); }
+.cand .pc-wrap.size-xs { --w: 46px; }
+.cand-pos { width: 42px; font: 800 16px var(--font-display); color: var(--text-dim); }
+.cand-name { flex: 1; display: grid; font-weight: 600; min-width: 0; }
+.cand-name small { font-weight: 400; font-size: 12px; }
+.cand-eff { font: 800 26px var(--font-display); }
+.cand-delta { width: 40px; text-align: right; font: 700 16px var(--font-display); color: var(--text-dim); }
+.up { color: var(--up) !important; }
+.down { color: #ff8a96 !important; }
+.fit-exact, .fit-alt { color: var(--up); }
+.fit-related { color: var(--warn); }
+.fit-off { color: #ff8a96; }
+.compare { display: grid; grid-template-columns: repeat(3, 1fr) auto; gap: 6px 14px; align-items: center; padding: 6px 4px 12px 62px; }
+.compare .btn { grid-row: span 2; grid-column: 4; }
+.cmp { display: flex; align-items: baseline; gap: 6px; }
+.cmp span { font: 600 12px var(--font-display); color: var(--text-dim); width: 28px; }
+.cmp b { font: 800 18px var(--font-display); }
+.cmp em { font-style: normal; font: 700 13px var(--font-display); color: var(--text-dim); }
+@media (max-width: 420px) { .compare { grid-template-columns: repeat(3, 1fr); padding-left: 4px; } .compare .btn { grid-column: 1 / -1; grid-row: auto; } }
+
+.filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.coll-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 10px; justify-items: center; }
+.coll-grid .pc-wrap.size-sm { --w: 84px; }

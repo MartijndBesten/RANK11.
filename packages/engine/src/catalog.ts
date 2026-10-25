@@ -189,7 +189,7 @@ const POSITION_WEIGHTS: [Position, number][] = [
   ['RM', 5], ['LM', 5], ['RW', 7], ['LW', 7], ['ST', 12],
 ];
 
-const HAIR: HairStyle[] = ['buzz', 'short', 'short', 'curly', 'fade', 'fade', 'long', 'bald', 'afro', 'mohawk', 'bun'];
+const HAIR: HairStyle[] = ['buzz', 'short', 'short', 'curly', 'fade', 'fade', 'bald', 'afro', 'mohawk', 'bun'];
 const HAIR_COLORS = ['#141414', '#2b1d14', '#4a2f1d', '#7a5230', '#b88a4a', '#d9c08c', '#8a2f16'];
 
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
@@ -317,9 +317,9 @@ const LEGENDS: { id: string; firstName: string; lastName: string; nation: string
   { id: 'L01', firstName: 'Marco', lastName: 'Steenhuis', nation: 'NL', position: 'ST', rating: 97, portrait: { skin: 1, hair: 'short', hairColor: '#4a2f1d', beard: 0, build: 1 } },
   { id: 'L02', firstName: 'Lucien', lastName: 'Darrieux', nation: 'FR', position: 'CAM', rating: 96, portrait: { skin: 2, hair: 'bald', hairColor: '#141414', beard: 1, build: 1 } },
   { id: 'L03', firstName: 'Paulo', lastName: 'Vierenes', nation: 'BR', position: 'LW', rating: 96, portrait: { skin: 3, hair: 'curly', hairColor: '#141414', beard: 0, build: 0 } },
-  { id: 'L04', firstName: 'Franz', lastName: 'Kellermann', nation: 'DE', position: 'CB', rating: 95, portrait: { skin: 0, hair: 'long', hairColor: '#7a5230', beard: 0, build: 2 } },
+  { id: 'L04', firstName: 'Franz', lastName: 'Kellermann', nation: 'DE', position: 'CB', rating: 95, portrait: { skin: 0, hair: 'short', hairColor: '#7a5230', beard: 0, build: 2 } },
   { id: 'L05', firstName: 'Gianluca', lastName: 'Ferrante', nation: 'IT', position: 'GK', rating: 95, portrait: { skin: 1, hair: 'fade', hairColor: '#2b1d14', beard: 2, build: 2 } },
-  { id: 'L06', firstName: 'Diego', lastName: 'Lazcano', nation: 'AR', position: 'RW', rating: 97, portrait: { skin: 2, hair: 'long', hairColor: '#141414', beard: 1, build: 0 } },
+  { id: 'L06', firstName: 'Diego', lastName: 'Lazcano', nation: 'AR', position: 'RW', rating: 97, portrait: { skin: 2, hair: 'fade', hairColor: '#141414', beard: 2, build: 0 } },
   { id: 'L07', firstName: 'Andrés', lastName: 'Ibarrola', nation: 'ES', position: 'CM', rating: 95, portrait: { skin: 1, hair: 'buzz', hairColor: '#2b1d14', beard: 1, build: 0 } },
   { id: 'L08', firstName: 'Samuel', lastName: 'Okonjo', nation: 'NG', position: 'CDM', rating: 94, portrait: { skin: 5, hair: 'buzz', hairColor: '#141414', beard: 0, build: 2 } },
 ];

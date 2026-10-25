@@ -1,0 +1,87 @@
+.walkout {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  overflow: hidden;
+  background: radial-gradient(90% 60% at 50% 100%, color-mix(in srgb, var(--accent) 16%, #05070d), #010205 70%);
+  display: grid;
+  place-items: center;
+  animation: fade-in 0.4s ease;
+  user-select: none;
+}
+.wo-beams { position: absolute; inset: 0; pointer-events: none; }
+.wo-beams i {
+  position: absolute;
+  top: -20%;
+  width: 34vmax;
+  height: 140vmax;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 55%, transparent), transparent 70%);
+  filter: blur(18px);
+  opacity: 0.0;
+  transform-origin: 50% 0;
+  animation: beam 3.2s ease-in-out infinite alternate;
+}
+.wo-beams i:nth-child(1) { left: -8%; rotate: -28deg; animation-delay: 0s; }
+.wo-beams i:nth-child(2) { left: 20%; rotate: -10deg; animation-delay: 0.4s; }
+.wo-beams i:nth-child(3) { right: 20%; rotate: 10deg; animation-delay: 0.2s; }
+.wo-beams i:nth-child(4) { right: -8%; rotate: 28deg; animation-delay: 0.6s; }
+.walkout:not(.stage-0) .wo-beams i { opacity: 0.55; }
+.stage-5 .wo-beams i { opacity: 0.9; animation-duration: 1.6s; }
+@keyframes beam { from { transform: rotate(-9deg); } to { transform: rotate(9deg); } }
+
+.wo-floor {
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  bottom: -20%;
+  height: 50%;
+  background:
+    radial-gradient(50% 40% at 50% 40%, color-mix(in srgb, var(--accent) 35%, transparent), transparent 70%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0 2px, transparent 2px 60px);
+  transform: perspective(500px) rotateX(62deg);
+}
+
+.wo-stage { position: relative; z-index: 5; width: 100%; height: 100%; display: grid; place-items: center; }
+.wo-clue {
+  position: absolute;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  animation: clue-in 0.7s var(--ease-out) both;
+}
+.wo-clue span { font-size: clamp(18px, 4.4vw, 28px); color: #fff; text-shadow: 0 0 24px var(--accent); }
+.wo-flag { top: 22%; }
+.wo-flag-svg { width: clamp(120px, 34vw, 200px); height: auto; border-radius: 6px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 40px color-mix(in srgb, var(--accent) 40%, transparent); animation: wave 2.4s ease-in-out infinite; }
+.wo-pos { top: 46%; }
+.wo-pos b { font-size: clamp(80px, 24vw, 150px); line-height: 0.8; color: transparent; -webkit-text-stroke: 2px var(--accent); text-shadow: 0 0 40px color-mix(in srgb, var(--accent) 50%, transparent); }
+.wo-club { bottom: 12%; }
+.wo-crest { width: clamp(80px, 22vw, 120px); height: auto; filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.7)); }
+
+/* Als de volgende aanwijzing komt, schuiven de vorige weg */
+.stage-2 .wo-flag, .stage-3 .wo-flag { top: 10%; scale: 0.7; opacity: 0.75; transition: all 0.6s var(--ease-out); }
+.stage-3 .wo-pos { top: 30%; scale: 0.7; opacity: 0.75; transition: all 0.6s var(--ease-out); }
+.stage-4 .wo-clue { opacity: 0.25; scale: 0.6; transition: all 0.6s var(--ease-out); }
+.stage-4 .wo-flag { top: 6%; }
+.stage-4 .wo-pos { top: 16%; }
+.stage-4 .wo-club { bottom: 4%; }
+
+.wo-silhouette { width: min(72vw, 360px); animation: sil-in 1.2s var(--ease-out) both; filter: drop-shadow(0 0 30px color-mix(in srgb, var(--accent) 60%, transparent)); }
+.wo-silhouette svg { width: 100%; height: auto; }
+
+.wo-reveal { display: grid; justify-items: center; gap: 14px; animation: card-in 0.9s var(--ease-spring) both; }
+.wo-card .pc { animation: card-flip 1s var(--ease-out) backwards; }
+.wo-name { font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 7vw, 40px); text-transform: uppercase; letter-spacing: 0.04em; text-shadow: 0 0 30px var(--accent); }
+.wo-name span { font-weight: 600; opacity: 0.75; }
+.wo-rarity { color: var(--accent); letter-spacing: 0.4em; font-size: 15px; }
+.wo-flash { position: fixed; inset: 0; background: radial-gradient(circle, #fff, color-mix(in srgb, var(--accent) 60%, transparent) 40%, transparent 70%); animation: flash 0.9s ease-out both; pointer-events: none; z-index: -1; }
+
+@keyframes clue-in { from { opacity: 0; transform: translateY(30px) scale(1.3); filter: blur(10px); } }
+@keyframes wave { 50% { transform: perspective(300px) rotateY(10deg) skewY(-2deg); } }
+@keyframes sil-in { from { opacity: 0; transform: translateY(40px) scale(0.9); filter: brightness(0); } }
+@keyframes card-in { from { opacity: 0; transform: scale(0.6); } }
+@keyframes card-flip { from { transform: rotateY(540deg) scale(0.8); } }
+@keyframes flash { from { opacity: 1; transform: scale(0.4); } to { opacity: 0; transform: scale(2.2); } }

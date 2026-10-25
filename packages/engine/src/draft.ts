@@ -52,9 +52,9 @@ export const DRAFT_EVENTS: Record<string, DraftEventDef> = {
     groups: [
       { id: 'A', label: 'Groep A · Sterspelers', rank: 0, weight: 0.03, minRating: 0, ids: ['L06', 'L01', 'L03'] },
       { id: 'B', label: 'Groep B · Legends & Electric 90+', rank: 1, weight: 0.35, minRating: 90, rarities: ['legend', 'special', 'exam', 'season'] },
-      { id: 'C', label: 'Groep C · 85+', rank: 2, weight: 6, minRating: 85 },
-      { id: 'D', label: 'Groep D · 80-84', rank: 3, weight: 30, minRating: 80, maxRating: 84 },
-      { id: 'E', label: 'Groep E · 70-79', rank: 4, weight: 63.62, minRating: 70, maxRating: 79 },
+      { id: 'C', label: 'Groep C · 85+', rank: 2, weight: 10, minRating: 85 },
+      { id: 'D', label: 'Groep D · 80-84', rank: 3, weight: 40, minRating: 80, maxRating: 84 },
+      { id: 'E', label: 'Groep E · 70-79', rank: 4, weight: 49.62, minRating: 70, maxRating: 79 },
     ],
     pity: [
       { groupId: 'B', every: 10 },

@@ -5,3 +5,7 @@ export * from './packs.ts';
 export * from './squad.ts';
 export * from './draft.ts';
 export * from './rewards.ts';
+export * from './stats.ts';
+export * from './gradebook.ts';
+export * from './goals.ts';
+export * from './insights.ts';

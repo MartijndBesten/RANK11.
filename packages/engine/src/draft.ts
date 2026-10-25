@@ -111,10 +111,27 @@ function indexGroups(event: DraftEventDef, catalog: readonly Player[]): GroupInd
   return index;
 }
 
-function candidates(index: GroupIndex, group: DraftGroup, position: Position, used: Set<string>): Player[] {
-  const inGroup = (index.get(group.id) ?? []).filter((p) => !used.has(p.baseId));
-  const strict = inGroup.filter((p) => fitsSlot(p, position, true));
-  return strict.length ? strict : inGroup.filter((p) => fitsSlot(p, position, false));
+function candidates(index: GroupIndex, group: DraftGroup, position: Position, used: Set<string>, strict = true): Player[] {
+  return (index.get(group.id) ?? []).filter((p) => !used.has(p.baseId) && fitsSlot(p, position, strict));
+}
+
+/**
+ * Kandidaten met terugval: eerst de gerolde groep, dan dichtstbijzijnde lagere groepen, dan hogere;
+ * pas als geen enkele groep een speler op exact deze positie heeft, ook verwante posities.
+ */
+function poolWithFallback(index: GroupIndex, groupsByRank: DraftGroup[], rolled: DraftGroup, position: Position, used: Set<string>): Player[] {
+  const order = [...groupsByRank].sort((a, b) => {
+    const da = a.rank >= rolled.rank ? a.rank - rolled.rank : (rolled.rank - a.rank) + 0.5;
+    const db = b.rank >= rolled.rank ? b.rank - rolled.rank : (rolled.rank - b.rank) + 0.5;
+    return da - db;
+  });
+  for (const strict of [true, false]) {
+    for (const g of order) {
+      const pool = candidates(index, g, position, used, strict);
+      if (pool.length) return pool;
+    }
+  }
+  return [];
 }
 
 /** Resterende drafts tot een garantie; voor de teller "gegarandeerd over N drafts". */
@@ -139,15 +156,8 @@ export function createDraft(
   const slots: DraftSlot[] = formation.slots.map((slot) => {
     const offers: Player[] = [];
     for (let i = 0; i < event.offersPerSlot; i++) {
-      let group = rng.weighted(event.groups, (g) => g.weight);
-      let pool = candidates(index, group, slot.position, used);
-      // Terugval naar de eerstvolgende lagere groep als een groep voor deze positie leeg is.
-      for (let r = group.rank + 1; !pool.length && r <= groupsByRank.length; r++) {
-        const next = groupsByRank.find((g) => g.rank === r);
-        if (!next) break;
-        group = next;
-        pool = candidates(index, group, slot.position, used);
-      }
+      const group = rng.weighted(event.groups, (g) => g.weight);
+      const pool = poolWithFallback(index, groupsByRank, group, slot.position, used);
       if (!pool.length) throw new DraftError(`Te weinig spelers voor positie ${slot.position}.`);
       const pick = rng.pick(pool);
       used.add(pick.baseId);
@@ -170,7 +180,9 @@ export function createDraft(
     if (!due || present) continue;
     // Injecteer één kaart van de doelgroep op een willekeurige plek waar een kandidaat bestaat.
     for (const slot of rng.shuffle(slots)) {
-      const pool = candidates(index, target, slot.position, used);
+      const pool = candidates(index, target, slot.position, used, true).length
+        ? candidates(index, target, slot.position, used, true)
+        : candidates(index, target, slot.position, used, false);
       if (!pool.length) continue;
       const pick = rng.pick(pool);
       used.add(pick.baseId);

@@ -146,6 +146,8 @@ export interface Player {
   temporary?: boolean;
   /** Fotoportret; ontbreekt het, dan toont de UI het parametrische portret. */
   photo?: PortraitAsset;
+  /** Leeftijd (fictief), stuurt onder meer het portret. */
+  age: number;
 }
 
 const NAME_POOLS: Record<string, { first: string[]; last: string[] }> = {
@@ -261,11 +263,13 @@ export interface CatalogOptions {
   scale?: RatingScale;
   /** Portretten per baseId; wordt op alle kaarten van die speler gezet (ook speciale edities). */
   photos?: Record<string, PortraitAsset>;
+  /** Alleen spelers met een fotoportret opnemen (consistente uitstraling zolang niet alle portretten klaar zijn). */
+  photosOnly?: boolean;
 }
 
 /** Deterministische fictieve catalogus. Zelfde seed = zelfde spelers. */
 export function generateCatalog(options: CatalogOptions = {}): Player[] {
-  const { seed = 'rank11-catalog-v1', size = 360, scale = DEFAULT_RATING_SCALE, photos = {} } = options;
+  const { seed = 'rank11-catalog-v1', size = 200, scale = DEFAULT_RATING_SCALE, photos = {}, photosOnly = false } = options;
   const rng = createRng(seed);
   const regularClubs = CLUBS.filter((c) => c.id !== 'leg');
   const players: Player[] = [];
@@ -298,6 +302,7 @@ export function generateCatalog(options: CatalogOptions = {}): Player[] {
       rarity: rarityForRating(rating, rng),
       stats: deriveStats(position, rating, rng, scale),
       portrait: makePortrait(rng, nation),
+      age: rng.int(18, 34),
     });
   }
 
@@ -332,6 +337,7 @@ export function generateCatalog(options: CatalogOptions = {}): Player[] {
       rarity: f.rarity,
       stats: deriveStats(f.position, f.rating, frng, scale),
       portrait: f.portrait,
+      age: f.age,
     });
   }
 
@@ -351,14 +357,16 @@ export function generateCatalog(options: CatalogOptions = {}): Player[] {
       rarity: 'legend',
       stats: deriveStats(legend.position, legend.rating, lrng, scale),
       portrait: legend.portrait,
+      age: 31,
     });
   }
-  return players.map((p) => (photos[p.baseId] ? { ...p, photo: photos[p.baseId] } : p));
+  const withPhotos = players.map((p) => (photos[p.baseId] ? { ...p, photo: photos[p.baseId] } : p));
+  return photosOnly ? withPhotos.filter((p) => p.photo) : withPhotos;
 }
 
 /** Vaste, fictieve voorbeeldspelers (onder meer voor de reviewkaarten). */
-const FEATURED: { id: string; firstName: string; lastName: string; nation: string; clubId: string; position: Position; rating: number; rarity: Rarity; portrait: Portrait }[] = [
-  { id: 'S01', firstName: 'Jesse', lastName: 'Hoekstra', nation: 'NL', clubId: 'hvs', position: 'ST', rating: 86, rarity: 'gold', portrait: { skin: 0, hair: 'fade', hairColor: '#b88a4a', beard: 1, build: 2 } },
+const FEATURED: { id: string; firstName: string; lastName: string; nation: string; clubId: string; position: Position; rating: number; rarity: Rarity; age: number; portrait: Portrait }[] = [
+  { id: 'S01', firstName: 'Jesse', lastName: 'Hoekstra', nation: 'NL', clubId: 'hvs', position: 'ST', rating: 86, rarity: 'gold', age: 25, portrait: { skin: 0, hair: 'fade', hairColor: '#b88a4a', beard: 1, build: 2 } },
 ];
 
 const LEGENDS: { id: string; firstName: string; lastName: string; nation: string; position: Position; rating: number; portrait: Portrait }[] = [

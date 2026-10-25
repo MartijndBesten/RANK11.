@@ -9,3 +9,7 @@ export * from './stats.ts';
 export * from './gradebook.ts';
 export * from './goals.ts';
 export * from './insights.ts';
+export * from './motivation.ts';
+export * from './achievements.ts';
+export * from './academy.ts';
+export * from './gradeLeague.ts';

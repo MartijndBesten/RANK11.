@@ -17,27 +17,29 @@ const toneFor = (v: number): Tone => (v >= 8.5 ? 'elite' : v >= 6.5 ? 'good' : v
 const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
 
 export function RevealScreen({ nav }: { nav: Nav }) {
-  const { state, revealGrade } = useStore();
+  const { grades, pending, revealGrade } = useStore();
   const [active, setActive] = useState<string | null>(null);
   const [direct, setDirect] = useState<RevealOutcome[]>([]);
-  const averages = useMemo(() => subjectAverages(state.grades), [state.grades]);
+  const revealed = useMemo(() => grades.filter((g) => !pending.some((p) => p.grade.id === g.id)), [grades, pending]);
+  const averages = useMemo(() => subjectAverages(revealed), [revealed]);
 
   return (
     <div className="screen vault">
       <header className="screen-head">
         <div className="eyebrow">Cijferkluis</div>
-        <h1 className="display">{state.pending.length ? `${state.pending.length} nieuw` : 'Alles onthuld'}</h1>
+        <h1 className="display">{pending.length ? `${pending.length} nieuw` : 'Alles onthuld'}</h1>
       </header>
 
       <div className="vault-grid">
         <section className="vault-pending" aria-label="Nieuwe cijfers">
-          {state.pending.length === 0 && direct.length === 0 && (
+          {pending.length === 0 && direct.length === 0 && (
             <div className="panel empty">
-              <p>Geen nieuwe cijfers.</p>
-              <p className="dim small">Zodra je een cijfer invoert of het binnenkomt, verschijnt het hier als verrassing.</p>
+              <p>Geen beloningen die wachten.</p>
+              <p className="dim small">Voer een cijfer in; de beloning verschijnt hier om te openen.</p>
+              <button className="btn small" onClick={() => nav.go('cijfers-invoeren')}>Cijfer invoeren</button>
             </div>
           )}
-          {state.pending.map((p, i) => (
+          {pending.map((p, i) => (
             <article key={p.grade.id} className="sealed" style={{ animationDelay: `${i * 80}ms` }}>
               <button className="sealed-main" onClick={() => { sfx.tap(); setActive(p.grade.id); nav.setImmersive(true); }}>
                 <div className="sealed-lock" aria-hidden="true"><IconVault /></div>
@@ -66,12 +68,12 @@ export function RevealScreen({ nav }: { nav: Nav }) {
           <ul>
             {[...averages.entries()].map(([sid, avg]) => {
               const s = subjectById(sid);
-              const grades = state.grades.filter((g) => g.subjectId === sid);
-              const last = grades[grades.length - 1];
+              const list = revealed.filter((g) => g.subjectId === sid);
+              const last = list[list.length - 1];
               return (
                 <li key={sid}>
                   <span className="subj-dot" style={{ background: s.color }}>{s.short}</span>
-                  <span className="subj-name">{s.name}<small className="dim">{grades.length} cijfers{last ? ` · laatste ${formatGrade(last.value)}` : ''}</small></span>
+                  <span className="subj-name">{s.name}<small className="dim">{list.length} cijfers{last ? ` · laatste ${formatGrade(last.value)}` : ''}</small></span>
                   <span className={`subj-avg num ${avg < 5.5 ? 'low' : ''}`}>{formatGrade(avg)}</span>
                 </li>
               );

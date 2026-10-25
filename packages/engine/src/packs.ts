@@ -83,10 +83,10 @@ export const PACKS: Record<string, PackDef> = {
       {
         label: 'Toetsweekkaart',
         buckets: [
-          { id: 'r84', label: 'Zeldzaam goud 84+', weight: 70, rarities: ['rare_gold', 'gold'], minRating: 84 },
+          { id: 'r84', label: 'Rare of goud 84+', weight: 70, rarities: ['rare_gold', 'gold'], minRating: 84 },
           { id: 'exm', label: 'Toetsweek-editie', weight: 20, rarities: ['exam'] },
           { id: 'spc', label: 'Electric', weight: 8, rarities: ['special'] },
-          { id: 'leg', label: 'Legend', weight: 2, rarities: ['legend'] },
+          { id: 'leg', label: 'Legendary', weight: 2, rarities: ['legend'] },
         ],
       },
     ],
@@ -109,7 +109,7 @@ export const PACKS: Record<string, PackDef> = {
         buckets: [
           { id: 'spc', label: 'Speciale kaart 88+', weight: 74, rarities: ['special', 'season', 'exam'], minRating: 88 },
           { id: 'cmp', label: 'Topper 90+', weight: 20, rarities: ['gold', 'rare_gold', 'special'], minRating: 90 },
-          { id: 'leg', label: 'Legend', weight: 6, rarities: ['legend'] },
+          { id: 'leg', label: 'Legendary', weight: 6, rarities: ['legend'] },
         ],
       },
     ],

@@ -37,8 +37,8 @@ export const RARITY_RANK: Record<Rarity, number> = {
 };
 
 export const RARITY_LABEL: Record<Rarity, string> = {
-  bronze: 'Brons', silver: 'Zilver', gold: 'Goud', rare_gold: 'Zeldzaam goud', special: 'Electric',
-  exam: 'Toetsweek', season: 'Seizoen', champion: 'Kampioen', legend: 'Legend',
+  bronze: 'Brons', silver: 'Zilver', gold: 'Goud', rare_gold: 'Rare', special: 'Electric',
+  exam: 'Toetsweek Special', season: 'Seizoen', champion: 'Kampioen', legend: 'Legendary',
 };
 
 export interface RatingScale { min: number; max: number }

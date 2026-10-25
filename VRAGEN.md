@@ -17,7 +17,7 @@ Dit bestand is het vaste vraag-en-antwoordkanaal tussen Martijn, ChatGPT/Codex e
 
 ### V-001 — Goedkeuring visuele richting (stap 4)
 
-status: open
+status: verwerkt
 gesteld_door: claude
 datum: 2026-10-25
 
@@ -31,15 +31,15 @@ De masteropdracht zegt dat ik pas na jouw goedkeuring de volledige backend en al
 
 **Antwoord**
 
-Nog niet beantwoord.
+Martijn (25-10-2026, ronde 3): voorwaardelijk akkoord; Draft-scherm is de kwaliteitsreferentie. Eerst 7 verbeterpunten (consistente fotorealistische gezichten, onderscheidende series, informatieve Home, volledige navigatie, collectie met zoeken/filteren, elftal op kleine telefoons, één visuele identiteit). Daarna door met cijferdashboard, statistieken, doelen en multiplayerbackend.
 
 **Verwerkt in**
 
-Nog niet verwerkt.
+Ronde 3 (nacht 25-10-2026): alle 7 punten uitgewerkt, zie HANDOFF.md. Stap 5 (backend) gestart; lokaal gebouwd, niet uitgerold.
 
 ### V-002 — Portretstijl van de spelers
 
-status: open
+status: verwerkt
 gesteld_door: claude
 datum: 2026-10-25
 
@@ -61,11 +61,11 @@ Het portret is het zwakste visuele onderdeel. De keuze bepaalt het werk aan de c
 
 **Antwoord**
 
-Nog niet beantwoord.
+Martijn (ronde 3): alle gezichten consistent fotorealistisch, geen getekende koppen tussendoor.
 
 **Verwerkt in**
 
-Nog niet verwerkt.
+Volledige catalogus wordt lokaal gegenereerd (tools/portretten/batch.py); de app toont alleen spelers met portret zodra de catalogus (bijna) klaar is (PHOTOS_ONLY in apps/web/src/portraits/registry.ts).
 
 ### V-003 — Echte voetballers of fictieve catalogus
 
@@ -93,7 +93,7 @@ Nog niet verwerkt.
 
 ### V-004 — Cijferbron zonder Magister
 
-status: open
+status: verwerkt
 gesteld_door: claude
 datum: 2026-10-25
 
@@ -107,11 +107,11 @@ Een onofficiële koppeling valt af. Dit legt de bron voor beloningen en het veri
 
 **Antwoord**
 
-Nog niet beantwoord.
+Martijn (ronde 3): de jongens voeren hun cijfers zelf in, zonder ouderverificatie. Magister is voorlopig niet nodig; wel blijven onderzoeken voor een toekomstige geautoriseerde koppeling.
 
 **Verwerkt in**
 
-Nog niet verwerkt.
+Cijfers › Invoeren met eventlog (correcties, verwijderingen, geschiedenis), status "zelf ingevoerd", dubbele-invoercontrole. Onderzoek Magister/Somtoday: docs/onderzoek/ECHTE_DATA_V2.md (partnerroute nu NO-GO; eigen CSV-sjabloon GO).
 
 ### V-005 — Verwerkingsverantwoordelijke en DPIA
 
@@ -203,7 +203,7 @@ Nog niet verwerkt.
 
 ### V-009 — Voorbeeldkaarten goedgekeurd: volledige catalogus vervangen?
 
-status: open
+status: verwerkt
 gesteld_door: claude
 datum: 2026-10-25
 
@@ -217,11 +217,11 @@ Martijn wil de twee voorbeeldkaarten eerst zien voordat de volledige catalogus w
 
 **Antwoord**
 
-Nog niet beantwoord.
+Martijn (ronde 3): ja, alle gezichten consistent fotorealistisch.
 
 **Verwerkt in**
 
-Nog niet verwerkt.
+Batch voor de hele vaste catalogus (200 spelers + 8 legends + S01) loopt; zie HANDOFF.md voor de stand.
 
 ### V-010 — AI-portretten en AI-vermelding
 
@@ -242,6 +242,142 @@ Wil je het label zichtbaar houden, of alleen vermelden in de kaartdetails en de 
 **Waarom nodig**
 
 AI-output is juridisch het minst riskante pad naar fotorealisme. Een vermelding is goedkoop en sluit aan bij de transparantielijn van de AI Act en het KIDS Act-voorstel. Waar het label staat, is een ontwerpkeuze.
+
+**Antwoord**
+
+Nog niet beantwoord.
+
+**Verwerkt in**
+
+Nog niet verwerkt.
+
+### V-011 — Kaartbeloningen voor leerlingen die moeite hebben
+
+status: open
+gesteld_door: claude
+datum: 2026-10-26
+
+**Vraag**
+
+De economiesimulatie (`docs/SIMULATIES.md`) laat zien dat een leerling die rond een 5,6 staat ongeveer 0,13 draft-vouchers per week krijgt, tegenover 2,19 voor een leerling rond de 8,0. XP voor vooruitgang werkt wel, maar de kaartbeloningen zijn sterk gekoppeld aan hoge cijfers. Kies een richting:
+
+- (A) laten zoals het is;
+- (B) een vaste kaartbeloning voor vooruitgang, bijvoorbeeld een Goudpack bij +0,5 op een vakgemiddelde;
+- (C) vouchers ook voor bereikte persoonlijke doelen en herstel na een onvoldoende.
+
+**Waarom nodig**
+
+Dit is een ontwerpkeuze over eerlijkheid en motivatie, geen technische keuze. Het raakt de hele economie.
+
+**Antwoord**
+
+Nog niet beantwoord.
+
+**Verwerkt in**
+
+Nog niet verwerkt.
+
+### V-012 — Koppeling met de leeromgeving (RANK Academy)
+
+status: open
+gesteld_door: claude
+datum: 2026-10-26
+
+**Vraag**
+
+Wil je de koppeling met leren.martijndenbesten.com? Zo ja, beantwoord dan de deelvragen V-L1 t/m V-L9 uit `docs/onderzoek/LEEROMGEVING.md`, §"Open vragen". Daar staan onder meer: de leeromgeving uitbreiden met een ondertekende webhook, of een oefentoets als cijfer telt, welke pogingen beloond worden, de bewaartermijn, en of ik de broncode mag inzien.
+
+**Waarom nodig**
+
+De leeromgeving heeft geen API. Zonder uitbreiding aan die kant is er geen veilige bron. Ik heb de site alleen gelezen en niets gewijzigd. De Academy werkt nu alleen met de interne oefenmodule.
+
+**Antwoord**
+
+Nog niet beantwoord.
+
+**Verwerkt in**
+
+Nog niet verwerkt.
+
+### V-013 — Startelftal voor nieuwe accounts
+
+status: open
+gesteld_door: claude
+datum: 2026-10-26
+
+**Vraag**
+
+Mag een nieuw account eenmalig 11 brons- en zilverkaarten krijgen (één per plek), zodat het meteen kan battlen? Dit staat niet in het GDD. De server doet het nu zo.
+
+**Waarom nodig**
+
+Zonder startkaarten kan een nieuwe speler pas meedoen aan de competitie als hij een aantal cijfers heeft ingevoerd.
+
+**Antwoord**
+
+Nog niet beantwoord.
+
+**Verwerkt in**
+
+Nog niet verwerkt.
+
+### V-014 — Niet reageren op een uitdaging
+
+status: open
+gesteld_door: claude
+datum: 2026-10-26
+
+**Vraag**
+
+Een competitiewedstrijd die de uitgedaagde niet vóór de deadline accepteert, telt nu als reglementair verlies (3-0). Doet niemand iets, dan verliezen beiden. Is dat goed? Het alternatief is dat de wedstrijd vervalt en niet meetelt.
+
+**Waarom nodig**
+
+Het gaat om strengheid tegenover kinderen die een paar dagen niet in de app kijken. De keuze is instelbaar per competitie (`unplayedRule`), maar er moet een standaard zijn.
+
+**Antwoord**
+
+Nog niet beantwoord.
+
+**Verwerkt in**
+
+Nog niet verwerkt.
+
+### V-015 — Transfermarkt aan of uit
+
+status: open
+gesteld_door: claude
+datum: 2026-10-26
+
+**Vraag**
+
+De transfermarkt-engine is klaar en veilig opgezet: alleen spelcoins, vaste prijsband, geen chat of ruil, afkoelperiode en daglimieten. Moet de markt per pool standaard **uit** staan, zodat de beheerder hem bewust aanzet? Of standaard aan?
+
+**Waarom nodig**
+
+Handelen tussen kinderen kan sociale druk geven ("geef mij die kaart"). Dit is een pedagogische keuze.
+
+**Antwoord**
+
+Nog niet beantwoord.
+
+**Verwerkt in**
+
+Nog niet verwerkt.
+
+### V-016 — Minimale oefentijd in de Academy
+
+status: open
+gesteld_door: claude
+datum: 2026-10-26
+
+**Vraag**
+
+Een oefening levert alleen XP op als er minstens 8 seconden per vraag is besteed. Voor eenvoudige vragen (woordjes, tafels) kan dat te streng zijn. Wil je 8 seconden houden, verlagen naar bijvoorbeeld 4, of laten afhangen van het soort vraag?
+
+**Waarom nodig**
+
+Te streng ontmoedigt; te soepel maakt doorklikken voor XP mogelijk. De instelling staat in `DEFAULT_MOTIVATION_CONFIG.academy.minSecondsPerQuestion`.
 
 **Antwoord**
 

@@ -65,9 +65,9 @@ aangegeven (✱).
 | GET | `/api/matches/:matchId/events` | Volledige eventlog (reconnect) |
 | GET | `/api/matches/:matchId/ws` | WebSocket (live): `{type:"move",cardId}`, `{type:"resign"}`, `{type:"sync"}` |
 | POST | `/api/matches/:matchId/accept` · `/decline` · `/moves` `{cardId}` · `/resign` | |
-| GET | `/api/grades` | Eigen cijfers + gemiddelden (engine) |
-| POST ✱ | `/api/grades` | `{subjectId, testName, value, weight, date, externalRef?}` → cijfer + beloning |
-| PUT ✱ / DELETE ✱ | `/api/grades/:gradeId` | Correctie (alleen het verschil) / verwijderen (soft) |
+| GET | `/api/grades` | Eigen cijfers + gemiddelden (engine) + `xp`: totaal, per categorie, clubniveau |
+| POST ✱ | `/api/grades` | `{subjectId, testName, value, weight, date, externalRef?}` → cijfer + beloning + `xp` (toegekende regels) |
+| PUT ✱ / DELETE ✱ | `/api/grades/:gradeId` | Correctie (alleen het verschil) / verwijderen (soft, XP gaat eraf); beide met `xp` |
 | GET | `/api/grades/:gradeId/history` | Mutatiegeschiedenis |
 | GET | `/api/collection` | Kaartinstanties |
 | POST | `/api/collection/starter` | Eenmalig startelftal (11 kaarten, zie aannames) |
@@ -80,7 +80,7 @@ aangegeven (✱).
 Foutformaat: `{ "error": { "code": "...", "message": "Nederlandse melding" } }`. Interne fouten geven
 alleen "Er ging iets mis." (details alleen in de serverlog).
 
-## Datamodel (`migrations/0001_init.sql`)
+## Datamodel (`migrations/0001_init.sql`, `0002_xp_ledger.sql`)
 
 | Tabel | Inhoud / regels |
 |---|---|
@@ -94,7 +94,8 @@ alleen "Er ging iets mis." (details alleen in de serverlog).
 | `matches` | metadata, vastgezette elftallen (snapshot), configVersion, uitslag. Eén open/gespeelde wedstrijd per fixture (partiële unieke index) |
 | `grades`, `grade_history` | status `self`; uniek actief per `dedupe_key` (engine `gradeKey`); soft delete; geschiedenis van create/correct/delete |
 | `reward_grants` | per toets één eerste toekenning (partiële unieke index), correcties apart, `config_version` + volledige engine-uitkomst |
-| `wallet_ledger` | grootboek; trigger `wallet_no_negative` breekt elke afschrijving onder 0 af; `UNIQUE(user, currency, ref)` |
+| `xp_ledger` | XP van de motivatie-engine (Prestatie/Vooruitgang/Academy); `UNIQUE(user, key)` = idempotent; negatieve regels bij verwijderen |
+| `wallet_ledger` | grootboek coins/vouchers; trigger `wallet_no_negative` breekt elke afschrijving onder 0 af; `UNIQUE(user, currency, ref)` |
 | `card_instances`, `lineups`, `starter_grants` | kaarten verwijzen naar `card_def_id` + catalogusversie |
 | `pack_grants`, `pack_opens` | `UNIQUE(grant_id)` op openingen: nooit twee keer openen; seed bewaard |
 | `idempotency_keys` | per gebruiker + sleutel: requesthash en opgeslagen antwoord |
@@ -168,6 +169,18 @@ elftal, packs kopen/openen (idempotent, geen dubbele kaarten, geen negatief sald
 van de engine (nog) niet is aangepast. Na het toevoegen van
 `export * from './competition/index.ts';` aan `packages/engine/src/index.ts` kan de tweede regel in
 `src/engine.ts` vervallen (beide tegelijk werkt ook).
+
+## XP: motivatie-engine (gelijk aan de web-app)
+
+- XP wordt niet meer via `computeReward` en `wallet_ledger` toegekend, maar via `gradeXp`, `correctionXp` en `deletionXp`
+  uit `@rank11/engine` (`DEFAULT_MOTIVATION_CONFIG`), in dezelfde D1-batch als het cijfer (alles of niets).
+- Coins, vouchers en packs komen nog steeds uit `computeReward` (beloningsconfiguratie, eigen dag-/weeklimiet).
+  Het veld `reward.xp` in de antwoorden bevat nu het XP-totaal uit de motivatie-engine.
+- Verwijderen draait alle XP van dat cijfer terug; coins, vouchers en packs blijven. Dezelfde toets opnieuw invoeren
+  levert geen nieuwe XP op (sleutel `perf:<gradeKey>` bestaat al).
+- Doelen kent de API nog niet: `goals: []`, dus geen doel-XP of doelpack via de server.
+- Oude regels met `currency = 'xp'` in `wallet_ledger` (van vóór migratie 0002) blijven leesbaar via `/api/wallet`,
+  maar tellen niet mee in het XP-totaal van `/api/grades`.
 
 ## Bekende punten
 

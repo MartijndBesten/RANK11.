@@ -81,10 +81,14 @@ describe('volgende beloningen', () => {
       upcoming: [{ id: 'u', subjectId: 'wi', name: 'H5', date: '2026-11-03', weight: 2 }], today: '2026-10-26',
       packName: (id) => ({ exam: 'Toetsweekpack', gold: 'Goudpack' }[id] ?? id), subjectName: () => 'Wiskunde',
     });
-    expect(r[0]).toMatchObject({ kind: 'test', condition: 'Haal een 7,5 of hoger', reward: 'Toetsweekpack + draft-voucher' });
+    // Vakgemiddelde 6,25: de eerstvolgende tier erboven is 6,5 (Goudpack).
+    expect(r[0]).toMatchObject({ kind: 'test', condition: 'Haal een 6,5 of hoger', reward: 'Goudpack' });
     // (7*4 - 12,5)/2 = 7,75 → 7,8
     expect(r[1]).toMatchObject({ kind: 'goal', condition: 'Haal minimaal een 7,8 voor H5' });
     expect(nextRewards(DEFAULT_REWARD_CONFIG, { grades, goals: [], upcoming: [], today: '2026-10-26', packName: (x) => x, subjectName: (x) => x })).toEqual([]);
+    // Hoog gemiddelde (8,0): drempel 8,5 (Elitepack).
+    const high = nextRewards(DEFAULT_REWARD_CONFIG, { grades: [g('en', 8, 1, '2026-10-01')], goals: [], upcoming: [{ id: 'e', subjectId: 'en', name: 'U4', date: '2026-11-03', weight: 1 }], today: '2026-10-26', packName: (x) => x, subjectName: (x) => x });
+    expect(high[0]!.condition).toBe('Haal een 8,5 of hoger');
   });
 });
 

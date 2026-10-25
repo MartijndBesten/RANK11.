@@ -205,7 +205,7 @@ export interface NextReward {
 }
 
 /**
- * Concrete, haalbare beloningen voor de komende toetsen: welke cijfergrens levert welk pack op,
+ * Concrete, haalbare beloningen voor de komende toetsen: de eerstvolgende cijfergrens boven je vakgemiddelde,
  * en welk cijfer is nodig om een doel te halen. Alleen echte gegevens; niets verzonnen.
  */
 export function nextRewards(
@@ -217,7 +217,11 @@ export function nextRewards(
   const fmt = (v: number) => v.toFixed(1).replace('.', ',');
   const tiers = sortedTiers(rewards).filter((t) => t.packId || t.pick);
   for (const t of [...upcoming].filter((x) => x.date >= today).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 4)) {
-    const tier = tiers.find((x) => x.minGrade >= 7.5) ?? tiers.at(-1);
+    // Persoonlijke drempel: de eerste beloningstier boven je huidige vakgemiddelde (minimaal een voldoende),
+    // zodat een haalbare stap zichtbaar is in plaats van steeds dezelfde 7,5.
+    const avg = weightedAverage(grades.filter((g) => g.subjectId === t.subjectId));
+    const floor = Math.max(rewards.scale.pass, avg ?? 0);
+    const tier = tiers.find((x) => x.minGrade > floor) ?? tiers.at(-1);
     if (!tier) continue;
     const what = tier.packId ? packName(tier.packId) : `spelerskeuze (${tier.pick?.minRating}+)`;
     out.push({

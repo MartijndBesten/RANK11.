@@ -1,0 +1,75 @@
+/* RANK Academy: elektrisch blauw als eigen accent naast het goud van de club. */
+.academy .page-head .btn { flex: none; }
+.acad-xp { font: 800 20px var(--font-display); color: var(--electric-hot); min-width: 3ch; text-align: right; }
+
+.acad-link { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; flex: none; background: rgba(255, 255, 255, 0.06); color: var(--text-faint); }
+.acad-link.on { background: rgba(47, 227, 154, 0.15); color: var(--up); }
+.acad-link svg { width: 18px; height: 18px; }
+
+.acad-rules { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 14px; color: var(--text-dim); }
+.acad-rules b { display: inline-block; min-width: 3.2ch; font: 800 17px var(--font-display); color: var(--electric-hot); }
+
+/* Vakkeuze */
+.acad-banks { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); }
+.acad-bank {
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+  text-align: left;
+  padding: 18px;
+  min-height: 150px;
+  background: radial-gradient(90% 120% at 100% 0%, color-mix(in srgb, var(--subj) 28%, transparent), transparent 60%), linear-gradient(180deg, rgba(20, 28, 48, 0.8), rgba(10, 15, 27, 0.8));
+  transition: transform 0.2s var(--ease-out), border-color 0.2s;
+}
+.acad-bank:hover { transform: translateY(-2px); border-color: var(--line-strong); }
+.acad-bank .subj-dot { margin-bottom: 6px; }
+.acad-bank-name { font: 800 26px/1 var(--font-display); text-transform: uppercase; letter-spacing: 0.03em; }
+.acad-bank-topic { font-weight: 600; }
+.acad-bank .tag { margin-top: 6px; }
+
+/* Quiz */
+.quiz { max-width: 640px; }
+.quiz-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.quiz-progress { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; }
+.quiz-progress i { height: 6px; border-radius: 99px; background: rgba(255, 255, 255, 0.08); }
+.quiz-progress i[data-state='now'] { background: var(--electric); box-shadow: 0 0 10px rgba(58, 168, 255, 0.6); }
+.quiz-progress i[data-state='ok'] { background: var(--up); }
+.quiz-progress i[data-state='bad'] { background: var(--down); }
+.quiz-card { display: grid; gap: 14px; padding: 20px; }
+.quiz-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
+.quiz-prompt { font: 800 clamp(34px, 10vw, 48px)/1.05 var(--font-display); letter-spacing: 0.01em; overflow-wrap: anywhere; }
+.quiz-form { display: grid; gap: 12px; }
+.quiz-options { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); }
+.quiz-option {
+  min-height: 56px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.04);
+  font: 700 19px var(--font-ui);
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+  overflow-wrap: anywhere;
+}
+.quiz-option:not(:disabled):hover { border-color: var(--electric); background: rgba(58, 168, 255, 0.1); }
+.quiz-option:disabled { cursor: default; }
+.quiz-option[data-state='ok'] { border-color: var(--up); background: rgba(47, 227, 154, 0.14); color: #fff; }
+.quiz-option[data-state='bad'] { border-color: var(--down); background: rgba(255, 90, 106, 0.14); }
+.quiz-option[data-state='off'] { opacity: 0.45; }
+.quiz-feedback { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 12px; font-size: 15px; line-height: 1.4; }
+.quiz-feedback svg { width: 20px; height: 20px; flex: none; margin-top: 1px; }
+.quiz-feedback.ok { background: rgba(47, 227, 154, 0.12); color: #b8ffe0; }
+.quiz-feedback.bad { background: rgba(255, 90, 106, 0.12); color: #ffc4cb; }
+.quiz-feedback b { color: #fff; }
+.quiz-form .btn { justify-self: stretch; }
+@media (min-width: 560px) { .quiz-form .btn { justify-self: start; } }
+
+/* Resultaat */
+.acad-result { display: grid; gap: 12px; max-width: 640px; padding: 20px; }
+.acad-score { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.acad-score .big-num { font-size: clamp(64px, 18vw, 92px); }
+.acad-score .big-num small { font-size: 0.4em; color: var(--text-dim); }
+.acad-score-meta { display: grid; gap: 6px; justify-items: start; padding-bottom: 10px; }
+.acad-total { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-radius: 12px; background: rgba(58, 168, 255, 0.1); border: 1px solid rgba(127, 240, 255, 0.25); font: 700 15px var(--font-display); letter-spacing: 0.1em; text-transform: uppercase; }
+.acad-total b { font-size: 28px; color: var(--electric-hot); letter-spacing: 0; }
+.acad-actions { display: flex; flex-wrap: wrap; gap: 10px; }

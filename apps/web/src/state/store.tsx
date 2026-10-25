@@ -386,7 +386,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ...s,
       academy: {
         ...s.academy,
-        events: decision.status === 'duplicate' ? s.academy.events : [...s.academy.events, event],
+        // Alleen echte, afgeronde pogingen tellen als eerdere poging (te snel, afgebroken of niet gekoppeld niet).
+        events: ['rewarded', 'capped', 'no-learning-value'].includes(decision.status) ? [...s.academy.events, event] : s.academy.events,
         decisions: [...s.academy.decisions, { eventId: event.eventId, status: decision.status, xp: decision.entries.reduce((a, e) => a + e.xp, 0), reason: decision.reason }].slice(-50),
       },
       xpLedger: [...s.xpLedger, ...decision.entries],

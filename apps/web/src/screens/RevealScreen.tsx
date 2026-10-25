@@ -380,12 +380,16 @@ function RewardPanel({ outcome, reduced, onClose, onOpenPack, onPick }: {
 
       <div className="rv-gains">
         {r.xp > 0 && <span className="gain"><IconXp /> +{r.xp} XP</span>}
+        {outcome.xpEntries.some((e) => e.packId) && <span className="gain">+ doelpack</span>}
         {r.coins > 0 && <span className="gain"><IconCoin /> +{r.coins.toLocaleString('nl-NL')}</span>}
         {r.vouchers > 0 && <span className="gain"><IconVoucher /> +{r.vouchers} draft-voucher</span>}
       </div>
-      {r.bonuses.length > 0 && (
+      {(outcome.xpEntries.length > 0 || r.bonuses.some((b) => b.coins)) && (
         <div className="rv-bonuses">
-          {r.bonuses.map((b) => <span key={b.label} className="bonus">{b.label}{b.xp ? ` +${b.xp} XP` : ''}{b.coins ? ` +${b.coins}` : ''}</span>)}
+          {outcome.xpEntries.map((e) => (
+            <span key={e.key} className="bonus">{e.label} +{e.xp} {e.category === 'progress' ? 'Vooruitgang' : 'Prestatie'}-XP{e.cappedBy ? ` (plafond: −${e.cappedBy})` : ''}</span>
+          ))}
+          {r.bonuses.filter((b) => b.coins).map((b) => <span key={b.label} className="bonus">{b.label} +{b.coins} coins</span>)}
         </div>
       )}
 

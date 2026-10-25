@@ -6,7 +6,8 @@ import { StoreProvider } from './state/store';
 import { App } from './App';
 import { Gallery } from './Gallery';
 
-const gallery = new URLSearchParams(location.search).has('gallery');
+// Kaartengalerij: ?gallery lokaal, #kaarten in de preview (die geeft alleen #ankers door).
+const gallery = new URLSearchParams(location.search).has('gallery') || location.hash === '#kaarten';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -17,6 +17,7 @@ export function Gallery() {
     <div className="gallery">
       {walk && <Walkout player={walk} reduced={false} onDone={() => setWalk(null)} doneLabel="Sluiten" />}
       <div className="gallery-row">
+        <button className="btn ghost small" onClick={() => { location.hash = 'home'; location.reload(); }}>Naar de game</button>
         <button className="btn small" onClick={() => setWalk(s01)}>Walkout Hoekstra</button>
         <button className="btn small" onClick={() => setWalk(l01)}>Walkout Steenhuis</button>
       </div>

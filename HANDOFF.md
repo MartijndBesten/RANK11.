@@ -1,10 +1,50 @@
 # HANDOFF — RANK11.
 
-**Status:** `wacht-op-review`. Ronde 2 is klaar: onderzoek naar echte spelers, twee voorbeeldkaarten met fotoportret en twee bugs opgelost.
-**Bijgewerkt:** 25-10-2026, ±22:00 (Claude Code, cloudsessie)
-**Branch:** `main`
+**Status:** `wacht-op-review`. Ronde 3 (nachtronde) is klaar: de 7 verbeterpunten, het cijferdashboard, de motivatie-engine, het competitiesysteem, de Academy-voorbereiding en de lokale multiplayerserver.
+**Bijgewerkt:** 26-10-2026 (Claude Code, cloudsessie). Zie de portretregel hieronder voor de laatste stand.
+**Branch:** `main` (gepusht)
 **Volgende actor:** Martijn
-**Volgende stap:** de twee voorbeeldkaarten beoordelen (preview en `docs/review/v2/`) en V-009 en V-010 beantwoorden. Na akkoord vervangt Claude de portretten van de volledige catalogus (zie `docs/portretten/README.md`). V-001 t/m V-008 staan ook nog open.
+**Volgende stap:** preview v4 bekijken (https://claude.ai/artifact/L5dsftxHszJFRNqb35xBa9) en `docs/review/v3/`. Daarna V-011 t/m V-016 beantwoorden. V-005 en V-006 blijven nodig vóór iets online kan.
+
+## Ronde 3 (nacht 25 op 26 oktober 2026)
+
+Wat echt werkt en wat demo is: `docs/PROJECT-STATUS.md`. Testresultaten: `docs/TEST-REPORT.md` (188 engine-tests en 44 API-tests groen; overflow-audit 17 routes × 8 schermmaten).
+
+| Verbeterpunt / opdracht | Status |
+|---|---|
+| 1. Gezichten consistent fotorealistisch | Batch voor de hele catalogus (209 portretten, lokaal FLUX.2 [klein], €0) loopt; hervatbaar. De app toont alleen spelers met portret zodra ≥150 klaar zijn (`PHOTOS_ONLY`). Onderzoek echte data: `docs/onderzoek/ECHTE_DATA_V2.md`. Echte spelers, clubs en foto's blijven NO-GO zonder licenties. |
+| 2. Onderscheidende series | Brons, Zilver, Goud, Rare, Toetsweek Special, Legendary (+ Electric/Seizoen); de demo-collectie bevat ze allemaal; serie-strip in Collectie. |
+| 3. Informatieve Home | Gemiddelde met verloop en verandering door de laatste toets, clubniveau met XP per categorie, kluisbalk, volgende beloning (persoonlijke drempel), stijgers/dalers, inzichten, doelen, aankomende toetsen. |
+| 4. Navigatie | Home · Club · Competitie · Cijfers · Academy (verborgen als uitgeschakeld), elk met subnavigatie; oude ankers blijven werken. |
+| 5. Collectie | Zoeken, filters (serie, positie, elftal, dubbel), sorteren, detailsheet met statistieken, licentieregel en snel verkopen (bevestiging in de pagina). |
+| 6. Elftal op kleine telefoons | Hoger veld en kleinere kaarten onder 480 px; geen overlap meer op 320 px. |
+| 7. Eén visuele identiteit | Gedeelde bouwstenen in `styles/ui.css` (subnav, panelen, tegels, lijsten, formulieren, labels) in het materiaal van Draft en Kluis. |
+| Cijferdashboard en statistieken (P1) | GEBOUWD + OFFLINE GETEST: invoeren (zelf, zonder ouderverificatie), corrigeren, verwijderen, geschiedenis, grafiek per vak, verdeling, records, wat-als met scenario's, "wat moet ik halen", doelen, geplande toetsen, inzichten. |
+| Motivatie-engine (P2) | GEBOUWD + OFFLINE GETEST: Prestatie-, Vooruitgangs- en Academy-XP met dag/weekplafonds, idempotente sleutels, achievements zonder streaks. |
+| Competitie (P3) | Engine GEBOUWD + OFFLINE GETEST (battle, ranglijst, schema's, toernooi, Grade League). App: demo-pool met computertegenstanders en speelbare kaartbattle. |
+| Academy-voorbereiding (P4) | Provider-interface, eventschema, HMAC-verificatie, accountkoppeling, beloningsregels; interne oefenmodule werkt echt. Leeromgeving alleen gelezen, niet gewijzigd; koppeling staat uit (V-012). |
+| Multiplayer/backend (P6) | `apps/api` GEBOUWD + OFFLINE GETEST (en `wrangler dev --local`): accounts, pools, battles via Durable Object, competities, cijfers met XP uit de motivatie-engine, grootboek, packs. **Niet uitgerold**, geen account/database aangemaakt, app nog niet gekoppeld. |
+| Draftbalans | 10.000-draft-simulatie: de getoonde kansen weken af. Opgelost en de gemeten kansen worden getoond (`docs/SIMULATIES.md`). |
+| Transfermarkt | Engine met tests (alleen coins, prijsband, escrow, afkoelperiode, limieten); nog geen scherm (V-015). |
+| Meldingen | Instellingen met stille uren, één melding per wachtende beloning; geen pushmeldingen. |
+
+**Niet gedaan of niet gelukt:**
+- Niets gepubliceerd naar productie. Geen nieuwe diensten aangemaakt.
+- Geen ouderaccount/toestemmingsflow: blokkeert productie (V-005, V-007).
+- Gelijkeniscontrole van portretten alleen visueel (V-010).
+- **Incident:** de onderzoeksagent heeft bij zes verzoeken naar Wikimedia Commons per vergissing het e-mailadres van Martijn in de User-Agent-header meegestuurd. Daarna is dat gestopt. Er is niets anders gelekt en het adres staat niet in de repository.
+
+**Bestanden ronde 3 (belangrijkste):**
+- Engine: `packages/engine/src/{stats,gradebook,goals,insights,motivation,achievements,academy,gradeLeague,market,simulate}.ts`, `competition/*`, tests in `packages/engine/test/`
+- Web: `apps/web/src/App.tsx`, `state/{store.tsx,school.ts,gradeData.ts}`, `screens/grades/*`, `screens/{Hub,CollectionScreen,CompetitionScreen,BattleView,AcademyScreen,SettingsSheet}.tsx`, `competition/demoPool.ts`, `academy/demoProvider.ts`, `components/{charts,SubNav}.tsx`, `styles/ui.css`, `portraits/{registry.ts,manifest.json}`, `public/portraits/*.webp`
+- Server: `apps/api/**` (README met endpoints, datamodel en uitrolstappen)
+- Tools: `tools/portretten/{export-jobs.ts,batch.py,manifest.mjs,catalogus-jobs.json}`, `tools/sim/balans.ts`, `tools/preview.py`
+- Docs: `README.md`, `docs/{PROJECT-STATUS,ARCHITECTURE,GAME-DESIGN,DESIGN-SYSTEM,GRADE-ENGINE,GRADE-INSIGHTS,MOTIVATION-ENGINE,ACADEMY-INTEGRATION,COMPETITION-SYSTEM,MULTIPLAYER,REWARD-ECONOMY,SECURITY,TEST-REPORT,SIMULATIES,ROADMAP,OPEN-ISSUES}.md`, `docs/onderzoek/{LEEROMGEVING,VERGELIJKBARE-APPS,ECHTE_DATA_V2}.md`
+- `VRAGEN.md`: V-001, V-002, V-004 en V-009 verwerkt; nieuw V-011 t/m V-016.
+
+**Open vragen:** V-003, V-005, V-006, V-007, V-008, V-010, V-011, V-012, V-013, V-014, V-015, V-016.
+
+**Bouwstenenbibliotheek (ronde 3):** beoordeeld, nog geen PR. Kandidaten zodra ze server-side in gebruik zijn: (1) cijferboek als eventlog met XP-ledger en plafonds, (2) balanssimulatie die getoonde kansen controleert, (3) MatchDO-kern met opslagadapter, (4) grootboek met trigger tegen negatief saldo, (5) lokale AI-portretpijplijn. Aanmelden via een aparte `bibliotheek/*`-PR in de workbench.
 
 ## Ronde 2 (25-10-2026, avond)
 

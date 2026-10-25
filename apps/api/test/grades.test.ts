@@ -112,13 +112,14 @@ describe('cijfers en beloningen', () => {
 
   it('onvoldoende = herstelkans (XP, geen pack); dagelijkse limiet; cijfers alleen voor jezelf', async () => {
     const { app, user } = await setup();
-    const low = await app.api('POST', '/api/grades', { token: user.token, idem: idem(), body: grade({ value: 4.2, testName: 'SO 1' }) });
+    // Verschillende toetsdatums: bij gelijke datum is de volgorde (en dus "herstel na onvoldoende") niet gedefinieerd.
+    const low = await app.api('POST', '/api/grades', { token: user.token, idem: idem(), body: grade({ value: 4.2, testName: 'SO 1', date: '2026-10-14' }) });
     expect(low.body.reward).toMatchObject({ status: 'support', xp: 50, coins: 0, packId: null });
     for (let i = 2; i <= 4; i++) {
-      const r = await app.api('POST', '/api/grades', { token: user.token, idem: idem(), body: grade({ testName: `SO ${i}` }) });
+      const r = await app.api('POST', '/api/grades', { token: user.token, idem: idem(), body: grade({ testName: `SO ${i}`, date: `2026-10-1${4 + i}` }) });
       expect(r.body.reward.status).toBe('rewarded');
     }
-    const capped = await app.api('POST', '/api/grades', { token: user.token, idem: idem(), body: grade({ testName: 'SO 5' }) });
+    const capped = await app.api('POST', '/api/grades', { token: user.token, idem: idem(), body: grade({ testName: 'SO 5', date: '2026-10-19' }) });
     // Kaartbeloning begrensd (4 per dag); XP heeft eigen plafonds (450 Prestatie-XP per dag) en telt hier nog mee.
     expect(capped.body.reward).toMatchObject({ status: 'capped', coins: 0 });
     expect(capped.body.xp.total).toBe(80);

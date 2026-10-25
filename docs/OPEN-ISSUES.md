@@ -33,6 +33,7 @@ Stand: nacht 25 op 26 oktober 2026. Besluiten die Martijn moet nemen, staan als 
 | T4 | `npm audit` meldt undici in wrangler | Alleen lokaal gereedschap, niet in de Worker-bundel |
 | T5 | Preview zonder server | De reviewpreview is één statische pagina met lokale opslag per bezoeker |
 | T6 | Portretbatch op CPU | Ongeveer 50-80 seconden per portret. Hervatbaar: `tools/portretten/batch.py` slaat bestaande portretten over |
+| T8 | Volgorde bij gelijke toetsdatum | Bij twee toetsen op dezelfde dag bepaalt het id de volgorde. Op de server zijn id's willekeurig, dus "herstel na een onvoldoende" op dezelfde dag is niet eenduidig. Voorstel: bij gelijke datum op invoermoment sorteren |
 | T7 | Bundlegrootte | De web-bundel is groter geworden door alle schermen. Code-splitting per tab is nog niet gedaan |
 
 ## Opgelost in deze ronde

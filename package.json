@@ -1,0 +1,15 @@
+{
+  "name": "rank11",
+  "private": true,
+  "version": "0.1.0",
+  "description": "RANK11. — Your grades. Your squad. Voetbalkaartgame op basis van schoolcijfers.",
+  "workspaces": ["packages/*", "apps/*"],
+  "scripts": {
+    "dev": "npm run dev -w apps/web",
+    "build": "npm run build -w apps/web",
+    "build:single": "npm run build:single -w apps/web",
+    "test": "npm test -w packages/engine",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "engines": { "node": ">=22" }
+}

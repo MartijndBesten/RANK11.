@@ -1,0 +1,116 @@
+# RANK11. — Beloningseconomie
+
+**Stand:** 25-10-2026 · **Code:** `packages/engine/src/rewards.ts`, `packs.ts`, `draft.ts`, `market.ts`, `simulate.ts`; snel verkopen in `apps/web/src/state/store.tsx` · **Simulaties:** `docs/SIMULATIES.md` (`node --experimental-strip-types tools/sim/balans.ts`)
+
+## 1. Spelregels voor de economie
+
+- **Geen echt geld.** Coins zijn spelvaluta en zijn niet te koop. Er bestaan geen betaalde packs, boosts of abonnementen.
+- **Kansen zijn zichtbaar** bij iedere pack en iedere draft, inclusief de gemeten kansen voor de draft.
+- **XP staat los van de kaarteconomie.** XP komt uit de motivatie-engine (`MOTIVATION-ENGINE.md`). Coins, packs, vouchers en spelerskeuzes komen uit de beloningsconfiguratie hieronder.
+- **Niets verloopt en niets gaat verloren** door wegblijven. Er zijn geen tijdgebonden aanbiedingen.
+
+## 2. Beloning per cijfer (`DEFAULT_REWARD_CONFIG`, versie `2026.10-proto.1`)
+
+| Tier | Vanaf | Coins | Pack | Extra | (XP in config*) |
+|---|---|---:|---|---|---:|
+| Herstelkans | 1,0 | 0 | — | herstelchallenge (alleen tekst in de UI) | 15 |
+| Voldoende | 5,5 | 150 | Starterspack | | 50 |
+| Goed | 6,5 | 250 | Goudpack | | 90 |
+| Sterk | 7,5 | 400 | Toetsweekpack | 1 draft-voucher | 140 |
+| Uitstekend | 8,5 | 600 | Elitepack | 1 draft-voucher | 200 |
+| Legendarisch | 9,5 | 900 | — | spelerskeuze 1 uit 3 (rating 90+), 1 draft-voucher | 300 |
+
+\* De web-app gebruikt deze XP niet meer, maar die van de motivatie-engine. De lokale API gebruikt ze nog wel (open punt).
+
+Overige regels:
+- **Grote verbetering:** stijgt het vakgemiddelde door dit cijfer ≥ 0,25, dan +200 coins (en +60 XP in de config).
+- **Weging:** +20 XP (config) per wegingspunt boven 1, alleen bij een voldoende. `tierBumpFromWeight` staat uit (`null`).
+- **Limieten:** maximaal 4 beloonde cijfers per dag en 12 per week. Daarboven: status `capped`; het cijfer telt wel mee in het gemiddelde.
+- **Correcties:** `topup`. Bij een correctie naar een hogere tier wordt alleen het verschil bijgeschreven; een gelijke of lagere tier levert niets op (`duplicate`).
+- **Onvoldoende:** status `support`. Geen pack en geen vouchers; wel de herstelchallenge-tekst.
+- `unverifiedMaxTierId` staat op `null`: zelf ingevoerde cijfers krijgen dezelfde tiers als bevestigde.
+- **Doel bereikt** (motivatie-engine): extra Goudpack.
+
+## 3. Packs (`PACKS`)
+
+| Pack | Inhoud | Prijs in coins |
+|---|---|---:|
+| Starterspack | 3 kaarten; per kaart Brons 60 / Zilver 36 / Goud 4 | 750 |
+| Goudpack | 4× goudbasis + topkaart (Goud 80-84: 78 · Goud 85+: 19 · speciaal: 3) | 5000 |
+| Toetsweekpack | 4× goudbasis + toetsweekkaart (Rare of goud 84+: 70 · Toetsweek-editie: 20 · Electric: 8 · Legendary: 2) | niet te koop |
+| Elitepack | 2× (Goud 85+: 80 · speciaal 85+: 20) + elitekaart (speciaal 88+: 74 · Topper 90+: 20 · Legendary: 6) | niet te koop |
+
+Goudbasis per kaart: Goud 75-79: 68 · Goud 80-84: 24 · Goud 85+: 7 · speciaal: 1. In één pack zit nooit twee keer dezelfde speler. `oddsTable` geeft per categorie de kans per kaartplek en de kans op minstens één; die tabel staat in de app.
+
+Gemeten in 10.000 packs per soort (`SIMULATIES.md`): de gemeten kansen liggen binnen enkele tienden van een procentpunt van de getoonde kansen. Een test bewaakt dat het verschil voor het Goudpack kleiner blijft dan 3 procentpunt.
+
+## 4. Draft (Toetsweek Draft I)
+
+- 1 draft-voucher per draft, formatie 4-3-3, 5 kaarten per positie (55 per draft), alle draftkaarten tijdelijk.
+- Groepen en kans per kaart: A (drie vaste sterspelers) 0,03 · B (Legends en speciale kaarten 90+) 0,35 · C (85+) 10 · D (80-84) 40 · E (60-79) 49,62.
+- Garanties: uiterlijk bij de 10e draft minstens één kaart uit B of beter, bij de 50e uit A.
+- Er wordt alleen geloot tussen groepen die op die positie nog een kandidaat hebben (gewichten herschaald).
+
+**Gemeten (10.000 drafts, catalogus van 245 kaarten):**
+
+| Groep | Getoond per kaart | Gemeten per kaart | Draft met deze groep of beter |
+|---|---:|---:|---:|
+| A | 0,03% | 0,04% | 2,3% |
+| B | 0,35% | 0,45% | 24,2% |
+| C | 10,0% | 12,2% | 100% |
+| D | 40,0% | 26,1% | 100% |
+| E | 49,6% | 61,3% | 100% |
+
+De langste reeks zonder B was 9 drafts, zonder A 49: de garanties werken. Groep D wordt minder vaak getoond dan ingesteld, omdat er per positie maar weinig spelers van 80-84 in de catalogus zitten. Daarom toont de app naast de ingestelde kans ook de gemeten kans (`apps/web/src/data/draft-odds.json`). Dat bestand moet opnieuw worden gegenereerd zodra de catalogus verandert (bijv. als `PHOTOS_ONLY` aan gaat).
+
+Gemiddelde teamrating als de speler steeds de hoogste rating kiest: 88,4 (p10 86, p90 91).
+
+## 5. Snel verkopen
+
+`quickSellValue`: rating ≥ 85 → 2500, ≥ 80 → 900, ≥ 75 → 400, ≥ 65 → 150, anders 60 coins. Legendary ×10, Electric/Toetsweek/Seizoen ×3. Kaarten in het elftal kunnen niet verkocht worden. De UI vraagt bevestiging in de pagina zelf.
+
+## 6. Transfermarkt (`market.ts`, versie `2026.10-markt.1`) — alleen engine
+
+| Regel | Waarde |
+|---|---|
+| Valuta | alleen coins |
+| Binnen | dezelfde pool |
+| Prijsband | 0,8× – 1,5× de basiswaarde, afgerond op 10 coins |
+| Basiswaarde | 90+: 9000 · 85+: 4000 · 80+: 1600 · 75+: 700 · 65+: 300 · lager: 120; Legendary ×6, Seizoen en hoger ×2,5, Rare ×1,4 |
+| Belasting bij verkoop | 5% (naar boven afgerond), verdwijnt uit het spel |
+| Advertentie geldig | 48 uur, daarna automatisch terug |
+| Max. tegelijk te koop | 5 per speler |
+| Max. aankopen / verkopen per dag | 5 / 5 |
+| Afkoelperiode na aankoop | 72 uur voordat je de kaart weer mag verkopen |
+| Niet verhandelbaar | draftkaarten, kaarten in het elftal, een kaart die al te koop staat |
+| Niet mogelijk | bieden, ruilen, chat, je eigen kaart kopen |
+
+Kopen is één atomaire overgang. `marketInvariants` controleert dat coins alleen via de belasting verdwijnen, dat er geen negatief saldo ontstaat en dat iedere kaart één eigenaar heeft. De markt heeft nog geen API-module en geen scherm.
+
+## 7. Economie per week (simulatie)
+
+2000 gesimuleerde weken per profiel, cijfers normaal verdeeld, weging willekeurig 1-3:
+
+| Profiel | Coins | Vouchers | Spelerskeuzes | Packs per week |
+|---|---:|---:|---:|---|
+| Gemiddeld 6,8 · 3 cijfers/week | 773 | 0,90 | 0,04 | Goud 0,94 · Toetsweek 0,64 · Starter 0,76 · Elite 0,22 |
+| Sterk 8,0 · 3 cijfers/week | 1296 | 2,19 | 0,16 | Toetsweek 1,27 · Goud 0,67 · Elite 0,76 · Starter 0,13 |
+| Moeite 5,6 · 3 cijfers/week | 335 | 0,13 | 0,00 | Starter 0,99 · Goud 0,52 · Toetsweek 0,12 · Elite 0,01 |
+| Toetsweek 7,0 · 8 cijfers/week | 2284 | 2,85 | 0,17 | Elite 0,76 · Toetsweek 1,92 · Goud 2,57 · Starter 1,77 |
+
+**Bevinding:** een leerling die moeite heeft, verdient ongeveer 17× minder draft-vouchers dan een sterke leerling (0,13 tegen 2,19 per week) en vrijwel nooit een Elitepack. Dat botst met het uitgangspunt "verbetering moet lonen" (onderzoek C7). De motivatie-engine compenseert dat alleen in XP, niet in kaarten.
+
+**Opties (besluit Martijn):**
+
+1. **Vooruitgang ook in kaarten belonen:** bij Vooruitgang-XP (gemiddelde +0,2, herstel) een Goudpack of een voucher toekennen, met een weekplafond.
+2. **Voucher bij herstel:** een voldoende na een onvoldoende (≥ +1,5) geeft altijd 1 draft-voucher.
+3. **Tiers vlakker maken:** bijvoorbeeld de voucher al vanaf 6,5, en het Elitepack alleen voor 8,5+ én verbetering.
+4. **Niets veranderen,** en de draft en toernooien normaliseren (ratingplafond of alleen draft), zodat collectieverschil minder telt.
+
+Advies: 1 en 2 combineren. Dat raakt het minst aan bestaande beloningen en sluit aan bij het onderzoek.
+
+## 8. Te controleren voordat de economie live gaat
+
+- Coin-inflatie op langere termijn: de belasting op de markt is nu de enige afvoer naast packs kopen.
+- De lokale API en de web-app moeten dezelfde XP-bron gebruiken.
+- Iedere configuratiewijziging opnieuw door `tools/sim/balans.ts` halen en `draft-odds.json` bijwerken.

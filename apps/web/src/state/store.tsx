@@ -82,6 +82,14 @@ function initialState(): GameState {
     ...pool((p) => p.rarity === 'legend' && p.id !== 'L01', 1),
     ...['S01', 'L01'].filter((id) => CARD_BY_ID.has(id)),
   ])];
+  // Iedere positie van de 4-4-2 minstens één keer (goud/zilver), zodat het demo-elftal klopt.
+  for (const pos of ['LB', 'RB', 'CB', 'CB', 'LM', 'RM', 'CM', 'CM', 'ST', 'ST'] as const) {
+    const have = collection.filter((id) => CARD_BY_ID.get(id)?.position === pos).length;
+    const need = pos === 'CB' || pos === 'CM' || pos === 'ST' ? 2 : 1;
+    if (have >= need) continue;
+    const extra = rng.shuffle(CATALOG.filter((p) => p.position === pos && (p.rarity === 'gold' || p.rarity === 'silver') && !collection.includes(p.id))).at(0);
+    if (extra) collection.push(extra.id);
+  }
   const owned = collection.map((id) => CARD_BY_ID.get(id)).filter((p): p is Player => !!p);
   const formation = FORMATIONS['4-4-2']!;
   const best = autoBestLineup(formation, owned);

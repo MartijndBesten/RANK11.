@@ -45,4 +45,9 @@ for (const [label, mean, sd, gpw] of [['Gemiddeld 6,8 · 3 cijfers/week', 6.8, 1
   out.push(`| ${label} | ${Math.round(e.perWeek.xp)} | ${Math.round(e.perWeek.coins)} | ${n(e.perWeek.vouchers, 2)} | ${n(e.perWeek.picks, 2)} | ${packs} | ${p(e.cappedShare)} |`);
 }
 out.push('', '_XP in deze tabel komt uit de oude beloningsconfiguratie; in de app komt XP uit de motivatie-engine (zie MOTIVATION-ENGINE.md). Coins, packs, vouchers en keuzes komen wel uit deze configuratie._');
+out.push('', '## Conclusies', '',
+  '1. **Draftkansen per kaart wijken af van de ingestelde kansen** zodra een groep op een positie weinig spelers heeft (vooral Groep D, 80-84). De engine loot daarom alleen tussen groepen met kandidaten, en de app toont naast de ingestelde kans ook de gemeten kans. Structurele oplossing: grotere catalogus of groepen per positie herijken.',
+  '2. **Garanties werken**: de langste reeks zonder Groep B of beter blijft onder de garantiegrens.',
+  '3. **Packkansen kloppen** met de getoonde kansentabel (verschillen binnen de meetruis).',
+  '4. **Economie is scheef**: een leerling die moeite heeft, krijgt per week veel minder vouchers en betere packs dan een sterke leerling. Vooruitgang wordt wel beloond met XP (motivatie-engine), maar nauwelijks met kaarten. Dit is een ontwerpbesluit voor Martijn (zie VRAGEN.md).');
 console.log(out.join('\n'));

@@ -39,3 +39,11 @@
 .chem-dots { display: flex; gap: 2px; }
 .chem-dots i { width: 6px; height: 6px; border-radius: 50%; background: rgba(255, 255, 255, 0.18); }
 .chem-dots i.on { background: var(--up); box-shadow: 0 0 6px var(--up); }
+/* Kleine telefoons: hoger veld en chemiebolletjes tegen de kaart, zodat keeper en verdedigers niet overlappen. */
+@media (max-width: 480px) {
+  .pitch { aspect-ratio: 100 / 150; }
+  .pitch .pc-wrap.size-xs { --w: clamp(42px, 14vw, 66px); }
+  .pitch-empty { width: clamp(42px, 14vw, 66px); }
+  .pitch-slot { gap: 0; }
+  .pitch-slot .chem-dots { margin-top: -2px; }
+}

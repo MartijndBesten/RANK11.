@@ -60,3 +60,7 @@
 .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
 .coll-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 10px; justify-items: center; }
 .coll-grid .pc-wrap.size-sm { --w: 84px; }
+/* Kleine telefoons: kaarten iets kleiner zodat keeper en verdedigers niet overlappen (veld is daar ook hoger). */
+@media (max-width: 480px) {
+  .squad-pitch-col .pitch .pc-wrap.size-sm { --w: clamp(42px, 13.6vw, 66px); }
+}

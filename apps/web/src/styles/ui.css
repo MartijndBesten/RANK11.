@@ -198,3 +198,4 @@ button.row:hover .row-title { color: #fff; }
   .nav button { font-size: 10.5px; letter-spacing: 0.04em; }
   .nav button svg { width: 22px; height: 22px; }
 }
+.shell.immersive .subnav { display: none; }

@@ -11,7 +11,7 @@ import {
   academyReward, applyGradeEvents, autoBestLineup, categoryTotals, checkNewGrade, clubLevel, compareAverages, computeReward,
   correctionXp, createDraft, createRng, DEFAULT_MOTIVATION_CONFIG, DEFAULT_REWARD_CONFIG, deletionXp, DRAFT_EVENTS, FORMATIONS,
   generateCatalog, gradeKey, gradeXp, openPack, PACKS, resolvePlayer, subjectAverages, validateEvent, weightedAverage,
-  type AcademyDecision, type AccountLink, type DraftSession, type Goal, type Grade, type GradeEvent, type LearningEvent,
+  type AcademyDecision, type AccountLink, type BattleEvent, type DraftSession, type LeagueResult, type Goal, type Grade, type GradeEvent, type LearningEvent,
   type PackResult, type Player, type PityState, type RewardResult, type Scenario, type UpcomingTest, type XpEntry,
 } from '@rank11/engine';
 import type { CrestData } from '../components/Crest';
@@ -54,6 +54,8 @@ export interface GameState {
   upcoming: UpcomingTest[];
   scenarios: Scenario[];
   academy: { links: AccountLink[]; events: LearningEvent[]; decisions: { eventId: string; status: AcademyDecision['status']; xp: number; reason: string }[]; wrong: string[] };
+  /** Lokale demo-competitie: eigen uitslagen en lopende/afgeronde battles (eventlogs). */
+  competition: { results: LeagueResult[]; battles: Record<string, BattleEvent[]> };
   /** Kluisbeloningen waarvoor de melding al getoond is (precies één keer per cijfer). */
   notified: string[];
   settings: { sound: boolean; reducedMotion: boolean; academy: boolean; notify: NotifySettings };
@@ -125,6 +127,7 @@ function initialState(): GameState {
     upcoming: demoUpcoming(today()),
     scenarios: [],
     academy: { links: [{ providerId: DEMO_PROVIDER, externalUserId: 'leerling-1', playerId: ME, linkedAt: '2026-10-01T12:00:00Z' }], events: [], decisions: [], wrong: [] },
+    competition: { results: [], battles: {} },
     notified: [],
     settings: { sound: true, reducedMotion: false, academy: true, notify: { rewards: true, goals: true, competition: true, quietFrom: '21:30', quietTo: '07:30' } },
   };
@@ -136,7 +139,7 @@ function load(): GameState {
     if (raw) {
       const parsed = JSON.parse(raw) as GameState;
       // Alleen bewaarde kaarten die nog in de catalogus bestaan (catalogus kan krimpen tot spelers met portret).
-      if (parsed.version === 3) return { ...parsed, collection: parsed.collection.filter((id) => CARD_BY_ID.has(id)) };
+      if (parsed.version === 3) return { ...parsed, competition: parsed.competition ?? { results: [], battles: {} }, collection: parsed.collection.filter((id) => CARD_BY_ID.has(id)) };
     }
   } catch {
     /* privémodus of geblokkeerde opslag: gewoon met demo-data starten */
@@ -199,6 +202,7 @@ interface Store {
   removeScenario: (id: string) => void;
   submitLearningEvent: (event: LearningEvent) => AcademyDecision;
   recordWrongAnswers: (wrong: string[], fixed: string[]) => void;
+  saveBattle: (matchId: string, events: BattleEvent[], result?: LeagueResult) => void;
   setLineup: (formationId: string, lineup: Record<string, string>) => void;
   quickSell: (cardIds: string[]) => number;
   setSetting: (key: 'sound' | 'reducedMotion' | 'academy', value: boolean) => void;
@@ -399,6 +403,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     update((s) => ({ ...s, academy: { ...s.academy, wrong: [...new Set([...s.academy.wrong.filter((id) => !fixed.includes(id)), ...wrong])] } }));
   }, [update]);
 
+  const saveBattle = useCallback((matchId: string, events: BattleEvent[], result?: LeagueResult) => {
+    update((s) => ({
+      ...s,
+      competition: {
+        battles: { ...s.competition.battles, [matchId]: events },
+        results: result && !s.competition.results.some((r) => r.id === result.id) ? [...s.competition.results, result] : s.competition.results,
+      },
+    }));
+  }, [update]);
+
   const setLineup = useCallback((formationId: string, lineup: Record<string, string>) => {
     update((s) => ({ ...s, formationId, lineup }));
   }, [update]);
@@ -443,10 +457,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     () => ({
       state, owned, grades: book.grades, pending, history: book.history, xp, openPackFromInventory, buyPack, startDraft,
       addGrade, correctGrade, deleteGrade, revealGrade, claimPick, addGoal, removeGoal, addUpcoming, removeUpcoming,
-      saveScenario, removeScenario, submitLearningEvent, recordWrongAnswers, setLineup, quickSell, setSetting, setNotify, markNotified, reset,
+      saveScenario, removeScenario, submitLearningEvent, recordWrongAnswers, saveBattle, setLineup, quickSell, setSetting, setNotify, markNotified, reset,
     }),
     [state, owned, book, pending, xp, openPackFromInventory, buyPack, startDraft, addGrade, correctGrade, deleteGrade, revealGrade, claimPick,
-      addGoal, removeGoal, addUpcoming, removeUpcoming, saveScenario, removeScenario, submitLearningEvent, recordWrongAnswers, setLineup,
+      addGoal, removeGoal, addUpcoming, removeUpcoming, saveScenario, removeScenario, submitLearningEvent, recordWrongAnswers, saveBattle, setLineup,
       quickSell, setSetting, setNotify, markNotified, reset],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

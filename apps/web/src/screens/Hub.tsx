@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { chemistry, DRAFT_EVENTS, FORMATIONS, PACKS, pityRemaining, teamRating, type Lineup } from '@rank11/engine';
 import type { Nav } from '../App';
 import { CARD_BY_ID, useStore } from '../state/store';
@@ -28,6 +28,7 @@ export function Hub({ nav }: { nav: Nav }) {
   const featured = event.featured.map((id) => CARD_BY_ID.get(id)!).filter(Boolean);
   const packEntries = Object.entries(state.packs).filter(([, n]) => n > 0);
   const pending = state.pending.length;
+  const [confirmReset, setConfirmReset] = useState(false);
 
   return (
     <div className="hub">
@@ -56,7 +57,7 @@ export function Hub({ nav }: { nav: Nav }) {
           <h2 className="display">{event.name}</h2>
           <div className="hub-event-meta">
             <span><IconClock width={16} height={16} /> <Countdown to={DRAFT_END} /></span>
-            <span>Groep B+ gegarandeerd over&nbsp;<b className="num" style={{ whiteSpace: 'nowrap' }}>{pity.B} drafts</b></span>
+            <span>Groep B+ binnen <b className="num" style={{ whiteSpace: 'nowrap' }}>{pity.B} drafts</b></span>
           </div>
         </div>
       </section>
@@ -94,9 +95,15 @@ export function Hub({ nav }: { nav: Nav }) {
 
       <footer className="hub-foot">
         <span className="proto-tag">Prototype · demo-data, alleen op dit toestel</span>
-        <button className="link-btn" onClick={() => { if (confirm('Demo opnieuw beginnen? Je lokale voortgang wordt gewist.')) reset(); }}>
-          Demo opnieuw beginnen
-        </button>
+        {confirmReset ? (
+          <span className="confirm-inline" role="group" aria-label="Demo opnieuw beginnen bevestigen">
+            <span className="dim small">Je lokale voortgang wordt gewist.</span>
+            <button className="btn ghost small" onClick={() => { reset(); setConfirmReset(false); }}>Opnieuw beginnen</button>
+            <button className="link-btn" onClick={() => setConfirmReset(false)}>Annuleren</button>
+          </span>
+        ) : (
+          <button className="link-btn" onClick={() => setConfirmReset(true)}>Demo opnieuw beginnen</button>
+        )}
       </footer>
     </div>
   );

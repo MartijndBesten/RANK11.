@@ -123,6 +123,7 @@ function DraftPicking({ session, setSession, onExit }: { session: DraftSession; 
   const slot = nextOpenSlot(session);
   const [selected, setSelected] = useState<string | null>(null);
   const [flipped, setFlipped] = useState(0);
+  const [leaving, setLeaving] = useState(false);
   const rating = teamRating(formation, lineup);
   const chem = chemistry(formation, lineup);
   const picked = session.slots.filter((s) => s.pickedId).length;
@@ -156,7 +157,14 @@ function DraftPicking({ session, setSession, onExit }: { session: DraftSession; 
   return (
     <div className="draft-pick">
       <header className="dp-head">
-        <button className="link-btn" onClick={() => { if (confirm('Draft verlaten? Je voucher is al gebruikt.')) onExit(); }}>Verlaten</button>
+        {leaving ? (
+          <span className="confirm-inline">
+            <button className="btn ghost small" onClick={onExit}>Verlaten</button>
+            <button className="link-btn" onClick={() => setLeaving(false)}>Blijven</button>
+          </span>
+        ) : (
+          <button className="link-btn" onClick={() => setLeaving(true)} title="Je voucher is al gebruikt">Verlaten</button>
+        )}
         <div className="dp-step">
           <div className="eyebrow">Positie {picked + 1} van 11</div>
           <h2 className="display">Kies je {POSITION_NAME[slot.position].toLowerCase()}</h2>

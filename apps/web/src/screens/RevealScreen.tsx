@@ -390,7 +390,7 @@ function RewardPanel({ outcome, reduced, onClose, onOpenPack, onPick }: {
       {r.status === 'support' && (
         <div className="panel rv-challenge">
           <div className="eyebrow">Herstelchallenge</div>
-          <p>Haal bij je volgende toets {subject.name.toLowerCase()} een <b>6,0 of hoger</b> en verdien een <b>Goudpack</b>.</p>
+          <p>Haal bij je volgende toets {subject.name} een <b>6,0 of hoger</b> en verdien een <b>Goudpack</b>.</p>
         </div>
       )}
 

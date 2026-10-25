@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import iconUrl from './assets/icon.svg';
 import { useStore, levelFor } from './state/store';
 import { Crest } from './components/Crest';
 import {
@@ -107,7 +108,7 @@ export function App() {
         </main>
 
         <nav className="nav" aria-label="Hoofdmenu">
-          <div className="brand"><img src="./icon.svg" alt="RANK11." width={44} height={44} /></div>
+          <div className="brand"><img src={iconUrl} alt="RANK11." width={44} height={44} /></div>
           {NAV.map(({ id, label, Icon }) => (
             <button key={id} onClick={() => go(id)} aria-current={screen === id ? 'page' : undefined}>
               <Icon />

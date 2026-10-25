@@ -1,0 +1,36 @@
+{
+ "eventId": "toetsweek1",
+ "drafts": 10000,
+ "catalogSize": 245,
+ "photosOnly": false,
+ "groups": {
+  "A": {
+   "observed": 0.0004127272727272727,
+   "draftWithOrBetter": 0.0227
+  },
+  "B": {
+   "observed": 0.004509090909090909,
+   "draftWithOrBetter": 0.2417
+  },
+  "C": {
+   "observed": 0.12191272727272727,
+   "draftWithOrBetter": 0.9995
+  },
+  "D": {
+   "observed": 0.26057636363636366,
+   "draftWithOrBetter": 1
+  },
+  "E": {
+   "observed": 0.6125890909090909,
+   "draftWithOrBetter": 1
+  }
+ },
+ "rating": {
+  "mean": 88.3879,
+  "p10": 86,
+  "p50": 88,
+  "p90": 91,
+  "min": 82,
+  "max": 94
+ }
+}

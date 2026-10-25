@@ -4,6 +4,10 @@ import {
   pityRemaining, POSITION_NAME, teamRating, type DraftSession, type Player,
 } from '@rank11/engine';
 import type { Nav } from '../App';
+import MEASURED_RAW from '../data/draft-odds.json';
+
+const MEASURED = MEASURED_RAW as { eventId: string; drafts: number; groups: Record<string, { observed: number; draftWithOrBetter: number }> };
+const pctLabel = (x: number) => `${(x * 100).toFixed(x < 0.01 ? 2 : 1).replace('.', ',')}%`;
 import { CARD_BY_ID, useStore } from '../state/store';
 import { PlayerCard } from '../components/PlayerCard';
 import { Pitch } from '../components/Pitch';
@@ -96,12 +100,14 @@ export function DraftScreen({ nav }: { nav: Nav }) {
       {odds && (
         <Sheet title="Kansen · Ultimate Draft" onClose={() => setOdds(false)}>
           <table className="odds">
-            <thead><tr><th>Groep</th><th className="n">Per aangeboden kaart</th></tr></thead>
+            <thead><tr><th>Groep</th><th className="n">Per kaart</th><th className="n">Gemeten</th><th className="n">In een draft</th></tr></thead>
             <tbody>
               {draftOdds(event).map((o) => (
                 <tr key={o.groupId}>
                   <td>{event.groups.find((g) => g.id === o.groupId)?.label}</td>
-                  <td className="n">{o.chance < 0.001 ? `${(o.chance * 100).toFixed(2).replace('.', ',')}%` : `${(o.chance * 100).toFixed(1).replace('.', ',')}%`}</td>
+                  <td className="n">{pctLabel(o.chance)}</td>
+                  <td className="n">{MEASURED.eventId === event.id ? pctLabel(MEASURED.groups[o.groupId]?.observed ?? 0) : '–'}</td>
+                  <td className="n">{MEASURED.eventId === event.id ? pctLabel(MEASURED.groups[o.groupId]?.draftWithOrBetter ?? 0) : '–'}</td>
                 </tr>
               ))}
             </tbody>
@@ -109,6 +115,10 @@ export function DraftScreen({ nav }: { nav: Nav }) {
           <p className="odds-note">
             Per draft zie je 55 kaarten (11 posities × 5). Garantie: uiterlijk bij de {event.pity.find((p) => p.groupId === 'B')?.every}e draft minstens één kaart uit Groep B of hoger,
             bij de {event.pity.find((p) => p.groupId === 'A')?.every}e uit Groep A. De teller gaat terug naar nul zodra je zo'n kaart te zien krijgt.
+          </p>
+          <p className="odds-note">
+            <b>Per kaart</b> is de ingestelde kans. <b>Gemeten</b> is het werkelijke aandeel in {MEASURED.drafts.toLocaleString('nl-NL')} gesimuleerde drafts:
+            het wijkt af omdat er per positie maar een beperkt aantal spelers per groep is en garanties meetellen. <b>In een draft</b> = kans dat je in één draft minstens één kaart uit die groep of beter ziet.
           </p>
         </Sheet>
       )}

@@ -54,7 +54,7 @@ export const DRAFT_EVENTS: Record<string, DraftEventDef> = {
       { id: 'B', label: 'Groep B · Legends & Electric 90+', rank: 1, weight: 0.35, minRating: 90, rarities: ['legend', 'special', 'exam', 'season'] },
       { id: 'C', label: 'Groep C · 85+', rank: 2, weight: 10, minRating: 85 },
       { id: 'D', label: 'Groep D · 80-84', rank: 3, weight: 40, minRating: 80, maxRating: 84 },
-      { id: 'E', label: 'Groep E · 70-79', rank: 4, weight: 49.62, minRating: 70, maxRating: 79 },
+      { id: 'E', label: 'Groep E · 60-79', rank: 4, weight: 49.62, minRating: 60, maxRating: 79 },
     ],
     pity: [
       { groupId: 'B', every: 10 },
@@ -156,7 +156,10 @@ export function createDraft(
   const slots: DraftSlot[] = formation.slots.map((slot) => {
     const offers: Player[] = [];
     for (let i = 0; i < event.offersPerSlot; i++) {
-      const group = rng.weighted(event.groups, (g) => g.weight);
+      // Alleen loten tussen groepen die op deze positie nog een kandidaat hebben (gewichten herschaald),
+      // zodat de verhouding tussen groepen behouden blijft; terugval is dan alleen nodig als alles op is.
+      const open = event.groups.filter((g) => candidates(index, g, slot.position, used, true).length > 0);
+      const group = rng.weighted(open.length ? open : event.groups, (g) => g.weight);
       const pool = poolWithFallback(index, groupsByRank, group, slot.position, used);
       if (!pool.length) throw new DraftError(`Te weinig spelers voor positie ${slot.position}.`);
       const pick = rng.pick(pool);

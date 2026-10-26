@@ -53,9 +53,18 @@ class_name = "MatchDO"
 # ---------------------------------------------------------------------------------------------
 [env.test]
 name = "rank11-api-test"
+workers_dev = true
+
+[env.test.assets]
+directory = "../web/dist"
+binding = "ASSETS"
+run_worker_first = true
+not_found_handling = "single-page-application"
 
 [env.test.vars]
-INTEGRATION_KEY = "test-integratie-sleutel"
+PILOT_MODE = "true"
+REGISTRATION_ENABLED = "false"
+# INTEGRATION_KEY, PILOT_ACCESS_USER en PILOT_ACCESS_PASSWORD via wrangler secret put.
 ENVIRONMENT = "test"
 FEATURE_MARKET = "false" # V-015: transfermarkt uit
 FEATURE_ACADEMY = "true"

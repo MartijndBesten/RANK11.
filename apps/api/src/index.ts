@@ -4,6 +4,7 @@
  */
 import { adminCreatePlatformInvite, authenticate, login, logout, me, register } from './auth.ts';
 import type { Env } from './env.ts';
+import { servePilot } from './pilot.ts';
 import { ApiError, errorResponse, finalize, preflight, Router, type Ctx } from './http.ts';
 import { idempotent } from './idempotency.ts';
 import { getClub, putClub } from './modules/clubs.ts';
@@ -144,6 +145,6 @@ export async function scheduled(_event: ScheduledController, env: Env, ctx: Exec
 }
 
 export default {
-  fetch: (request: Request, env: Env): Promise<Response> => handle(request, env),
+  fetch: (request: Request, env: Env): Promise<Response> => servePilot(request, env, handle),
   scheduled,
 };

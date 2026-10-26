@@ -65,6 +65,9 @@ async function findUsableInvite(env: Env, code: string, now: number): Promise<In
 }
 
 export async function register(ctx: Ctx): Promise<Response> {
+  if (ctx.env.REGISTRATION_ENABLED === 'false') {
+    throw new ApiError(403, 'registration_closed', 'Registratie is gesloten.');
+  }
   const body = await readJson(ctx.req);
   const { username, password } = validateCredentials(body);
   const inviteCode = typeof body.inviteCode === 'string' ? body.inviteCode : '';

@@ -171,8 +171,6 @@ export interface GradeOrigin {
   /** Verificatie: 'self' = zelf ingevoerd/geïmporteerd (niet geverifieerd), 'confirmed' = uit een geautoriseerde bron. */
   status: 'self' | 'confirmed';
   externalRef?: string | null;
-  /** Ook als dubbel behandelen bij een bestaand actief cijfer met zelfde vak + waarde + datum (voor import/sync). */
-  dedupeBySubjectValueDate?: boolean;
 }
 
 type InsertResult =
@@ -181,8 +179,10 @@ type InsertResult =
 
 /**
  * Voegt één cijfer toe via precies dezelfde beloning-, XP- en voortgangsregels als handmatige invoer.
- * Idempotent: dezelfde toets (dedupe_key) of — bij import/sync — hetzelfde vak+waarde+datum levert nooit een
- * tweede cijfer en dus nooit dubbele XP, coins, packs of vouchers op. Gebruikt door handmatig invoeren,
+ * Idempotent op de toets-identiteit: dezelfde toets (vak + toetsnaam + datum) of — bij een bron — dezelfde
+ * externe sleutel levert nooit een tweede cijfer en dus nooit dubbele XP, coins, packs of vouchers op.
+ * Twee verschillende toetsen met toevallig hetzelfde cijfer op dezelfde datum blijven allebei behouden
+ * (ze hebben een verschillende toetsnaam, dus een verschillende sleutel). Gebruikt door handmatig invoeren,
  * bestandsimport en de synchronisatie van koppelingen.
  */
 export async function insertGrade(ctx: Ctx, userId: string, input: GradeInput, origin: GradeOrigin): Promise<InsertResult> {
@@ -191,12 +191,6 @@ export async function insertGrade(ctx: Ctx, userId: string, input: GradeInput, o
   const key = gradeKey({ ...input, source: origin.source, externalRef: externalRef ?? undefined });
   const dupe = await one<{ id: string }>(db, 'SELECT id FROM grades WHERE user_id = ? AND dedupe_key = ? AND deleted_at IS NULL', userId, key);
   if (dupe) return { outcome: 'duplicate', gradeId: dupe.id };
-  if (origin.dedupeBySubjectValueDate) {
-    const same = await one<{ id: string }>(db,
-      'SELECT id FROM grades WHERE user_id = ? AND subject_id = ? AND value = ? AND date = ? AND deleted_at IS NULL',
-      userId, input.subjectId, input.value, input.date);
-    if (same) return { outcome: 'duplicate', gradeId: same.id };
-  }
 
   const id = newId('grd');
   const row: GradeRow = {
@@ -281,7 +275,7 @@ export async function importGrades(ctx: Ctx): Promise<Response> {
       results.push({ status: 'invalid', reason: err instanceof ApiError ? err.message : 'Ongeldige rij.', testName: (raw as { testName?: string })?.testName ?? null });
       continue;
     }
-    const res = await insertGrade(ctx, user.id, input, { source: 'import', status: 'self', dedupeBySubjectValueDate: true });
+    const res = await insertGrade(ctx, user.id, input, { source: 'import', status: 'self' });
     if (res.outcome === 'duplicate') {
       duplicate++;
       results.push({ status: 'duplicate', gradeId: res.gradeId, testName: input.testName });

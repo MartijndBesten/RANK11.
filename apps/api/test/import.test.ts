@@ -33,15 +33,29 @@ describe('cijferimport op de server', () => {
     expect(xpTotal(app, u)).toBe(xp1);
   });
 
-  it('een al handmatig ingevoerd cijfer (zelfde vak, waarde, datum) geldt bij import als dubbel', async () => {
+  it('dedup op toets-identiteit: zelfde toets = dubbel, een andere toets met hetzelfde cijfer/datum blijft behouden (P1)', async () => {
     const app = createApp();
     const u = await register(app, 'Mix', await platformCode(app));
+    // Handmatig 'Proefwerk' 6,8 op 13-10.
     await app.api('POST', '/api/grades', { token: u.token, idem: idem(), body: { subjectId: 'wiskunde', testName: 'Proefwerk', value: 6.8, weight: 1, date: '2026-10-13' } });
-    const rewards1 = rewardCount(app, u);
-    const res = await importRows(app, u, [row()]); // andere toetsnaam, zelfde vak/waarde/datum
-    expect(res.body).toMatchObject({ created: 0, duplicate: 1 });
-    expect(allGrades(app, u)).toHaveLength(1);
-    expect(rewardCount(app, u)).toBe(rewards1);
+    // Dezelfde toets opnieuw importeren (zelfde naam+datum) = dubbel.
+    const same = await importRows(app, u, [{ subjectId: 'wiskunde', testName: 'Proefwerk', value: 6.8, weight: 1, date: '2026-10-13' }]);
+    expect(same.body).toMatchObject({ created: 0, duplicate: 1 });
+    // Een ÁNDERE toets met toevallig hetzelfde cijfer op dezelfde datum blijft behouden (mag niet verdwijnen).
+    const other = await importRows(app, u, [{ subjectId: 'wiskunde', testName: 'SO deel 2', value: 6.8, weight: 1, date: '2026-10-13' }]);
+    expect(other.body).toMatchObject({ created: 1, duplicate: 0 });
+    expect(allGrades(app, u)).toHaveLength(2);
+  });
+
+  it('twee verschillende toetsen met hetzelfde cijfer op dezelfde datum in één import blijven allebei behouden (P1)', async () => {
+    const app = createApp();
+    const u = await register(app, 'Twee', await platformCode(app));
+    const res = await importRows(app, u, [
+      { subjectId: 'wiskunde', testName: 'SO deel 1', value: 7.0, weight: 1, date: '2026-10-13' },
+      { subjectId: 'wiskunde', testName: 'SO deel 2', value: 7.0, weight: 1, date: '2026-10-13' },
+    ]);
+    expect(res.body).toMatchObject({ created: 2, duplicate: 0, invalid: 0 });
+    expect(allGrades(app, u)).toHaveLength(2);
   });
 
   it('ongeldige rijen worden geweigerd zonder de geldige te blokkeren', async () => {

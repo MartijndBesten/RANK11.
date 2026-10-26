@@ -9,7 +9,7 @@ import { idempotent } from './idempotency.ts';
 import { getClub, putClub } from './modules/clubs.ts';
 import { buyPack, claimStarter, getCollection, getLineup, getWallet, listPacks, openPackGrant, putLineup, sellCards } from './modules/collection.ts';
 import { createCompetition, getCompetition, listCompetitions, poolGradeLeague, poolStandings } from './modules/competitions.ts';
-import { correctGrade, createGrade, deleteGrade, gradeHistory, listGrades, listXp } from './modules/grades.ts';
+import { correctGrade, createGrade, deleteGrade, gradeHistory, importGrades, listGrades, listXp } from './modules/grades.ts';
 import { accept, challenge, decline, getMatch, getMatchEvents, listPoolMatches, matchSocket, move, resignMatch } from './modules/matches.ts';
 import { academyOverview, createSession, submitSession } from './modules/academy.ts';
 import { getConfig } from './modules/config.ts';
@@ -65,6 +65,7 @@ export const router = new Router()
   // cijfers
   .add('GET', '/api/grades', listGrades)
   .add('POST', '/api/grades', idempotent(createGrade, req))
+  .add('POST', '/api/grades/import', idempotent(importGrades, req))
   .add('PUT', '/api/grades/:gradeId', idempotent(correctGrade, req))
   .add('DELETE', '/api/grades/:gradeId', idempotent(deleteGrade, req))
   .add('GET', '/api/grades/:gradeId/history', gradeHistory)

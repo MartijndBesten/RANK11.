@@ -8,7 +8,7 @@
  */
 
 export type GradeStatus = 'registered' | 'verified' | 'simulated';
-export type GradeSource = 'manual' | 'confirmed' | 'magister';
+export type GradeSource = 'manual' | 'import' | 'confirmed' | 'magister';
 
 export interface Grade {
   id: string;

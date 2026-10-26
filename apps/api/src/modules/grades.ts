@@ -15,7 +15,7 @@ import {
   GradeValidationError, gradeXp, overallAverage, sortedTiers, subjectAverages, validateGrade, weightedAverage,
   type Grade, type MotivationConfig, type RewardConfig, type RewardResult, type XpEntry,
 } from '../engine.ts';
-import { badRequest, conflict, json, notFound, readJson, type Ctx } from '../http.ts';
+import { ApiError, badRequest, conflict, json, notFound, readJson, type Ctx } from '../http.ts';
 
 /** V-011: eerlijkere beloningsconfiguratie (voucher vanaf 8,5; vooruitgang via progressRewards). */
 export const REWARD_CONFIG: RewardConfig = CURRENT_REWARD_CONFIG;
@@ -164,27 +164,52 @@ function rewardView(result: RewardResult, grantId: string | null) {
   };
 }
 
-export async function createGrade(ctx: Ctx): Promise<Response> {
-  const user = requireUser(ctx);
+/** Herkomst (source) en verificatie (status) van een cijfer dat we toevoegen. */
+export interface GradeOrigin {
+  /** Waar het cijfer vandaan komt. */
+  source: 'manual' | 'import' | 'magister';
+  /** Verificatie: 'self' = zelf ingevoerd/geïmporteerd (niet geverifieerd), 'confirmed' = uit een geautoriseerde bron. */
+  status: 'self' | 'confirmed';
+  externalRef?: string | null;
+  /** Ook als dubbel behandelen bij een bestaand actief cijfer met zelfde vak + waarde + datum (voor import/sync). */
+  dedupeBySubjectValueDate?: boolean;
+}
+
+type InsertResult =
+  | { outcome: 'created'; row: GradeRow; rewarded: RewardResult & { pickOptions?: string[] }; grantId: string | null; xpEntries: XpEntry[]; progress: Awaited<ReturnType<typeof progressStatements>> }
+  | { outcome: 'duplicate'; gradeId: string };
+
+/**
+ * Voegt één cijfer toe via precies dezelfde beloning-, XP- en voortgangsregels als handmatige invoer.
+ * Idempotent: dezelfde toets (dedupe_key) of — bij import/sync — hetzelfde vak+waarde+datum levert nooit een
+ * tweede cijfer en dus nooit dubbele XP, coins, packs of vouchers op. Gebruikt door handmatig invoeren,
+ * bestandsimport en de synchronisatie van koppelingen.
+ */
+export async function insertGrade(ctx: Ctx, userId: string, input: GradeInput, origin: GradeOrigin): Promise<InsertResult> {
   const db = ctx.env.DB;
-  const input = parseInput(await readJson(ctx.req));
-  validate(input, ctx.now);
-  const key = gradeKey({ ...input, source: 'manual' });
-  const dupe = await one<{ id: string }>(db, 'SELECT id FROM grades WHERE user_id = ? AND dedupe_key = ? AND deleted_at IS NULL', user.id, key);
-  if (dupe) throw conflict('duplicate_grade', 'Dit cijfer staat er al. Pas het bestaande cijfer aan als het niet klopt.', { gradeId: dupe.id });
+  const externalRef = origin.externalRef ?? input.externalRef ?? null;
+  const key = gradeKey({ ...input, source: origin.source, externalRef: externalRef ?? undefined });
+  const dupe = await one<{ id: string }>(db, 'SELECT id FROM grades WHERE user_id = ? AND dedupe_key = ? AND deleted_at IS NULL', userId, key);
+  if (dupe) return { outcome: 'duplicate', gradeId: dupe.id };
+  if (origin.dedupeBySubjectValueDate) {
+    const same = await one<{ id: string }>(db,
+      'SELECT id FROM grades WHERE user_id = ? AND subject_id = ? AND value = ? AND date = ? AND deleted_at IS NULL',
+      userId, input.subjectId, input.value, input.date);
+    if (same) return { outcome: 'duplicate', gradeId: same.id };
+  }
 
   const id = newId('grd');
   const row: GradeRow = {
     id, subject_id: input.subjectId, test_name: input.testName, value: input.value, weight: input.weight, date: input.date,
-    status: 'self', source: 'manual', external_ref: input.externalRef ?? null, dedupe_key: key, created_at: ctx.now, updated_at: ctx.now,
+    status: origin.status, source: origin.source, external_ref: externalRef, dedupe_key: key, created_at: ctx.now, updated_at: ctx.now,
   };
-  const existing = await activeGrades(db, user.id);
+  const existing = await activeGrades(db, userId);
   const subject = existing.filter((g) => g.subject_id === input.subjectId).map(toEngine);
   const counts = await one<{ today: number; week: number }>(db,
     `SELECT SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) AS today, COUNT(*) AS week
      FROM reward_grants WHERE user_id = ? AND kind = 'initial' AND status IN ('rewarded', 'support') AND created_at >= ?`,
-    startOfUtcDay(ctx.now), user.id, startOfUtcWeek(ctx.now));
-  const previous = await effectivePrevious(db, user.id, key, null);
+    startOfUtcDay(ctx.now), userId, startOfUtcWeek(ctx.now));
+  const previous = await effectivePrevious(db, userId, key, null);
   const result = computeReward(REWARD_CONFIG, {
     grade: toEngine(row),
     subjectAvgBefore: weightedAverage(subject),
@@ -193,42 +218,79 @@ export async function createGrade(ctx: Ctx): Promise<Response> {
     rewardedThisWeek: Number(counts?.week ?? 0),
     previous,
   });
-  // XP via de motivatie-engine: zelfde regels, plafonds en sleutels als in de web-app. Doelen kent de API nog niet.
-  const goals = await activeGoals(db, user.id);
-  const ledgerBefore = await loadXpLedger(db, user.id);
+  const goals = await activeGoals(db, userId);
+  const ledgerBefore = await loadXpLedger(db, userId);
   const xpEntries = gradeXp(MOTIVATION_CONFIG, {
     grade: toEngine(row), before: existing.map(toEngine), goals, ledger: ledgerBefore, enteredOn: isoDay(ctx.now),
   });
-  const progress = await progressStatements(db, user.id, {
+  const progress = await progressStatements(db, userId, {
     grades: [...existing.map(toEngine), toEngine(row)], goals, ledger: [...ledgerBefore, ...xpEntries], today: isoDay(ctx.now),
   }, { kind: 'grade', id }, ctx.now);
   const rewarded: RewardResult & { pickOptions?: string[] } = { ...result, xp: xpEntries.reduce((sum, e) => sum + e.xp, 0) };
-  // Spelerskeuze (Legendarisch): de server trekt de opties nu, zodat ze vastliggen en niet te herrollen zijn.
   if (rewarded.pick) {
     const pool = getCatalog().filter((p) => !p.temporary && p.rating >= rewarded.pick!.minRating);
     rewarded.pickOptions = createRng(randomSeed()).shuffle(pool).slice(0, rewarded.pick.options).map((p) => p.id);
   }
-  const reward = rewardStatements(db, user.id, id, rewarded, previous, ctx.now);
-  // Doel bereikt: het doelpack komt als losse packtoekenning (uniek per doel).
+  const reward = rewardStatements(db, userId, id, rewarded, previous, ctx.now);
   const goalPacks = xpEntries.filter((e) => e.packId && e.source.kind === 'goal').map((e) =>
     stmt(db, `INSERT OR IGNORE INTO pack_grants (id, user_id, pack_id, source, source_ref, created_at) VALUES (?, ?, ?, 'reward', ?, ?)`,
-      newId('pg'), user.id, e.packId, `goal:${e.source.id}`, ctx.now));
+      newId('pg'), userId, e.packId, `goal:${e.source.id}`, ctx.now));
   try {
     await db.batch([
       stmt(db, `INSERT INTO grades (${GRADE_COLUMNS}, user_id, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
-        row.id, row.subject_id, row.test_name, row.value, row.weight, row.date, row.status, row.source, row.external_ref, row.dedupe_key, row.created_at, row.updated_at, user.id),
+        row.id, row.subject_id, row.test_name, row.value, row.weight, row.date, row.status, row.source, row.external_ref, row.dedupe_key, row.created_at, row.updated_at, userId),
       stmt(db, 'INSERT INTO grade_history (id, grade_id, user_id, action, before_json, after_json, at) VALUES (?, ?, ?, ?, NULL, ?, ?)',
-        newId('gh'), id, user.id, 'create', JSON.stringify(view(row)), ctx.now),
+        newId('gh'), id, userId, 'create', JSON.stringify(view(row)), ctx.now),
       ...reward.statements,
-      ...xpStatements(db, user.id, xpEntries, ctx.now),
+      ...xpStatements(db, userId, xpEntries, ctx.now),
       ...goalPacks,
       ...progress.statements,
     ]);
   } catch (err) {
-    if (isConstraintError(err)) throw conflict('duplicate_grade', 'Dit cijfer staat er al.');
+    // Een gelijktijdige dubbele invoer (unieke index) telt als dubbel, niet als fout.
+    if (isConstraintError(err)) return { outcome: 'duplicate', gradeId: id };
     throw err;
   }
-  return json({ grade: view(row), reward: rewardView(rewarded, reward.grantId), xp: xpView(xpEntries), progress: progress.grants.map(progressView) }, 201);
+  return { outcome: 'created', row, rewarded, grantId: reward.grantId, xpEntries, progress };
+}
+
+export async function createGrade(ctx: Ctx): Promise<Response> {
+  const user = requireUser(ctx);
+  const input = parseInput(await readJson(ctx.req));
+  validate(input, ctx.now);
+  const res = await insertGrade(ctx, user.id, input, { source: 'manual', status: 'self' });
+  if (res.outcome === 'duplicate') throw conflict('duplicate_grade', 'Dit cijfer staat er al. Pas het bestaande cijfer aan als het niet klopt.', { gradeId: res.gradeId });
+  return json({ grade: view(res.row), reward: rewardView(res.rewarded, res.grantId), xp: xpView(res.xpEntries), progress: res.progress.grants.map(progressView) }, 201);
+}
+
+/** Meerdere cijfers tegelijk uit een bestandsimport. Per rij: aangemaakt, al aanwezig (dubbel) of ongeldig. */
+export async function importGrades(ctx: Ctx): Promise<Response> {
+  const user = requireUser(ctx);
+  const body = await readJson(ctx.req);
+  const rows = (body as { rows?: unknown }).rows;
+  if (!Array.isArray(rows) || rows.length === 0 || rows.length > 100) throw badRequest('Stuur 1 t/m 100 cijfers in "rows".');
+  const results: Array<Record<string, unknown>> = [];
+  let created = 0, duplicate = 0, invalid = 0;
+  for (const raw of rows) {
+    let input: GradeInput;
+    try {
+      input = parseInput(raw as Record<string, unknown>);
+      validate(input, ctx.now);
+    } catch (err) {
+      invalid++;
+      results.push({ status: 'invalid', reason: err instanceof ApiError ? err.message : 'Ongeldige rij.', testName: (raw as { testName?: string })?.testName ?? null });
+      continue;
+    }
+    const res = await insertGrade(ctx, user.id, input, { source: 'import', status: 'self', dedupeBySubjectValueDate: true });
+    if (res.outcome === 'duplicate') {
+      duplicate++;
+      results.push({ status: 'duplicate', gradeId: res.gradeId, testName: input.testName });
+    } else {
+      created++;
+      results.push({ status: 'created', grade: view(res.row), reward: rewardView(res.rewarded, res.grantId) });
+    }
+  }
+  return json({ created, duplicate, invalid, results }, 201);
 }
 
 async function ownedGrade(db: D1Database, userId: string, id: string): Promise<GradeRow> {

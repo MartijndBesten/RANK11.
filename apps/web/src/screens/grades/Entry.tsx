@@ -10,6 +10,8 @@ export function GradeEntry({ nav }: { nav: Nav }) {
   const { addGrade, grades, pending, history } = useStore();
   const [done, setDone] = useState<string | null>(null);
   const [formKey, setFormKey] = useState(0);
+  // Vak en weging onthouden, zodat een reeks cijfers snel achter elkaar in te voeren is.
+  const [sticky, setSticky] = useState<{ subjectId?: string; weight?: number }>({});
   const recent = [...grades]
     .map((g) => ({ g, at: history.get(g.id)?.[0]?.at ?? '' }))
     .sort((a, b) => b.at.localeCompare(a.at))
@@ -24,6 +26,7 @@ export function GradeEntry({ nav }: { nav: Nav }) {
           <h1 className="display">Cijfer invoeren</h1>
           <p className="dim small">Neem het cijfer over uit je schoolsysteem. Het telt direct mee; de beloning open je in de kluis.</p>
         </div>
+        <button className="btn ghost small" onClick={() => nav.go('cijfers-importeren')}>Meerdere importeren</button>
       </div>
       <div className="page-cols">
         <section className="panel gold">
@@ -34,11 +37,11 @@ export function GradeEntry({ nav }: { nav: Nav }) {
               <p>{subjectById(added.subjectId).name} · {added.testName} · <b className="num">{fmt(added.value)}</b></p>
               <div className="confirm-inline" style={{ justifyContent: 'center' }}>
                 <button className="btn" onClick={() => nav.go('cijfers-kluis')}><IconVault width={20} height={20} /> Open de kluis</button>
-                <button className="btn ghost small" onClick={() => { setDone(null); setFormKey((k) => k + 1); }}>Nog een invoeren</button>
+                <button className="btn ghost small" onClick={() => { if (added) setSticky({ subjectId: added.subjectId, weight: added.weight }); setDone(null); setFormKey((k) => k + 1); }}>Nog een invoeren</button>
               </div>
             </div>
           ) : (
-            <GradeForm key={formKey} submitLabel="Opslaan" onSubmit={async (input) => {
+            <GradeForm key={formKey} initial={sticky} submitLabel="Opslaan" onSubmit={async (input) => {
               const res = await addGrade(input);
               if (res.ok && res.id) setDone(res.id);
               return res;
@@ -64,6 +67,8 @@ export function GradeEntry({ nav }: { nav: Nav }) {
                   <div className="row-main">
                     <span className="row-title">{g.testName}</span>
                     <span className="row-sub">{shortDate(g.date)} · weging {String(g.weight).replace('.', ',')}</span>
+                    {g.source === 'import' && <span className="tag origin">uit bestand</span>}
+                    {g.source === 'magister' && <span className="tag origin">uit Magister</span>}
                     {pending.some((p) => p.grade.id === g.id) && <span className="tag wait">beloning wacht</span>}
                   </div>
                   <span className="row-grade num">{fmt(g.value)}</span>

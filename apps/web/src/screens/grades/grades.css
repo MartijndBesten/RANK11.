@@ -65,3 +65,13 @@
 .field .seg { display: flex; flex-wrap: nowrap; }
 .field .seg button { flex: 1; padding: 0 4px; min-width: 0; }
 .row-main .tag { justify-self: start; margin-top: 3px; }
+
+/* Cijferimport: controleoverzicht en resultaat. */
+.import-text { font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; font-size: 13px; line-height: 1.5; resize: vertical; min-height: 120px; width: 100%; }
+.import-rows { max-height: 46vh; overflow-y: auto; }
+.import-rows li[data-ok='false'] { color: var(--text-dim); }
+.import-rows .subj-dot.warn { background: rgba(255, 90, 106, 0.18); color: var(--down); font-weight: 800; }
+.import-tally { list-style: none; display: flex; gap: 18px; justify-content: center; padding: 8px 0 2px; margin: 0; }
+.import-tally li { display: grid; justify-items: center; font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .04em; }
+.import-tally b { font-size: 22px; color: var(--text); }
+.tag.origin { background: rgba(58, 168, 255, 0.14); color: var(--electric-hot); }

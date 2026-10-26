@@ -214,6 +214,7 @@ export interface RevealOutcome {
 }
 
 export interface GradeInput { subjectId: string; testName: string; value: number; weight: number; date: string }
+export interface ImportOutcome { created: number; duplicate: number; invalid: number }
 export type ActionResult = { ok: true; id?: string } | { ok: false; error: string; duplicateOf?: string };
 
 type MaybePromise<T> = T | Promise<T>;
@@ -238,6 +239,8 @@ export interface Store {
   /** Online: keuze in de draft vastleggen op de server (lokaal geen effect). */
   draftPick: (slotId: string, playerId: string) => MaybePromise<void>;
   addGrade: (input: GradeInput) => MaybePromise<ActionResult>;
+  /** Meerdere cijfers tegelijk uit een bestandsimport. Herkomst 'import'; dedup voorkomt dubbele beloningen. */
+  importGrades: (rows: GradeInput[]) => MaybePromise<ImportOutcome>;
   correctGrade: (gradeId: string, changes: Partial<GradeInput>, reason?: string) => MaybePromise<ActionResult>;
   deleteGrade: (gradeId: string, reason?: string) => MaybePromise<ActionResult>;
   revealGrade: (gradeId: string) => RevealOutcome | null;
@@ -371,6 +374,25 @@ export function StoreProvider({ children, onExit }: { children: ReactNode; onExi
     if (!check.ok) return { ok: false, error: check.error ?? 'Ongeldig cijfer.', duplicateOf: check.duplicateOf };
     update((s) => ({ ...s, gradeEvents: [...s.gradeEvents, { type: 'add', at: new Date().toISOString(), grade }], pendingIds: [...s.pendingIds, grade.id] }));
     return { ok: true, id: grade.id };
+  }, [book, update]);
+
+  const importGrades = useCallback((rows: GradeInput[]): ImportOutcome => {
+    let duplicate = 0, invalid = 0;
+    const running = [...book.grades];
+    const toAdd: Grade[] = [];
+    for (const input of rows) {
+      const grade: Grade = { id: uid('c'), subjectId: input.subjectId, testName: input.testName.trim(), value: Math.round(input.value * 100) / 100, weight: input.weight, date: input.date, status: 'registered', source: 'import' };
+      const check = checkNewGrade({ ...book, grades: running }, grade, undefined, today());
+      if (!check.ok) { if (check.duplicateOf) duplicate++; else invalid++; continue; }
+      if (running.some((g) => g.subjectId === grade.subjectId && g.value === grade.value && g.date === grade.date)) { duplicate++; continue; }
+      running.push(grade); toAdd.push(grade);
+    }
+    if (toAdd.length) update((s) => ({
+      ...s,
+      gradeEvents: [...s.gradeEvents, ...toAdd.map((grade) => ({ type: 'add' as const, at: new Date().toISOString(), grade }))],
+      pendingIds: [...s.pendingIds, ...toAdd.map((g) => g.id)],
+    }));
+    return { created: toAdd.length, duplicate, invalid };
   }, [book, update]);
 
   const correctGrade = useCallback((gradeId: string, changes: Partial<GradeInput>, reason?: string): ActionResult => {
@@ -605,10 +627,10 @@ export function StoreProvider({ children, onExit }: { children: ReactNode; onExi
     () => ({
       mode: 'demo' as const, user: null, can: { quickSell: true, demoCompetition: true, academy: true, exit: !!onExit }, draftPick: () => undefined, logout: () => onExit?.(),
       state, owned, grades: book.grades, pending, history: book.history, xp, openPackFromInventory, buyPack, startDraft,
-      addGrade, correctGrade, deleteGrade, revealGrade, claimPick, addGoal, removeGoal, addUpcoming, removeUpcoming,
+      addGrade, importGrades, correctGrade, deleteGrade, revealGrade, claimPick, addGoal, removeGoal, addUpcoming, removeUpcoming,
       saveScenario, removeScenario, submitLearningEvent, practice, recordWrongAnswers, saveBattle, setLineup, quickSell, setSetting, setNotify, setTipsOn, markTipSeen, markNotified, reset,
     }),
-    [state, owned, book, pending, xp, openPackFromInventory, buyPack, startDraft, addGrade, correctGrade, deleteGrade, revealGrade, claimPick,
+    [state, owned, book, pending, xp, openPackFromInventory, buyPack, startDraft, addGrade, importGrades, correctGrade, deleteGrade, revealGrade, claimPick,
       addGoal, removeGoal, addUpcoming, removeUpcoming, saveScenario, removeScenario, submitLearningEvent, practice, recordWrongAnswers, saveBattle, setLineup,
       quickSell, setSetting, setNotify, setTipsOn, markTipSeen, markNotified, reset, onExit],
   );

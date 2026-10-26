@@ -37,7 +37,7 @@ export const TABS: TabDef[] = [
   { id: 'home', label: 'Home', Icon: IconHome, subs: [] },
   { id: 'club', label: 'Club', Icon: IconSquad, subs: [{ id: 'elftal', label: 'Elftal' }, { id: 'collectie', label: 'Collectie' }, { id: 'packs', label: 'Packs' }, { id: 'draft', label: 'Draft' }] },
   { id: 'competitie', label: 'Competitie', Icon: IconLeague, subs: [{ id: 'overzicht', label: 'Overzicht' }, { id: 'gradeleague', label: 'Grade League' }, { id: 'rankleague', label: 'RANK League' }, { id: 'pools', label: 'Pools' }] },
-  { id: 'cijfers', label: 'Cijfers', Icon: IconGrades, subs: [{ id: 'overzicht', label: 'Overzicht' }, { id: 'vakken', label: 'Vakken' }, { id: 'invoeren', label: 'Invoeren' }, { id: 'doelen', label: 'Doelen' }, { id: 'watals', label: 'Wat als' }, { id: 'kluis', label: 'Kluis' }] },
+  { id: 'cijfers', label: 'Cijfers', Icon: IconGrades, subs: [{ id: 'overzicht', label: 'Overzicht' }, { id: 'vakken', label: 'Vakken' }, { id: 'invoeren', label: 'Invoeren' }, { id: 'importeren', label: 'Importeren' }, { id: 'doelen', label: 'Doelen' }, { id: 'watals', label: 'Wat als' }, { id: 'kluis', label: 'Kluis' }] },
   { id: 'academy', label: 'Academy', Icon: IconAcademy, subs: [{ id: 'overzicht', label: 'Overzicht' }, { id: 'oefenen', label: 'Oefenen' }] },
 ];
 

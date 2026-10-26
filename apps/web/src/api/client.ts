@@ -52,7 +52,7 @@ export async function serverAvailable(timeoutMs = 1500): Promise<boolean> {
 
 export interface ApiUser { id: string; username: string; role: string }
 export interface ApiCard { id: string; cardDefId: string; name: string; position: string; rating: number; rarity: string; acquiredVia?: string; acquiredAt?: number }
-export interface ApiGrade { id: string; subjectId: string; testName: string; value: number; weight: number; date: string; status: string; createdAt: number; updatedAt: number }
+export interface ApiGrade { id: string; subjectId: string; testName: string; value: number; weight: number; date: string; status: string; source?: string; createdAt: number; updatedAt: number }
 export interface ApiHistory { gradeId: string; action: 'create' | 'correct' | 'delete'; before: ApiGrade | null; after: ApiGrade | null; at: number }
 export interface ApiXpEntry { key: string; category: 'performance' | 'progress' | 'academy'; xp: number; label: string; date: string; source: { kind: string; id: string }; configVersion: string; cappedBy?: number; packId?: string }
 export interface ApiVaultItem {

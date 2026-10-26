@@ -2,6 +2,7 @@ import type { Nav } from '../../App';
 import { GradesOverview } from './Overview';
 import { SubjectsView } from './Subjects';
 import { GradeEntry } from './Entry';
+import { ImportScreen } from './ImportScreen';
 import { GoalsView } from './Goals';
 import { WhatIfView } from './WhatIf';
 import './grades.css';
@@ -10,6 +11,7 @@ import './grades.css';
 export function GradesScreen({ nav, sub }: { nav: Nav; sub: string }) {
   if (sub === 'vakken') return <SubjectsView nav={nav} />;
   if (sub === 'invoeren') return <GradeEntry nav={nav} />;
+  if (sub === 'importeren') return <ImportScreen nav={nav} />;
   if (sub === 'doelen') return <GoalsView nav={nav} />;
   if (sub === 'watals') return <WhatIfView />;
   return <GradesOverview nav={nav} />;

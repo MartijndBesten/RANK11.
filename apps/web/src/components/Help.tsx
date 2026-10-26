@@ -24,6 +24,10 @@ export const TIPS = {
     title: 'Competitie',
     text: 'In een kaartbattle kies je om de beurt een kaart. Per duel telt één waarde, bijvoorbeeld snelheid; de hoogste wint. Je hoeft niet tegelijk online te zijn. Je cijfers ziet niemand, ook niet in de Grade League.',
   },
+  import: {
+    title: 'Cijfers importeren',
+    text: 'Plak een lijst of kies een bestand met je cijfers. Je ziet eerst een overzicht per regel. Cijfers die je al hebt, worden overgeslagen, dus je krijgt nooit dubbele beloningen.',
+  },
   academy: {
     title: 'De Academy',
     text: 'Oefen in korte rondjes. Wat je fout had, komt later terug tot je het kent. XP krijg je voor echte vooruitgang: nieuwe stof, verbeterde fouten en een betere score. Hetzelfde rondje nog eens doen levert niets op.',

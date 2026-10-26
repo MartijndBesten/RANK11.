@@ -47,7 +47,7 @@ function loadPrefs(): Prefs {
 }
 const savePrefs = (p: Prefs) => { try { localStorage.setItem(PREFS_KEY, JSON.stringify(p)); } catch { /* niet fataal */ } };
 
-const toGrade = (g: ApiGrade): Grade => ({ id: g.id, subjectId: g.subjectId, testName: g.testName, value: g.value, weight: g.weight, date: g.date, status: 'registered', source: 'manual' });
+const toGrade = (g: ApiGrade): Grade => ({ id: g.id, subjectId: g.subjectId, testName: g.testName, value: g.value, weight: g.weight, date: g.date, status: g.status === 'confirmed' ? 'verified' : 'registered', source: (g.source as Grade['source']) ?? 'manual' });
 const toXp = (e: ApiXpEntry): XpEntry => ({ ...e, source: { kind: e.source.kind as XpEntry['source']['kind'], id: e.source.id } });
 
 /** Fotoportret toevoegen aan een kaart van de server (de server kent alleen kaartdefinities). */
@@ -195,6 +195,14 @@ export function OnlineStoreProvider({ children, onLoggedOut }: { children: React
           const res = await api<{ grade: ApiGrade }>('POST', '/grades', { subjectId: g.subjectId, testName: g.testName, value: g.value, weight: g.weight, date: g.date });
           return { ok: true, id: res.grade.id } as ActionResult;
         } catch (e) { return fail(e); }
+      }),
+      importGrades: (rows: GradeInput[]) => act(async () => {
+        try {
+          const res = await api<{ created: number; duplicate: number; invalid: number }>('POST', '/grades/import', {
+            rows: rows.map((r) => ({ subjectId: r.subjectId, testName: r.testName.trim(), value: Math.round(r.value * 100) / 100, weight: r.weight, date: r.date })),
+          });
+          return { created: res.created, duplicate: res.duplicate, invalid: res.invalid };
+        } catch { return { created: 0, duplicate: 0, invalid: rows.length }; }
       }),
       correctGrade: (gradeId, changes) => act(async () => {
         try { await api('PUT', `/grades/${gradeId}`, changes); return { ok: true } as ActionResult; } catch (e) { return fail(e); }

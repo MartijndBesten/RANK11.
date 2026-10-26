@@ -1,46 +1,48 @@
 # Open punten
 
-Stand: nacht 25 op 26 oktober 2026. Besluiten die Martijn moet nemen, staan als vraag in `VRAGEN.md`. Dit bestand bevat de technische en inhoudelijke punten.
+Stand: 26 oktober 2026 (ronde 4). Besluiten die Martijn moet nemen, staan als vraag in `VRAGEN.md`. Dit bestand bevat de technische en inhoudelijke punten.
 
-## Blokkerend voor productie
+## Blokkerend voor een test met echte gebruikers
+
+Volledig overzicht, los van de ontwikkeling: `docs/BESLOTEN-TEST.md`.
 
 | # | Punt | Waarom | Wat nodig is |
 |---|---|---|---|
 | P1 | Privacy en toestemming voor minderjarigen | Doelgroep 10-16 jaar; er is geen ouderaccount of toestemmingsflow | Juridische toets, DPIA, ouder-/voogdaccount, verwerkersrol (V-005, V-007) |
 | P2 | Server niet uitgerold | Geen Cloudflare-testomgeving | Toestemming en account (V-006); daarna uitrolstappen in `apps/api/README.md` |
-| P3 | Web-app niet gekoppeld aan de server | De app gebruikt lokale opslag | De store vervangen door API-aanroepen; inloggen, pools en battles via de server |
 | P4 | Turnstile, rate-limit-bindings en retentietaak ontbreken | Misbruik en bewaartermijnen | Bouwen vóór openstelling |
+| P5 | Export en verwijderen van accountgegevens | AVG-rechten van de leerling en ouder | Endpoints en een scherm |
 
 ## Inhoudelijk
 
 | # | Punt | Toelichting |
 |---|---|---|
-| I1 | Economie bevoordeelt hoge cijfers | Zie `docs/SIMULATIES.md`: bij een 5,6 krijg je ongeveer 0,13 vouchers per week, bij een 8,0 ongeveer 2,19 (V-011) |
-| I2 | Draftkansen bij kleine catalogus | Groep D (80-84) heeft te weinig spelers per positie. De app toont daarom naast de ingestelde kans ook de gemeten kans. De structurele oplossing is een grotere catalogus of groepen per positie |
-| I4 | Academy: XP voor verbeterde fouten zonder interval | Het onderzoek (VERGELIJKBARE-APPS, C4) adviseert pas te belonen bij een latere juiste herhaling, niet direct in dezelfde sessie |
-| I5 | Demo-teamrating hoog (≈94) | De demo-collectie bevat bewust veel speciale series om ze te laten zien; voor echte spelers start je lager |
-| I6 | Lookalike-controle van portretten | Alleen visueel gecontroleerd op anatomie en kwaliteit. Een systematische gelijkeniscontrole (V-010) is niet gedaan |
-| I7 | Periode-indeling is een voorbeeld | `apps/web/src/state/school.ts`; scholen verschillen. Moet in de poolinstellingen komen |
+| I2 | Draftkansen bij kleine catalogus | Groep D (80-84) heeft te weinig spelers per positie. De app toont daarom naast de ingestelde kans ook de gemeten kans |
+| I5 | Demo-teamrating hoog (≈94) | De demo-collectie bevat bewust veel speciale series. Echte accounts starten met het startelftal (≈67) |
+| I6 | Lookalike-controle van portretten | Alleen visueel gecontroleerd. Een systematische gelijkeniscontrole (V-010) is niet gedaan |
+| I7 | Periode-indeling is een voorbeeld | `packages/engine/src/periods.ts`; scholen verschillen. Moet in de poolinstellingen komen |
+| I8 | Doel telt alleen voor cijfers na het instellen | Een doel dat je instelt na een cijfer dat het al haalt, levert pas iets op bij het volgende cijfer. Bewust (geen beloning achteraf), maar de app legt dat nog niet uit |
+| I9 | Economie na V-011 | Verhouding vouchers sterkste/zwakste gemotiveerde profiel 1,9× (was 25,7×). Een leerling die niets doet, krijgt bijna niets; dat is bedoeld. Bijstellen kan via de configuratieversies zonder code |
 
 ## Technisch
 
 | # | Punt | Toelichting |
 |---|---|---|
-| T1 | XP op de server | De server kende XP eerst toe via de oude beloningsconfiguratie. Gelijktrekken met de motivatie-engine is in deze ronde opgepakt (zie HANDOFF.md voor de stand). Doelen bestaan nog niet in de API, dus doel-XP kan de server nog niet geven |
-| T2 | Verwijderen op de server | De server draaide bij verwijderen de beloning niet terug, de app wel (XP). Packs en coins blijven in beide van de speler |
 | T3 | Toernooi-endpoints, toetsweken, kaartstraffen, chemiebonus in battles, battlebeloningen | Engine deels klaar, API nog niet |
 | T4 | `npm audit` meldt undici in wrangler | Alleen lokaal gereedschap, niet in de Worker-bundel |
-| T5 | Preview zonder server | De reviewpreview is één statische pagina met lokale opslag per bezoeker |
-| T6 | Portretbatch op CPU | Ongeveer 55 seconden per portret. Hervatbaar en in blokken te draaien (`batch.py … [max_aantal]`). Nieuwe spelers vragen een nieuwe batch |
-| T8 | Volgorde bij gelijke toetsdatum | Bij twee toetsen op dezelfde dag bepaalt het id de volgorde. Op de server zijn id's willekeurig, dus "herstel na een onvoldoende" op dezelfde dag is niet eenduidig. Voorstel: bij gelijke datum op invoermoment sorteren |
-| T7 | Bundlegrootte | De web-bundel is groter geworden door alle schermen. Code-splitting per tab is nog niet gedaan |
+| T5 | Preview zonder server | De reviewpreview is één statische pagina in demomodus |
+| T6 | Portretbatch op CPU | Ongeveer 55 seconden per portret, hervatbaar in blokken |
+| T7 | Bundlegrootte | Code-splitting per tab is nog niet gedaan |
+| T9 | Live battle niet in de app | De API heeft live wedstrijden via WebSocket (30 s per zet); de app gebruikt alleen asynchroon met verversen elke 3 s |
+| T10 | Online store herlaadt alles na iedere actie | Eenvoudig en consistent, maar ±11 verzoeken per actie. Voor een test met een klas prima; later gericht verversen |
+| T11 | Demo en server lopen via twee codepaden | Zelfde engine, maar de demo-store en de serverroutes zijn apart. De E2E-scripts dekken beide; wijzigingen in de regels moeten in beide getest worden |
 
-## Opgelost in deze ronde
+## Opgelost in ronde 4
 
-- Getoonde draftkansen weken ongemerkt af van de werkelijkheid. Nu wordt geloot tussen beschikbare groepen, is Groep E verbreed en worden de gemeten kansen getoond.
-- Academy: te snelle of afgebroken pogingen telden als eerdere poging, waardoor de eerste echte poging geen afrond-XP meer kreeg.
-- Kluisbeloning toonde XP-bonussen uit de oude configuratie; nu de XP-regels uit de motivatie-engine.
-- Elftal op 320 px: de keeper overlapte de centrale verdedigers.
-- Volgende beloning op Home was eentonig (steeds 7,5); nu de eerste tier boven je eigen vakgemiddelde.
-- Navigeren via een anker liet de scrollpositie staan; nu terug naar boven.
-- Portretten: alle 209 (200 spelers, 8 legends, S01) klaar; de app toont geen getekende koppen meer.
+- I1: economie bevoordeelde hoge cijfers (V-011). Nu eerlijke beloningsconfiguratie plus voortgangsbeloningen voor verbetering, doelen, herstel en Academy, met een weekplafond.
+- I4: verbeterde fout telde in dezelfde sessie. Nu pas in een latere sessie, met herhaling op 1/3/7/14 dagen.
+- T1: XP en doelen op de server gelijk aan de motivatie-engine; doelen bestaan nu in de API.
+- T2: verwijderen draait op de server de XP terug, net als in de app; packs en coins blijven van de speler.
+- T8: bij gelijke toetsdatum sorteert de server op invoermoment.
+- P3: de web-app is gekoppeld aan de (lokale) server.
+- Academy gaf afrond-XP bij 0 van 6 goed; nu vanaf 50% goed.

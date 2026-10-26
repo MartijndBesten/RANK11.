@@ -1,10 +1,55 @@
 # HANDOFF — RANK11.
 
-**Status:** `wacht-op-review`. Ronde 3 (nachtronde) is klaar: de 7 verbeterpunten, het cijferdashboard, de motivatie-engine, het competitiesysteem, de Academy-voorbereiding en de lokale multiplayerserver.
-**Bijgewerkt:** 26-10-2026, nacht (Claude Code, cloudsessie).
+**Status:** `wacht-op-review`. Ronde 4 is klaar: de app is gekoppeld aan de server, maar die draait alleen **lokaal**. Er staat niets online; dit is geen werkende online multiplayer voor gebruikers.
+**Bijgewerkt:** 26-10-2026, ochtend (Claude Code, cloudsessie).
 **Branch:** `main` (gepusht)
 **Volgende actor:** Martijn
-**Volgende stap:** de preview bekijken (https://claude.ai/artifact/L5dsftxHszJFRNqb35xBa9, versie 5, alle fotoportretten; privé reviewpagina, geen productie) en `docs/review/v3/`. Daarna V-011 t/m V-016 beantwoorden. V-005 en V-006 blijven nodig vóór iets online kan.
+**Volgende stap:** screenshots in `docs/review/v4/` bekijken (lokale online-stack met twee testaccounts) en eventueel de demo in de preview (https://claude.ai/artifact/L5dsftxHszJFRNqb35xBa9, versie 6; privé reviewpagina, alleen demo, geen server). Daarna: V-017 beantwoorden en beslissen over de route naar een besloten test (`docs/BESLOTEN-TEST.md`; V-005, V-006, V-007).
+
+## Ronde 4 (26 oktober 2026)
+
+Wat echt werkt en wat demo is: `docs/PROJECT-STATUS.md`. Testresultaten: `docs/TEST-REPORT.md`. Lokaal draaien: `docs/MULTIPLAYER.md`.
+
+| Prioriteit / besluit | Status |
+|---|---|
+| 1. Frontend gekoppeld aan de backend | KLAAR (lokaal): startscherm met inloggen, account maken (uitnodigingscode) of demo; online store via `/api` (Vite-proxy, httpOnly-cookie). Getest met `tools/e2e/online.cjs`. |
+| 2. Persistente accounts, clubs, cijfers, collecties, beloningen | KLAAR (lokaal): alles in D1; blijft na herladen en opnieuw inloggen (E2E). |
+| 3. Privé pools met uitnodigingen tussen testaccounts | KLAAR (lokaal): pool maken, code delen, lid worden (E2E met twee accounts). |
+| 4. Online/async kaartbattle tussen twee accounts | KLAAR (lokaal): uitdagen, accepteren, zetten om de beurt, verversen elke 3 s; deadline per zet 24/48/72 uur (V-014). Live WebSocket bestaat in de API maar wordt in de app niet gebruikt. |
+| 5. RANK League door de server berekend | KLAAR (lokaal), plus Grade League van de server (anderen zien alleen plaats en totaalscore). |
+| 6. Cijferstatistieken en persoonlijke doelen | Doelen en geplande toetsen op de server; voortgangsbeloningen bij doel, verbetering, persoonlijk record en herstel; kluisoverzicht met gemiddelden ook online. |
+| 7. Academy-oefenmodule | KLAAR: meer stof (wiskunde, Frans, Engels per onderwerp), herhaling van fouten (1/3/7/14 dagen), "verbeterd" pas in een latere sessie, voortgang per onderwerp; nakijken op de server, antwoorden niet in de app. Afrond-XP pas vanaf 50% goed. |
+| 8. Testen met meerdere accounts, isolatie | KLAAR: `apps/api/test/isolatie.test.ts` (15 directe pogingen op andermans id's: altijd 404/403) en E2E (B ziet niets van A). |
+| V-011 eerlijkere beloningen | Verwerkt: schooljaarsimulatie, verhouding vouchers sterkste/zwakste gemotiveerde profiel 25,7× → 1,9× (`docs/SIMULATIES.md`). |
+| V-012 leeromgeving | Voorbereid (ondertekende events, providermodel); site niet gewijzigd. |
+| V-013 startelftal | Verwerkt: 11 + 7 reserves bij registratie. |
+| V-014 async met deadline | Verwerkt: standaard 48 uur, instelbaar. |
+| V-015 transfermarkt uit | Verwerkt: feature flag `FEATURE_MARKET=false`. |
+| V-016 geen minimumtijd | Verwerkt: geen tijdregel; anti-farmen via vragenset-sleutel, dagelijkse afronding, 50%-drempel en plafonds. |
+| Incident e-mailheader | Vastgelegd in `docs/INCIDENT-2026-10-25-user-agent.md`: 6 GET-verzoeken naar Wikimedia Commons met het adres in de User-Agent, alleen zoektermen (namen van legends); het adres staat niet in de code of de geschiedenis, er waren dus geen headers uit de code te verwijderen. Herhaling voorkomen: regel in `docs/SECURITY.md` §11 en `tools/check-pii.mjs` in `npm test`. Inschatting: laag risico, niet meldplichtig (geen juridisch advies). |
+| Besloten test met echte gebruikers | Overzicht juridisch en technisch, los van de ontwikkeling: `docs/BESLOTEN-TEST.md`. |
+
+**Testresultaten:** engine 211 en API 58 tests groen, typecheck schoon, PII-controle schoon; E2E online 20/20, Academy 8/8, demo 9/9; lay-out 17 schermen × 8 maten zonder overloop in demo en online.
+
+**Commits ronde 4:** `017efff`, `b9eb796`, `c2e0982`, `cb8c7eb` en de documentatiecommit met deze HANDOFF.
+
+**Niet gedaan of niet gelukt:**
+- Niets online gezet: geen Cloudflare-account, database of Worker. De preview is alleen de demo.
+- Geen ouderaccount, toestemmingsflow, Turnstile, rate-limits of gegevensexport: blokkeert een test met echte gebruikers.
+- Live battle (WebSocket) niet in de app; vaste speelschema's niet in de app.
+- Niet getest op echte toestellen.
+
+**Bestanden ronde 4 (belangrijkste):**
+- Engine: `packages/engine/src/{economy,starter,practice,periods,sell}.ts`, `academy.ts`, `motivation.ts`, `simulate.ts`; tests `economy`, `practice`, `starter`, `motivation-academy`
+- Server: `apps/api/migrations/{0003_ronde4,0004_economie_academy}.sql`, `src/modules/{planning,vault,drafts,config,academy,collection,matches,competitions,grades}.ts`, `src/progress.ts`, `src/auth.ts`, tests `ronde4.test.ts`, `isolatie.test.ts`
+- Web: `apps/web/src/{Root,main}.tsx`, `api/client.ts`, `state/{onlineStore,store}.tsx`, `screens/{OnlineCompetition,OnlineBattle,CompetitionScreen,AcademyScreen,RevealScreen,SettingsSheet}.tsx`, `academy/types.ts`, `vite.config.ts`
+- Tools: `tools/dev-online.mjs`, `tools/check-pii.mjs`, `tools/e2e/{online,academy,demo,overflow}.cjs`
+- Docs: `README.md`, `docs/{PROJECT-STATUS,TEST-REPORT,MULTIPLAYER,COMPETITION-SYSTEM,REWARD-ECONOMY,MOTIVATION-ENGINE,ACADEMY-INTEGRATION,OPEN-ISSUES,SIMULATIES,SECURITY,BESLOTEN-TEST,INCIDENT-2026-10-25-user-agent}.md`, `docs/review/v4/`
+- `VRAGEN.md`: V-011 t/m V-016 verwerkt; nieuw V-017.
+
+**Open vragen:** V-003, V-005, V-006, V-007, V-008, V-010, V-017.
+
+**Bouwstenenbibliotheek (ronde 4):** beoordeeld, nog geen PR. De kandidaten uit ronde 3 zijn nu server-side in gebruik; nieuw erbij: (6) isolatietest-patroon (B probeert iedere route op A's id's, verwacht 404/403), (7) lokale online-stack met wrangler dev + Vite-proxy + uitnodigingscode, (8) herhaling met groeiende intervallen en "verbeterd pas in een latere sessie". Aanmelden via een aparte `bibliotheek/*`-PR in de workbench zodra Martijn dat wil.
 
 ## Ronde 3 (nacht 25 op 26 oktober 2026)
 

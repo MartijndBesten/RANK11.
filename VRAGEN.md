@@ -253,7 +253,7 @@ Nog niet verwerkt.
 
 ### V-011 — Kaartbeloningen voor leerlingen die moeite hebben
 
-status: open
+status: verwerkt
 gesteld_door: claude
 datum: 2026-10-26
 
@@ -271,15 +271,15 @@ Dit is een ontwerpkeuze over eerlijkheid en motivatie, geen technische keuze. He
 
 **Antwoord**
 
-Nog niet beantwoord.
+V-011: maak de beloningen aanzienlijk eerlijker. Goede cijfers moeten voordeel opleveren, maar persoonlijke verbetering, doelen en Academy-oefeningen moeten ook een serieuze route naar sterke spelers en Draft-vouchers vormen. Simuleer verschillende leerlingprofielen over een volledig schooljaar en voorkom extreme verschillen. (Martijn, 26-10-2026)
 
 **Verwerkt in**
 
-Nog niet verwerkt.
+`packages/engine/src/economy.ts` (`FAIR_REWARD_CONFIG` `2026.10-eerlijk.1`, `DEFAULT_PROGRESS_CONFIG` `2026.10-voortgang.1`: vouchers en packs voor doel, verbetering, persoonlijk record, herstel en Academy-XP, max. 2 vouchers per week uit voortgang), `simulateSchoolYear` in `simulate.ts`, `docs/SIMULATIES.md` (vouchers sterkste/zwakste gemotiveerde profiel 25,7× → 1,9×), `docs/REWARD-ECONOMY.md`. Server: `apps/api/src/progress.ts`, tabel `progress_grants` (migratie 0004), kluis toont 'Extra verdiend'. Getest in engine (`economy.test.ts`), API (`ronde4.test.ts`) en E2E (`tools/e2e/online.cjs`). (Claude, 26-10-2026)
 
 ### V-012 — Koppeling met de leeromgeving (RANK Academy)
 
-status: open
+status: verwerkt
 gesteld_door: claude
 datum: 2026-10-26
 
@@ -293,15 +293,15 @@ De leeromgeving heeft geen API. Zonder uitbreiding aan die kant is er geen veili
 
 **Antwoord**
 
-Nog niet beantwoord.
+V-012: bereid de optionele koppeling met leren.martijndenbesten.com voor. Wijzig die website nog niet. (Martijn, 26-10-2026)
 
 **Verwerkt in**
 
-Nog niet verwerkt.
+Voorbereid, niet gekoppeld: providermodel met ondertekende events (`packages/engine/src/academy.ts`: `signedProvider`, HMAC, idempotent per `provider_id`+`event_id`), tabel `academy_events` (migratie 0004), interne provider `rank-intern` als referentie. Ontwerp en open deelvragen in `docs/ACADEMY-INTEGRATION.md` en `docs/onderzoek/LEEROMGEVING.md`. De website is niet gewijzigd. (Claude, 26-10-2026)
 
 ### V-013 — Startelftal voor nieuwe accounts
 
-status: open
+status: verwerkt
 gesteld_door: claude
 datum: 2026-10-26
 
@@ -315,15 +315,15 @@ Zonder startkaarten kan een nieuwe speler pas meedoen aan de competitie als hij 
 
 **Antwoord**
 
-Nog niet beantwoord.
+V-013: geef iedereen een compleet, bruikbaar startelftal met reserves. (Martijn, 26-10-2026)
 
 **Verwerkt in**
 
-Nog niet verwerkt.
+`packages/engine/src/starter.ts` (11 basisspelers op 4-3-3 + 7 reserves, deterministisch per seed); server bij registratie (`apps/api/src/auth.ts`, `modules/collection.ts` `starterStatements`), opstelling met bank (`lineups.bench_json`, migratie 0003). Getest in `starter.test.ts`, `collection.test.ts` en E2E. (Claude, 26-10-2026)
 
 ### V-014 — Niet reageren op een uitdaging
 
-status: open
+status: verwerkt
 gesteld_door: claude
 datum: 2026-10-26
 
@@ -337,15 +337,15 @@ Het gaat om strengheid tegenover kinderen die een paar dagen niet in de app kijk
 
 **Antwoord**
 
-Nog niet beantwoord.
+V-014: gebruik asynchrone wedstrijden met een configureerbare deadline, standaard als voorstel 48 uur. (Martijn, 26-10-2026)
 
 **Verwerkt in**
 
-Nog niet verwerkt.
+`apps/api/src/modules/matches.ts`: `deadline_hours` per wedstrijd (standaard uit `ASYNC_DEADLINE_HOURS`=48, bereik 1–168); dezelfde tijd geldt als acceptatietermijn (daarna status `expired`, telt niet mee) en als bedenktijd per zet (daarna speelt de server de laagste kaart; 3× te laat = reglementair verlies). App: keuze 24/48/72 uur bij uitdagen (`OnlineCompetition.tsx`). Het standaardgedrag bij níet gespeelde wedstrijden in een vast speelschema is nog niet beslist: zie V-017. (Claude, 26-10-2026)
 
 ### V-015 — Transfermarkt aan of uit
 
-status: open
+status: verwerkt
 gesteld_door: claude
 datum: 2026-10-26
 
@@ -359,15 +359,15 @@ Handelen tussen kinderen kan sociale druk geven ("geef mij die kaart"). Dit is e
 
 **Antwoord**
 
-Nog niet beantwoord.
+V-015: transfermarkt voorlopig uit via een feature flag. (Martijn, 26-10-2026)
 
 **Verwerkt in**
 
-Nog niet verwerkt.
+`FEATURE_MARKET="false"` in `apps/api/wrangler.toml`, `apps/api/src/modules/config.ts` (`requireFlag`), zichtbaar via `/api/config`. Geen marktscherm in de app. (Claude, 26-10-2026)
 
 ### V-016 — Minimale oefentijd in de Academy
 
-status: open
+status: verwerkt
 gesteld_door: claude
 datum: 2026-10-26
 
@@ -378,6 +378,28 @@ Een oefening levert alleen XP op als er minstens 8 seconden per vraag is besteed
 **Waarom nodig**
 
 Te streng ontmoedigt; te soepel maakt doorklikken voor XP mogelijk. De instelling staat in `DEFAULT_MOTIVATION_CONFIG.academy.minSecondsPerQuestion`.
+
+**Antwoord**
+
+V-016: geen verplichte minimumtijd per oefenvraag. Beloon echte voortgang en voorkom herhaald XP farmen. (Martijn, 26-10-2026)
+
+**Verwerkt in**
+
+`DEFAULT_MOTIVATION_CONFIG` (`2026.10-motivatie.3`): `minSecondsPerQuestion: 0`; afrond-XP één keer per activiteit per dag en alleen bij minstens 50% goed (`completeMinScore`); identieke vragenset levert niets op (`contentKey`); verbeterde fout telt pas in een latere sessie (`packages/engine/src/practice.ts`). Docs: `docs/MOTIVATION-ENGINE.md`, `docs/ACADEMY-INTEGRATION.md`. (Claude, 26-10-2026)
+
+### V-017 — Niet gespeelde wedstrijd in een vast speelschema
+
+status: open
+gesteld_door: claude
+datum: 2026-10-26
+
+**Vraag**
+
+Vrije uitdagingen in een pool vervallen nu na de deadline en tellen niet mee (V-014). Voor een competitie met een vast speelschema (`unplayedRule`) staat de standaard nog op `double-forfeit`: wordt een wedstrijd niet gespeeld, dan verliezen beide spelers. Wil je die standaard houden, of liever `void` (de wedstrijd vervalt en telt niet mee)?
+
+**Waarom nodig**
+
+Pedagogische keuze over strengheid tegenover kinderen die een paar dagen niet in de app kijken. De app gebruikt het vaste speelschema nog niet, dus dit blokkeert de huidige ontwikkeling niet.
 
 **Antwoord**
 

@@ -2,7 +2,7 @@
 
 **Your grades. Your squad.** Een multiplayer voetbalkaartgame waarin schoolcijfers je spelers, packs en beloningen opleveren. Mobile-first PWA voor iPhone, Android, tablet en desktop.
 
-> **Status (26-10-2026):** prototype met lokale opslag. Cijfers, statistieken, doelen, XP, packs, draft, elftal, collectie en de Academy-oefenmodule werken echt. De competitie speelt tegen computertegenstanders. De multiplayerserver is gebouwd en lokaal getest, maar staat niet online. Zie [docs/PROJECT-STATUS.md](docs/PROJECT-STATUS.md) en [HANDOFF.md](HANDOFF.md).
+> **Status (26-10-2026, ronde 4):** de app is gekoppeld aan de server, maar die draait alleen **lokaal**. Met een testaccount lopen cijfers, beloningen, collectie, Academy, pools, asynchrone battles en ranglijsten via de server; zonder account is er een demo op het toestel. **Er staat niets online**, alleen synthetische testgegevens. Zie [docs/PROJECT-STATUS.md](docs/PROJECT-STATUS.md) en [HANDOFF.md](HANDOFF.md).
 
 ## Navigatie
 
@@ -13,7 +13,7 @@ Home · Club (Elftal, Collectie, Packs, Draft) · Competitie (Overzicht, Grade L
 ```
 packages/engine   spelregels in pure TypeScript: cijfers, statistieken, inzichten, motivatie/XP, achievements,
                   Academy, Grade League, beloningen, packs, draft, elftal, transfermarkt, competitie, simulaties
-apps/web          React + Vite PWA (lokale store = toekomstige API-client)
+apps/web          React + Vite PWA (demo-store op het toestel, online-store via de API)
 apps/api          Cloudflare Worker + D1 + Durable Objects (lokaal, niet uitgerold)
 tools/            portretpijplijn (FLUX.2 [klein], lokaal), balanssimulaties, previewbouw
 docs/             zie hieronder
@@ -27,9 +27,11 @@ docs/             zie hieronder
 
 ```bash
 npm install
-npm test                 # engine + api
+npm test                 # engine + api + PII-controle
 npm run typecheck
 npm run dev              # http://localhost:5173  (#kaarten = kaartengalerij)
+node tools/dev-online.mjs   # lokale server op :8787 + uitnodigingscode (apps/api/.wrangler/dev-invite.txt)
+node tools/e2e/online.cjs   # E2E met twee testaccounts (ook: academy.cjs, demo.cjs, overflow.cjs demo|online)
 npm run build:single     # één HTML-bestand; daarna: python3 tools/preview.py apps/web/dist-single/index.html <uit.html>
 node tools/portretten/manifest.mjs                                   # na nieuwe portretten
 node --experimental-transform-types tools/sim/balans.ts > docs/SIMULATIES.md   # balansrapport + gemeten draftkansen

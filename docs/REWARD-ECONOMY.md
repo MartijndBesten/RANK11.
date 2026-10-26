@@ -2,7 +2,7 @@
 
 **Stand:** 26-10-2026 · **Code:** `packages/engine/src/rewards.ts`, `economy.ts`, `starter.ts`, `packs.ts`, `draft.ts`, `market.ts`, `simulate.ts`; snel verkopen in `apps/web/src/state/store.tsx` · **Simulaties:** `docs/SIMULATIES.md` (`node --experimental-transform-types tools/sim/balans.ts`)
 
-> **Economie v2 (V-011, 26-10-2026):** zie §9. In de engine staan nu twee configuraties naast elkaar: de oude `DEFAULT_REWARD_CONFIG` (`2026.10-proto.1`, nog in gebruik door app en server) en de nieuwe `FAIR_REWARD_CONFIG` (`2026.10-eerlijk.1`) met de voortgangslaag `DEFAULT_PROGRESS_CONFIG` (`2026.10-voortgang.1`). Overschakelen is een bewuste stap in app en server; bestaande toekenningen behouden hun configuratieversie.
+> **Economie v2 (V-011, 26-10-2026):** zie §9. App (demo) en server gebruiken sinds ronde 4 de nieuwe `FAIR_REWARD_CONFIG` (`2026.10-eerlijk.1`) met de voortgangslaag `DEFAULT_PROGRESS_CONFIG` (`2026.10-voortgang.1`). De oude `DEFAULT_REWARD_CONFIG` (`2026.10-proto.1`, §2) staat nog in de engine ter vergelijking in de simulaties; bestaande toekenningen behouden hun configuratieversie.
 
 ## 1. Spelregels voor de economie
 
@@ -11,7 +11,7 @@
 - **XP staat los van de kaarteconomie.** XP komt uit de motivatie-engine (`MOTIVATION-ENGINE.md`). Coins, packs, vouchers en spelerskeuzes komen uit de beloningsconfiguratie hieronder.
 - **Niets verloopt en niets gaat verloren** door wegblijven. Er zijn geen tijdgebonden aanbiedingen.
 
-## 2. Beloning per cijfer (`DEFAULT_REWARD_CONFIG`, versie `2026.10-proto.1`)
+## 2. Beloning per cijfer (`DEFAULT_REWARD_CONFIG`, versie `2026.10-proto.1`) — vervangen door §9
 
 | Tier | Vanaf | Coins | Pack | Extra | (XP in config*) |
 |---|---|---:|---|---|---:|

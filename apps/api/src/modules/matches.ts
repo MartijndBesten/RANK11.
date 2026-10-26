@@ -195,7 +195,11 @@ export async function getMatch(ctx: Ctx): Promise<Response> {
   const battle = match.status === 'active' || match.status === 'finished' ? await callDO(ctx.env, match.id, '/state') : null;
   // De DO kan de wedstrijd net hebben afgerond (time-out); lees de metadata opnieuw.
   const fresh = battle ? await one<MatchRow>(ctx.env.DB, `SELECT ${MATCH_COLUMNS} FROM matches WHERE id = ?`, match.id) : match;
-  return json({ match: matchView(fresh ?? match, ctx.now), battle });
+  // Kaartdefinities van de vastgezette elftallen (instantie → kaart), zodat de app spelers kan tonen.
+  const lineups = await one<{ home_lineup_json: string | null; away_lineup_json: string | null }>(ctx.env.DB, 'SELECT home_lineup_json, away_lineup_json FROM matches WHERE id = ?', match.id);
+  const cardDefs: Record<string, string> = {};
+  for (const raw of [lineups?.home_lineup_json, lineups?.away_lineup_json]) for (const c of JSON.parse(raw ?? '[]') as LineupCard[]) cardDefs[c.instanceId] = c.cardDefId;
+  return json({ match: matchView(fresh ?? match, ctx.now), battle, cardDefs });
 }
 
 export async function getMatchEvents(ctx: Ctx): Promise<Response> {

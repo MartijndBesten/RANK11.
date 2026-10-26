@@ -7,11 +7,13 @@ import { requireUser } from '../auth.ts';
 import { newId } from '../crypto.ts';
 import { auditStmt, many, one, stmt } from '../db.ts';
 import {
-  computeStandings, DEFAULT_LEAGUE_CONFIG, resolveUnplayed, roundRobin, withDeadlines,
+  computeStandings, DEFAULT_LEAGUE_CONFIG, DEFAULT_PERIODS, gradeLeagueTable, resolveUnplayed, roundRobin, withDeadlines,
   type LeagueConfig, type LeagueResult, type UnplayedRule,
 } from '../engine.ts';
 import { badRequest, json, notFound, num, readJson, str, type Ctx } from '../http.ts';
 import { requireAdmin, requireMember } from './pools.ts';
+import { activeGrades, toEngine } from './grades.ts';
+import { activeGoals } from './planning.ts';
 
 interface FinishedMatch {
   id: string; fixture_id: string | null; home_user_id: string; away_user_id: string;
@@ -131,4 +133,31 @@ export async function poolStandings(ctx: Ctx): Promise<Response> {
   const names = await usernames(db, participants);
   const standings = computeStandings(participants, finished.map(toLeagueResult), { names });
   return json({ standings: standings.map((s) => ({ ...s, username: names[s.participant] ?? null })) });
+}
+
+/**
+ * Grade League van de pool (serverberekend). Andere spelers zien alleen plaats en totaalscore, nooit
+ * cijfers of deelscores (de prestatiescore zou anders terug te rekenen zijn naar een gemiddelde).
+ */
+export async function poolGradeLeague(ctx: Ctx): Promise<Response> {
+  const user = requireUser(ctx);
+  const poolId = ctx.params.poolId as string;
+  const db = ctx.env.DB;
+  await requireMember(db, poolId, user.id);
+  const today = new Date(ctx.now).toISOString().slice(0, 10);
+  const period = DEFAULT_PERIODS.find((p) => today >= p.start && today <= p.end) ?? DEFAULT_PERIODS.filter((p) => p.start <= today).at(-1) ?? DEFAULT_PERIODS[0]!;
+  const members = await many<{ user_id: string }>(db, 'SELECT user_id FROM pool_members WHERE pool_id = ?', poolId);
+  const names = await usernames(db, members.map((m) => m.user_id));
+  const participants = await Promise.all(members.map(async (m) => ({
+    playerId: m.user_id,
+    grades: (await activeGrades(db, m.user_id)).map(toEngine),
+    goals: await activeGoals(db, m.user_id),
+  })));
+  const table = gradeLeagueTable(participants, period);
+  return json({
+    period: { id: period.id, name: period.name },
+    rows: table.map((r) => r.playerId === user.id
+      ? { userId: r.playerId, username: names[r.playerId] ?? null, me: true, rank: r.rank ?? null, eligible: r.eligible, score: r.score, components: r.components, explanation: r.explanation }
+      : { userId: r.playerId, username: names[r.playerId] ?? null, me: false, rank: r.rank ?? null, eligible: r.eligible, score: r.eligible ? r.score : null }),
+  });
 }

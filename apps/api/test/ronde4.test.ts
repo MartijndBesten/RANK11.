@@ -122,3 +122,71 @@ describe('asynchrone wedstrijden met deadline (V-014)', () => {
     expect(accepted.battle.state.deadline - accepted.battle.state.lastEventAt).toBe(12 * 3600_000);
   });
 });
+
+import { practiceQuestion } from '../src/engine.ts';
+
+describe('Academy op de server', () => {
+  it('geen antwoorden vooraf; nakijken op de server; één keer inleveren; fouten komen later terug als herkansing', async () => {
+    const app = createApp();
+    const code = await platformCode(app, { maxUses: 5 });
+    const u = await register(app, 'Oefenaar', code);
+    const other = await register(app, 'Afkijker', code);
+    const s1 = await app.api('POST', '/api/academy/sessions', { token: u.token, body: { subjectId: 'fa' } });
+    expect(s1.status).toBe(201);
+    const items = s1.body.session.items as { id: string; answer?: string }[];
+    expect(items.length).toBeGreaterThan(0);
+    expect(items.every((i) => i.answer === undefined)).toBe(true);
+    // Alles goed behalve de eerste vraag.
+    const answers = Object.fromEntries(items.map((i, n) => [i.id, n === 0 ? 'fout-antwoord' : practiceQuestion(i.id)!.answer]));
+    expect((await app.api('POST', `/api/academy/sessions/${s1.body.session.id}/submit`, { token: other.token, body: { answers } })).status).toBe(404);
+    const r1 = await app.api('POST', `/api/academy/sessions/${s1.body.session.id}/submit`, { token: u.token, body: { answers } });
+    expect(r1.status).toBe(200);
+    expect(r1.body.summary.correctCount).toBe(items.length - 1);
+    expect(r1.body.results[0]).toMatchObject({ correct: false, answer: practiceQuestion(items[0]!.id)!.answer });
+    expect(r1.body.decision.status).toBe('rewarded');
+    expect(r1.body.decision.xp).toBeGreaterThan(0);
+    expect((await app.api('POST', `/api/academy/sessions/${s1.body.session.id}/submit`, { token: u.token, body: { answers } })).status).toBe(409);
+    // Volgende dag: de foute vraag komt terug als herkansing; goed beantwoord telt als verbeterde fout.
+    app.advance(25 * 3600_000);
+    const s2 = await app.api('POST', '/api/academy/sessions', { token: u.token, body: { subjectId: 'fa' } });
+    const fix = (s2.body.session.items as { id: string; reason: string }[]).find((i) => i.id === items[0]!.id);
+    expect(fix?.reason).toBe('fix');
+    const answers2 = Object.fromEntries((s2.body.session.items as { id: string }[]).map((i) => [i.id, practiceQuestion(i.id)!.answer]));
+    const r2 = await app.api('POST', `/api/academy/sessions/${s2.body.session.id}/submit`, { token: u.token, body: { answers: answers2 } });
+    expect(r2.body.summary.mistakesFixed).toBe(1);
+    expect(r2.body.decision.entries.some((e: { label: string }) => /fout/i.test(e.label))).toBe(true);
+    const overview = await app.api('GET', '/api/academy', { token: u.token });
+    expect(overview.body.recent).toHaveLength(2);
+    expect(overview.body.xp.total).toBeGreaterThan(0);
+    expect(overview.body.progress.some((t: { subjectId: string; learning: number; mastered: number }) => t.subjectId === 'fa' && t.learning + t.mastered > 0)).toBe(true);
+    expect((await app.api('GET', '/api/academy', { token: other.token })).body.recent).toEqual([]);
+  });
+
+  it('Academy uit via feature flag: 404', async () => {
+    const app = createApp({ FEATURE_ACADEMY: 'false' });
+    const u = await register(app, 'Uit', await platformCode(app));
+    expect((await app.api('GET', '/api/academy', { token: u.token })).status).toBe(404);
+  });
+});
+
+describe('Grade League in een pool (server)', () => {
+  it('alleen plaats en totaalscore van anderen; eigen deelscores; niet-lid 404', async () => {
+    const app = createApp();
+    const { poolId, users } = await poolWith(app, ['Gerda', 'Henk']);
+    const [gerda, henk] = users as [TestUser, TestUser];
+    for (const [u, vals] of [[gerda, [6, 7, 8]], [henk, [5, 5.5]]] as const) {
+      let i = 0;
+      for (const v of vals) await app.api('POST', '/api/grades', { token: u.token, idem: idem(), body: grade({ value: v, testName: `T${i}`, date: `2026-10-1${3 + i++}` }) });
+    }
+    const res = await app.api('GET', `/api/pools/${poolId}/grade-league`, { token: gerda.token });
+    expect(res.status).toBe(200);
+    const mine = res.body.rows.find((r: { me: boolean }) => r.me);
+    const theirs = res.body.rows.find((r: { me: boolean }) => !r.me);
+    expect(mine.components).toBeDefined();
+    expect(theirs.components).toBeUndefined();
+    expect(theirs.explanation).toBeUndefined();
+    expect(JSON.stringify(res.body)).not.toMatch(/"value"|"grades"/);
+    const outsider = await register(app, 'Buiten', await platformCode(app));
+    expect((await app.api('GET', `/api/pools/${poolId}/grade-league`, { token: outsider.token })).status).toBe(404);
+  });
+});

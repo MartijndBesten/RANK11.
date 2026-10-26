@@ -5,6 +5,7 @@ import { CARD_BY_ID, useStore } from '../state/store';
 import { currentPeriod, todayIso } from '../state/school';
 import { BOTS, botTeam, gradeLeague, ME, myFixtures, myTeam, nameOf, PLAYED_ROUNDS, POOL_NAME, standings } from '../competition/demoPool';
 import { BattleView } from './BattleView';
+import { OnlineCompetition } from './OnlineCompetition';
 import { IconInfo, IconLeague } from '../components/Icons';
 import './competition.css';
 
@@ -26,6 +27,11 @@ function resultClass(r: { homeGoals: number; awayGoals: number }, home: boolean)
 }
 
 export function CompetitionScreen({ nav, sub }: { nav: Nav; sub: string }) {
+  const { mode } = useStore();
+  return mode === 'online' ? <OnlineCompetition nav={nav} sub={sub} /> : <DemoCompetition nav={nav} sub={sub} />;
+}
+
+function DemoCompetition({ nav, sub }: { nav: Nav; sub: string }) {
   const { state, grades } = useStore();
   const [playing, setPlaying] = useState<string | null>(null);
   const club = state.club.name;

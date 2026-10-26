@@ -26,7 +26,7 @@ interface XpRow {
   source_id: string; config_version: string; capped_by: number | null; pack_id: string | null;
 }
 
-async function loadXpLedger(db: D1Database, userId: string): Promise<XpEntry[]> {
+export async function loadXpLedger(db: D1Database, userId: string): Promise<XpEntry[]> {
   const rows = await many<XpRow>(db,
     'SELECT key, category, xp, label, date, source_kind, source_id, config_version, capped_by, pack_id FROM xp_ledger WHERE user_id = ? ORDER BY created_at, rowid', userId);
   return rows.map((r) => ({
@@ -36,7 +36,7 @@ async function loadXpLedger(db: D1Database, userId: string): Promise<XpEntry[]> 
 }
 
 /** Schrijfopdrachten voor XP-regels; de unieke sleutel (user_id, key) maakt dubbel toekennen onmogelijk. */
-function xpStatements(db: D1Database, userId: string, entries: readonly XpEntry[], now: number): D1PreparedStatement[] {
+export function xpStatements(db: D1Database, userId: string, entries: readonly XpEntry[], now: number): D1PreparedStatement[] {
   return entries.map((e) => stmt(db,
     `INSERT INTO xp_ledger (id, user_id, key, category, xp, label, date, source_kind, source_id, config_version, capped_by, pack_id, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -64,7 +64,7 @@ interface GradeRow {
 const GRADE_COLUMNS = 'id, subject_id, test_name, value, weight, date, status, source, external_ref, dedupe_key, created_at, updated_at';
 
 /** DB-status → engine-status: 'self' telt als geregistreerd (niet geverifieerd). */
-function toEngine(r: Pick<GradeRow, 'id' | 'subject_id' | 'test_name' | 'value' | 'weight' | 'date' | 'status' | 'external_ref'>): Grade {
+export function toEngine(r: Pick<GradeRow, 'id' | 'subject_id' | 'test_name' | 'value' | 'weight' | 'date' | 'status' | 'external_ref'>): Grade {
   return {
     id: r.id, subjectId: r.subject_id, testName: r.test_name, value: r.value, weight: r.weight, date: r.date,
     status: r.status === 'confirmed' ? 'verified' : 'registered', source: 'manual', externalRef: r.external_ref ?? undefined,
@@ -153,7 +153,7 @@ function rewardStatements(db: D1Database, userId: string, gradeId: string, resul
   return { grantId, statements };
 }
 
-async function activeGrades(db: D1Database, userId: string): Promise<GradeRow[]> {
+export async function activeGrades(db: D1Database, userId: string): Promise<GradeRow[]> {
   return many<GradeRow>(db, `SELECT ${GRADE_COLUMNS} FROM grades WHERE user_id = ? AND deleted_at IS NULL ORDER BY date, created_at`, userId);
 }
 

@@ -8,9 +8,10 @@ import { ApiError, errorResponse, finalize, preflight, Router, type Ctx } from '
 import { idempotent } from './idempotency.ts';
 import { getClub, putClub } from './modules/clubs.ts';
 import { buyPack, claimStarter, getCollection, getLineup, getWallet, listPacks, openPackGrant, putLineup } from './modules/collection.ts';
-import { createCompetition, getCompetition, listCompetitions, poolStandings } from './modules/competitions.ts';
+import { createCompetition, getCompetition, listCompetitions, poolGradeLeague, poolStandings } from './modules/competitions.ts';
 import { correctGrade, createGrade, deleteGrade, gradeHistory, listGrades, listXp } from './modules/grades.ts';
 import { accept, challenge, decline, getMatch, getMatchEvents, listPoolMatches, matchSocket, move, resignMatch } from './modules/matches.ts';
+import { academyOverview, createSession, submitSession } from './modules/academy.ts';
 import { getConfig } from './modules/config.ts';
 import { draftStatus, pickInDraft, startDraft } from './modules/drafts.ts';
 import { createGoal, createUpcoming, deleteGoal, deleteUpcoming, getPlanning } from './modules/planning.ts';
@@ -43,6 +44,7 @@ export const router = new Router()
   .add('PATCH', '/api/pools/:poolId/members/:userId', idempotent(setMemberRole, opt))
   .add('POST', '/api/pools/:poolId/invites', idempotent(createInvite, opt))
   .add('GET', '/api/pools/:poolId/standings', poolStandings)
+  .add('GET', '/api/pools/:poolId/grade-league', poolGradeLeague)
   // competities
   .add('GET', '/api/pools/:poolId/competitions', listCompetitions)
   .add('POST', '/api/pools/:poolId/competitions', idempotent(createCompetition, opt))
@@ -74,6 +76,10 @@ export const router = new Router()
   .add('GET', '/api/vault', listVault)
   .add('POST', '/api/vault/:grantId/seen', idempotent(markSeen, opt))
   .add('POST', '/api/vault/:grantId/pick', idempotent(claimPick, req))
+  // academy (interne oefenmodule)
+  .add('GET', '/api/academy', academyOverview)
+  .add('POST', '/api/academy/sessions', idempotent(createSession, opt))
+  .add('POST', '/api/academy/sessions/:sessionId/submit', idempotent(submitSession, opt))
   // draft
   .add('GET', '/api/draft', draftStatus)
   .add('POST', '/api/draft', idempotent(startDraft, req))

@@ -15,6 +15,7 @@ import { academyOverview, createSession, submitSession } from './modules/academy
 import { getConfig } from './modules/config.ts';
 import { getSettings, putSettings } from './modules/settings.ts';
 import { connectIntegration, disconnectIntegration, getIntegration, listIntegrations, syncIntegration } from './modules/integrations/routes.ts';
+import { runScheduledSync } from './modules/integrations/sync.ts';
 import { draftStatus, pickInDraft, startDraft } from './modules/drafts.ts';
 import { createGoal, createUpcoming, deleteGoal, deleteUpcoming, getPlanning } from './modules/planning.ts';
 import { claimPick, listVault, markSeen } from './modules/vault.ts';
@@ -131,6 +132,18 @@ export async function handle(request: Request, env: Env): Promise<Response> {
   }
 }
 
+/**
+ * Periodieke synchronisatie van cijferkoppelingen (cron). Nu alleen zinvol voor de voorbeeldbron; een echte,
+ * geautoriseerde bron haakt hier vanzelf op aan. `waitUntil` houdt de run levend tot hij klaar is.
+ */
+export async function scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+  ctx.waitUntil(runScheduledSync(env, Date.now()).then(
+    (reports) => { for (const r of reports) console.log(`sync ${r.provider}: ${r.users} gebruikers, ${r.created} nieuw, ${r.duplicate} al aanwezig, ${r.failed} mislukt`); },
+    (err) => console.error('Geplande sync mislukt', err),
+  ));
+}
+
 export default {
   fetch: (request: Request, env: Env): Promise<Response> => handle(request, env),
+  scheduled,
 };

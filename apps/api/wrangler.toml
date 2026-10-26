@@ -17,6 +17,12 @@ workers_dev = false
 tag = "v1"
 new_sqlite_classes = ["MatchDO"]
 
+# Periodieke synchronisatie van cijferkoppelingen (scheduled handler). Nu alleen zinvol voor de voorbeeldbron;
+# een echte, geautoriseerde bron haakt vanzelf aan. Lokaal testen: `wrangler dev --test-scheduled` en dan
+# curl "http://127.0.0.1:8787/cdn-cgi/handler/scheduled". De logica zelf is getest via runScheduledSync.
+[env.dev.triggers]
+crons = ["0 * * * *"] # elk uur
+
 # ---------------------------------------------------------------------------------------------
 [env.dev]
 name = "rank11-api-dev"

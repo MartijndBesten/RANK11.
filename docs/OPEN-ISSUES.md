@@ -25,7 +25,7 @@ Volledig overzicht, los van de ontwikkeling: `docs/BESLOTEN-TEST.md`.
 | I9 | Economie v3 bijstellen na echte data | Alles staat in configuratieversies (`economy.ts`, `motivation.ts`); de simulatie (`tools/sim/balans.ts`) en de tests bewaken de grenzen. Echte speeldata kan andere keuzes vragen |
 | I10 | Battles gevoelig voor kleine verschillen | Opgelost met de vorm van de dag (V-018): kleine, zichtbare, begrensde geluksfactor. Grote verschillen blijven beslissend |
 | I11 | Magister alleen via de school | Koppelarchitectuur is gebouwd en getest (voorbeeldbron); de Magister-provider is niet geactiveerd. Activeren vraagt een toegestane route + ouderlijke toestemming. Zie `docs/onderzoek/MAGISTER.md` |
-| I12 | Periodieke sync nog niet aangezet | De sync-engine en `linkedUsers` staan klaar; een cron/scheduled handler die periodiek synchroniseert is nog niet toegevoegd (pas zinvol met een echte, geautoriseerde bron) |
+| I12 | Periodieke sync | Scheduled handler (`runScheduledSync`) + cron (elk uur) toegevoegd en getest; werkt nu voor de voorbeeldbron, klaar voor een echte bron |
 
 ## Technisch
 

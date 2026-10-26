@@ -94,3 +94,29 @@ describe('koppelingen-endpoints', () => {
     expect((await app.api('GET', '/api/integrations/sample', { token: a.token })).body.link.linked).toBe(true);
   });
 });
+
+describe('periodieke synchronisatie (scheduled)', () => {
+  it('synchroniseert gekoppelde gebruikers, slaat niet-gekoppelde over en is idempotent', async () => {
+    const { runScheduledSync } = await import('../src/modules/integrations/sync.ts');
+    const app = createApp();
+    const code = await platformCode(app, { maxUses: 5 });
+    const a = await register(app, 'Gepland', code);
+    const b = await register(app, 'Nietgekoppeld', code);
+    // A koppelt de voorbeeldbron handmatig (zonder directe sync) door een link te zetten, zoals na een koppeling.
+    app.db.db.prepare('INSERT INTO integration_links (user_id, provider, display_name, status, token_enc, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(a.id, 'sample', 'Voorbeeldkoppeling', 'linked', 'iv:ct', app.now(), app.now());
+    const countA = () => (app.db.db.prepare('SELECT COUNT(*) AS n FROM grades WHERE user_id = ? AND deleted_at IS NULL').get(a.id) as { n: number }).n;
+    const countB = () => (app.db.db.prepare('SELECT COUNT(*) AS n FROM grades WHERE user_id = ? AND deleted_at IS NULL').get(b.id) as { n: number }).n;
+
+    const first = await runScheduledSync(app.env, app.now());
+    const sample = first.find((r) => r.provider === 'sample')!;
+    expect(sample).toMatchObject({ users: 1, created: 5, duplicate: 0, failed: 0 });
+    expect(countA()).toBe(5);
+    expect(countB()).toBe(0); // B heeft geen koppeling
+
+    // Tweede run: alles al aanwezig, niets dubbels.
+    const second = await runScheduledSync(app.env, app.now());
+    expect(second.find((r) => r.provider === 'sample')).toMatchObject({ users: 1, created: 0, duplicate: 5 });
+    expect(countA()).toBe(5);
+  });
+});

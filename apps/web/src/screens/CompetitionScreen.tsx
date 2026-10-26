@@ -16,7 +16,7 @@ function DemoNote() {
   return (
     <div className="demo-note">
       <IconInfo />
-      <span><b>Demo-pool met computertegenstanders.</b> Spelregels, ranglijsten en battles draaien op de echte engine; de tegenstanders en hun cijfers zijn verzonnen. Online tegen klasgenoten werkt via de server, die lokaal gebouwd en getest is maar nog niet online staat.</span>
+      <span><b>Je speelt in demomodus.</b> Je tegenstanders en hun cijfers zijn verzonnen. Gebruik een account om met anderen te spelen.</span>
     </div>
   );
 }

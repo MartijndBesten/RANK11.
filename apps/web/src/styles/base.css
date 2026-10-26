@@ -8,7 +8,7 @@
   --line-strong: rgba(255, 255, 255, 0.16);
   --text: #eef2f8;
   --text-dim: #9aa6bc;
-  --text-faint: #5f6b82;
+  --text-faint: #9aa6bc;
 
   --gold-1: #fff1c4;
   --gold-2: #f2cf73;
@@ -23,7 +23,7 @@
   --warn: #ffb547;
 
   --font-display: 'Barlow Condensed', 'Arial Narrow', system-ui, sans-serif;
-  --font-ui: 'Barlow', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-ui: system-ui, -apple-system, 'Segoe UI', sans-serif;
 
   --radius: 14px;
   --nav-h: 64px;
@@ -47,8 +47,8 @@ body {
   background: var(--bg-0);
   color: var(--text);
   font-family: var(--font-ui);
-  font-size: 15px;
-  line-height: 1.4;
+  font-size: 16px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;
@@ -61,7 +61,7 @@ button:disabled { cursor: not-allowed; }
 [hidden] { display: none !important; }
 
 .display { font-family: var(--font-display); font-weight: 800; letter-spacing: 0.01em; text-transform: uppercase; line-height: 0.92; }
-.eyebrow { font-family: var(--font-display); font-weight: 700; font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-dim); }
+.eyebrow { font-family: var(--font-ui); font-weight: 600; font-size: 13px; letter-spacing: 0.02em; color: var(--text-dim); }
 .dim { color: var(--text-dim); }
 .num { font-variant-numeric: tabular-nums; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
@@ -151,7 +151,7 @@ button:disabled { cursor: not-allowed; }
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid var(--line);
-  font-family: var(--font-display);
+  font-family: var(--font-ui);
   font-weight: 700;
   font-size: 16px;
   letter-spacing: 0.02em;
@@ -193,11 +193,10 @@ button:disabled { cursor: not-allowed; }
   justify-content: center;
   gap: 3px;
   color: var(--text-faint);
-  font-family: var(--font-display);
+  font-family: var(--font-ui);
   font-weight: 700;
   font-size: 12px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   position: relative;
   transition: color 0.2s;
 }
@@ -254,11 +253,10 @@ button:disabled { cursor: not-allowed; }
   gap: 10px;
   height: 52px;
   padding: 0 26px;
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 20px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: 0;
   color: #1d1304;
   background: linear-gradient(180deg, var(--gold-1) 0%, var(--gold-2) 38%, var(--gold-3) 100%);
   clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);

@@ -2,7 +2,7 @@
  "eventId": "toetsweek1",
  "drafts": 10000,
  "catalogSize": 245,
- "photosOnly": false,
+ "photosOnly": true,
  "groups": {
   "A": {
    "observed": 0.0004127272727272727,

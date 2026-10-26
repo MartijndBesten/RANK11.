@@ -32,7 +32,7 @@ npm run typecheck
 npm run dev              # http://localhost:5173  (#kaarten = kaartengalerij)
 npm run build:single     # één HTML-bestand; daarna: python3 tools/preview.py apps/web/dist-single/index.html <uit.html>
 node tools/portretten/manifest.mjs                                   # na nieuwe portretten
-node --experimental-strip-types tools/sim/balans.ts > docs/SIMULATIES.md   # balansrapport + gemeten draftkansen
+node --experimental-transform-types tools/sim/balans.ts > docs/SIMULATIES.md   # balansrapport + gemeten draftkansen
 ```
 
 ## Uitgangspunten

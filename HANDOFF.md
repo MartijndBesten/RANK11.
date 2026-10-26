@@ -1,7 +1,7 @@
 # HANDOFF — RANK11.
 
 **Status:** `wacht-op-review`. Ronde 3 (nachtronde) is klaar: de 7 verbeterpunten, het cijferdashboard, de motivatie-engine, het competitiesysteem, de Academy-voorbereiding en de lokale multiplayerserver.
-**Bijgewerkt:** 26-10-2026 (Claude Code, cloudsessie). Zie de portretregel hieronder voor de laatste stand.
+**Bijgewerkt:** 26-10-2026, nacht (Claude Code, cloudsessie).
 **Branch:** `main` (gepusht)
 **Volgende actor:** Martijn
 **Volgende stap:** preview v4 bekijken (https://claude.ai/artifact/L5dsftxHszJFRNqb35xBa9) en `docs/review/v3/`. Daarna V-011 t/m V-016 beantwoorden. V-005 en V-006 blijven nodig vóór iets online kan.
@@ -12,7 +12,7 @@ Wat echt werkt en wat demo is: `docs/PROJECT-STATUS.md`. Testresultaten: `docs/T
 
 | Verbeterpunt / opdracht | Status |
 |---|---|
-| 1. Gezichten consistent fotorealistisch | Batch voor de hele catalogus (209 portretten, lokaal FLUX.2 [klein], €0) loopt; hervatbaar. De app toont alleen spelers met portret zodra ≥150 klaar zijn (`PHOTOS_ONLY`). Onderzoek echte data: `docs/onderzoek/ECHTE_DATA_V2.md`. Echte spelers, clubs en foto's blijven NO-GO zonder licenties. |
+| 1. Gezichten consistent fotorealistisch | KLAAR: alle 209 portretten (200 spelers, 8 legends, S01), lokaal met FLUX.2 [klein], €0. De app staat op alleen fotoportretten (`PHOTOS_ONLY`); geen getekende koppen meer. Contactbladen visueel gecontroleerd op kwaliteit en anatomie. Onderzoek echte data: `docs/onderzoek/ECHTE_DATA_V2.md`. Echte spelers, clubs en foto's blijven NO-GO zonder licenties. |
 | 2. Onderscheidende series | Brons, Zilver, Goud, Rare, Toetsweek Special, Legendary (+ Electric/Seizoen); de demo-collectie bevat ze allemaal; serie-strip in Collectie. |
 | 3. Informatieve Home | Gemiddelde met verloop en verandering door de laatste toets, clubniveau met XP per categorie, kluisbalk, volgende beloning (persoonlijke drempel), stijgers/dalers, inzichten, doelen, aankomende toetsen. |
 | 4. Navigatie | Home · Club · Competitie · Cijfers · Academy (verborgen als uitgeschakeld), elk met subnavigatie; oude ankers blijven werken. |

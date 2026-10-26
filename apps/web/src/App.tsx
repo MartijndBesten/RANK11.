@@ -77,7 +77,7 @@ export function App() {
     return () => clearTimeout(t);
   }, [toastIds, markNotified]);
   useEffect(() => {
-    const onHash = () => setRoute(parse(location.hash.replace('#', ''), academyOn));
+    const onHash = () => { setRoute(parse(location.hash.replace('#', ''), academyOn)); document.querySelector('.main')?.scrollTo({ top: 0 }); };
     addEventListener('hashchange', onHash);
     return () => removeEventListener('hashchange', onHash);
   }, [academyOn]);

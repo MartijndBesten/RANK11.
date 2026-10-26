@@ -1,6 +1,7 @@
 """Hervatbare batch: genereer (FLUX.2 [klein] 4B) en snijd uit (IS-Net) voor alle opdrachten.
-Gebruik: python batch.py jobs.json ruwmap webpmap
-Bestaande webp-bestanden worden overgeslagen; na iedere speler staat het resultaat direct klaar."""
+Gebruik: python batch.py jobs.json ruwmap webpmap [max_aantal]
+Bestaande webp-bestanden worden overgeslagen; na iedere speler staat het resultaat direct klaar.
+Met max_aantal draait één begrensd blok (handig als een proces een tijdslimiet heeft)."""
 import gc, json, os, sys, time, torch
 from diffusers import Flux2KleinPipeline
 from PIL import Image
@@ -11,6 +12,7 @@ jobs_path, raw_dir, webp_dir = sys.argv[1], sys.argv[2], sys.argv[3]
 os.makedirs(raw_dir, exist_ok=True); os.makedirs(webp_dir, exist_ok=True)
 torch.set_num_threads(4)
 jobs = [j for j in json.load(open(jobs_path)) if not os.path.exists(f"{webp_dir}/{j['id']}.webp")]
+if len(sys.argv) > 4: jobs = jobs[:int(sys.argv[4])]
 print(f'te doen: {len(jobs)}', flush=True)
 if not jobs: sys.exit(0)
 

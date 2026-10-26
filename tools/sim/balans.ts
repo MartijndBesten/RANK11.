@@ -1,4 +1,4 @@
-// Balansrapport: node --experimental-strip-types tools/sim/balans.ts > docs/SIMULATIES.md
+// Balansrapport: node --experimental-transform-types tools/sim/balans.ts > docs/SIMULATIES.md
 // Draait dezelfde engine als het spel; deterministisch per seed.
 import { DRAFT_EVENTS, generateCatalog, PACKS, simulateDrafts, simulateEconomy, simulatePacks } from '../../packages/engine/src/index.ts';
 import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';

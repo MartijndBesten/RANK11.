@@ -17,7 +17,6 @@ Stand: nacht 25 op 26 oktober 2026. Besluiten die Martijn moet nemen, staan als 
 |---|---|---|
 | I1 | Economie bevoordeelt hoge cijfers | Zie `docs/SIMULATIES.md`: bij een 5,6 krijg je ongeveer 0,13 vouchers per week, bij een 8,0 ongeveer 2,19 (V-011) |
 | I2 | Draftkansen bij kleine catalogus | Groep D (80-84) heeft te weinig spelers per positie. De app toont daarom naast de ingestelde kans ook de gemeten kans. De structurele oplossing is een grotere catalogus of groepen per positie |
-| I3 | Volgende beloning op Home is eentonig | `nextRewards` toont per toets de tier vanaf 7,5. Variatie of een persoonlijke drempel (bijv. eigen gemiddelde + 0,5) is te overwegen |
 | I4 | Academy: XP voor verbeterde fouten zonder interval | Het onderzoek (VERGELIJKBARE-APPS, C4) adviseert pas te belonen bij een latere juiste herhaling, niet direct in dezelfde sessie |
 | I5 | Demo-teamrating hoog (≈94) | De demo-collectie bevat bewust veel speciale series om ze te laten zien; voor echte spelers start je lager |
 | I6 | Lookalike-controle van portretten | Alleen visueel gecontroleerd op anatomie en kwaliteit. Een systematische gelijkeniscontrole (V-010) is niet gedaan |
@@ -32,7 +31,7 @@ Stand: nacht 25 op 26 oktober 2026. Besluiten die Martijn moet nemen, staan als 
 | T3 | Toernooi-endpoints, toetsweken, kaartstraffen, chemiebonus in battles, battlebeloningen | Engine deels klaar, API nog niet |
 | T4 | `npm audit` meldt undici in wrangler | Alleen lokaal gereedschap, niet in de Worker-bundel |
 | T5 | Preview zonder server | De reviewpreview is één statische pagina met lokale opslag per bezoeker |
-| T6 | Portretbatch op CPU | Ongeveer 50-80 seconden per portret. Hervatbaar: `tools/portretten/batch.py` slaat bestaande portretten over |
+| T6 | Portretbatch op CPU | Ongeveer 55 seconden per portret. Hervatbaar en in blokken te draaien (`batch.py … [max_aantal]`). Nieuwe spelers vragen een nieuwe batch |
 | T8 | Volgorde bij gelijke toetsdatum | Bij twee toetsen op dezelfde dag bepaalt het id de volgorde. Op de server zijn id's willekeurig, dus "herstel na een onvoldoende" op dezelfde dag is niet eenduidig. Voorstel: bij gelijke datum op invoermoment sorteren |
 | T7 | Bundlegrootte | De web-bundel is groter geworden door alle schermen. Code-splitting per tab is nog niet gedaan |
 
@@ -42,3 +41,6 @@ Stand: nacht 25 op 26 oktober 2026. Besluiten die Martijn moet nemen, staan als 
 - Academy: te snelle of afgebroken pogingen telden als eerdere poging, waardoor de eerste echte poging geen afrond-XP meer kreeg.
 - Kluisbeloning toonde XP-bonussen uit de oude configuratie; nu de XP-regels uit de motivatie-engine.
 - Elftal op 320 px: de keeper overlapte de centrale verdedigers.
+- Volgende beloning op Home was eentonig (steeds 7,5); nu de eerste tier boven je eigen vakgemiddelde.
+- Navigeren via een anker liet de scrollpositie staan; nu terug naar boven.
+- Portretten: alle 209 (200 spelers, 8 legends, S01) klaar; de app toont geen getekende koppen meer.

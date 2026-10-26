@@ -44,7 +44,7 @@ Legenda: **Server** = berekend en opgeslagen door de server, getest met meerdere
 
 ## Getest
 
-Zie `docs/TEST-REPORT.md`. Kort: engine 225 tests, API 73 tests (waaronder isolatie tussen accounts), E2E met twee testaccounts tegen de lokale stack (20 controles), speluitleg-E2E (14), Academy-E2E (demo en online), demo-regressie, lay-out op 17 schermen × 8 maten in beide modi, schooljaarsimulatie met 12 leerlingprofielen.
+Zie `docs/TEST-REPORT.md`. Kort: engine 225 tests, API 73 tests (waaronder isolatie tussen accounts), E2E met twee testaccounts tegen de lokale stack (20 controles), speluitleg-E2E (14), Academy-E2E (demo en online), import-E2E (11) en koppelingen-E2E (13), demo-regressie, lay-out op 18 schermen × 8 maten in beide modi, schooljaarsimulatie met 12 leerlingprofielen.
 
 ## Niet gedaan, en bewust niet
 

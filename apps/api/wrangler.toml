@@ -32,6 +32,7 @@ SESSION_TTL_DAYS = "30"
 POOL_MAX_MEMBERS_DEFAULT = "20"
 LOGIN_MAX_FAILURES = "5"
 LOGIN_MAX_FAILURES_IP = "30"
+INTEGRATION_KEY = "dev-integratie-sleutel-niet-geheim" # dev-only; productie gebruikt een Worker-secret
 
 [[env.dev.d1_databases]]
 binding = "DB"
@@ -48,6 +49,7 @@ class_name = "MatchDO"
 name = "rank11-api-test"
 
 [env.test.vars]
+INTEGRATION_KEY = "test-integratie-sleutel"
 ENVIRONMENT = "test"
 FEATURE_MARKET = "false" # V-015: transfermarkt uit
 FEATURE_ACADEMY = "true"

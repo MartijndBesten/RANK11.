@@ -141,6 +141,7 @@ export function createApp(overrides: Partial<Env> = {}): TestApp {
     MATCH: dos as unknown as DurableObjectNamespace,
     ALLOWED_ORIGINS: 'https://app.rank11.test',
     PBKDF2_ITERATIONS: '1000', // snel in tests; standaard (productie) 100.000
+    INTEGRATION_KEY: 'test-integratie-sleutel',
     ...overrides,
   };
   dos.env = env;

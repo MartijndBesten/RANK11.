@@ -19,6 +19,8 @@ export interface Env {
   FEATURE_ACADEMY?: string;
   /** Deadline in uren voor asynchrone wedstrijden (per zet en voor accepteren); standaard 48 (V-014). */
   ASYNC_DEADLINE_HOURS?: string;
+  /** Secret voor het versleutelen van koppelingstokens (AES-GCM). Dev gebruikt een niet-geheime placeholder. */
+  INTEGRATION_KEY?: string;
 }
 
 export function intVar(value: string | undefined, fallback: number): number {

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Sheet } from '../components/Sheet';
 import { useStore } from '../state/store';
+import { Koppelingen } from './Koppelingen';
 
 function Toggle({ label, note, on, onChange }: { label: string; note?: string; on: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -23,6 +24,9 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
       <Toggle label="Geluid" on={state.settings.sound} onChange={(v) => setSetting('sound', v)} />
       <Toggle label="Volledige animaties" note="Uit = korte animaties (ook bij systeeminstelling 'minder beweging')." on={!state.settings.reducedMotion} onChange={(v) => setSetting('reducedMotion', !v)} />
       <Toggle label="RANK Academy" note="Toont de Academy-tab. Nu alleen met de interne oefenmodule; een echte leeromgeving is nog niet gekoppeld." on={state.settings.academy} onChange={(v) => setSetting('academy', v)} />
+
+      <div className="eyebrow" style={{ marginTop: 18 }}>Cijfers koppelen</div>
+      <Koppelingen />
 
       <div className="eyebrow" style={{ marginTop: 18 }}>Meldingen in de app</div>
       <Toggle label="Beloningen in de kluis" on={n.rewards} onChange={(v) => setNotify({ rewards: v })} />

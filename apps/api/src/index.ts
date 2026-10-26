@@ -14,6 +14,7 @@ import { accept, challenge, decline, getMatch, getMatchEvents, listPoolMatches, 
 import { academyOverview, createSession, submitSession } from './modules/academy.ts';
 import { getConfig } from './modules/config.ts';
 import { getSettings, putSettings } from './modules/settings.ts';
+import { connectIntegration, disconnectIntegration, getIntegration, listIntegrations, syncIntegration } from './modules/integrations/routes.ts';
 import { draftStatus, pickInDraft, startDraft } from './modules/drafts.ts';
 import { createGoal, createUpcoming, deleteGoal, deleteUpcoming, getPlanning } from './modules/planning.ts';
 import { claimPick, listVault, markSeen } from './modules/vault.ts';
@@ -29,6 +30,12 @@ export const router = new Router()
   .add('GET', '/api/config', getConfig)
   .add('GET', '/api/settings', getSettings)
   .add('PUT', '/api/settings', putSettings)
+  // koppelingen (externe cijferbronnen)
+  .add('GET', '/api/integrations', listIntegrations)
+  .add('GET', '/api/integrations/:provider', getIntegration)
+  .add('POST', '/api/integrations/:provider/connect', idempotent(connectIntegration, req))
+  .add('POST', '/api/integrations/:provider/sync', idempotent(syncIntegration, req))
+  .add('DELETE', '/api/integrations/:provider', disconnectIntegration)
   // accounts
   .add('POST', '/api/auth/register', register)
   .add('POST', '/api/auth/login', login)

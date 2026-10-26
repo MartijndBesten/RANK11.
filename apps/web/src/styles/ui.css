@@ -221,3 +221,15 @@ button.row:hover .row-title { color: #fff; }
 .help-body { min-width: 0; display: grid; gap: 6px; }
 .help-body p { margin: 0; color: var(--text-dim); font-size: 14px; line-height: 1.45; max-width: 62ch; }
 .help-actions { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
+
+/* Koppelingen met externe cijferbronnen (in Instellingen). */
+.koppel { display: grid; gap: 12px; }
+.koppel-row { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: rgba(255, 255, 255, 0.02); }
+.koppel-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.koppel-head b { display: block; }
+.koppel-status { display: inline-block; margin-top: 3px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; padding: 2px 8px; border-radius: 999px; }
+.koppel-status.on { color: var(--up); background: rgba(47, 227, 154, 0.12); }
+.koppel-status.off { color: var(--text-dim); background: rgba(255, 255, 255, 0.05); }
+.koppel-status.na { color: var(--warn); background: rgba(255, 181, 71, 0.12); }
+.koppel-status.err { color: var(--down); background: rgba(255, 90, 106, 0.12); }
+.koppel-note { margin-top: 6px; }

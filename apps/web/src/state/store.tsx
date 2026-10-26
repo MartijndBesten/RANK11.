@@ -215,6 +215,16 @@ export interface RevealOutcome {
 
 export interface GradeInput { subjectId: string; testName: string; value: number; weight: number; date: string }
 export interface ImportOutcome { created: number; duplicate: number; invalid: number }
+export interface IntegrationProvider {
+  id: string; name: string; school: string | null; available: boolean; note: string | null;
+  link: { linked: boolean; status?: string; displayName?: string | null; lastSyncAt?: number | null; lastError?: string | null };
+}
+export interface Integrations {
+  list: () => MaybePromise<IntegrationProvider[]>;
+  connect: (id: string) => MaybePromise<void>;
+  sync: (id: string) => MaybePromise<ImportOutcome>;
+  disconnect: (id: string) => MaybePromise<void>;
+}
 export type ActionResult = { ok: true; id?: string } | { ok: false; error: string; duplicateOf?: string };
 
 type MaybePromise<T> = T | Promise<T>;
@@ -241,6 +251,8 @@ export interface Store {
   addGrade: (input: GradeInput) => MaybePromise<ActionResult>;
   /** Meerdere cijfers tegelijk uit een bestandsimport. Herkomst 'import'; dedup voorkomt dubbele beloningen. */
   importGrades: (rows: GradeInput[]) => MaybePromise<ImportOutcome>;
+  /** Externe cijferkoppelingen (demo: lokaal voorbeeld; online: via de server). */
+  integrations: Integrations;
   correctGrade: (gradeId: string, changes: Partial<GradeInput>, reason?: string) => MaybePromise<ActionResult>;
   deleteGrade: (gradeId: string, reason?: string) => MaybePromise<ActionResult>;
   revealGrade: (gradeId: string) => RevealOutcome | null;
@@ -394,6 +406,27 @@ export function StoreProvider({ children, onExit }: { children: ReactNode; onExi
     }));
     return { created: toAdd.length, duplicate, invalid };
   }, [book, update]);
+
+  // Demo-koppeling: een lokaal voorbeeld met synthetische cijfers, zodat de preview de koppeling toont zonder server.
+  const SAMPLE_ROWS: GradeInput[] = [
+    { subjectId: 'wis', testName: 'SO Hoofdstuk 1', value: 6.8, weight: 2, date: '2026-09-15' },
+    { subjectId: 'ne', testName: 'Leesvaardigheid', value: 7.5, weight: 1, date: '2026-09-22' },
+    { subjectId: 'en', testName: 'Reading Unit 2', value: 8.1, weight: 2, date: '2026-10-02' },
+    { subjectId: 'fa', testName: 'Vocabulaire', value: 5.4, weight: 1, date: '2026-10-09' },
+    { subjectId: 'bi', testName: 'Toets Cellen', value: 7.0, weight: 2, date: '2026-10-16' },
+  ];
+  const DEMO_LINK_KEY = 'rank11-demo-link-sample';
+  const demoLinked = () => { try { return localStorage.getItem(DEMO_LINK_KEY) === '1'; } catch { return false; } };
+  const integrations = useMemo<Integrations>(() => ({
+    list: () => [
+      { id: 'sample', name: 'Voorbeeldkoppeling', school: null, available: true, note: 'Synthetische voorbeeldcijfers om de koppeling te proberen. Geen echte schoolgegevens.', link: { linked: demoLinked() } },
+      { id: 'magister', name: 'Magister', school: 'De Passie', available: false, note: 'Nog niet beschikbaar: een koppeling per leerling vraagt een officieel toegestane route via de school of een geautoriseerde partner.', link: { linked: false } },
+    ],
+    connect: (id) => { if (id === 'sample') { try { localStorage.setItem(DEMO_LINK_KEY, '1'); } catch { /* */ } importGrades(SAMPLE_ROWS); } },
+    sync: (id) => (id === 'sample' ? importGrades(SAMPLE_ROWS) : { created: 0, duplicate: 0, invalid: 0 }),
+    disconnect: (id) => { if (id === 'sample') { try { localStorage.removeItem(DEMO_LINK_KEY); } catch { /* */ } } },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [importGrades]);
 
   const correctGrade = useCallback((gradeId: string, changes: Partial<GradeInput>, reason?: string): ActionResult => {
     const before = book.grades.find((g) => g.id === gradeId);
@@ -627,10 +660,10 @@ export function StoreProvider({ children, onExit }: { children: ReactNode; onExi
     () => ({
       mode: 'demo' as const, user: null, can: { quickSell: true, demoCompetition: true, academy: true, exit: !!onExit }, draftPick: () => undefined, logout: () => onExit?.(),
       state, owned, grades: book.grades, pending, history: book.history, xp, openPackFromInventory, buyPack, startDraft,
-      addGrade, importGrades, correctGrade, deleteGrade, revealGrade, claimPick, addGoal, removeGoal, addUpcoming, removeUpcoming,
+      addGrade, importGrades, integrations, correctGrade, deleteGrade, revealGrade, claimPick, addGoal, removeGoal, addUpcoming, removeUpcoming,
       saveScenario, removeScenario, submitLearningEvent, practice, recordWrongAnswers, saveBattle, setLineup, quickSell, setSetting, setNotify, setTipsOn, markTipSeen, markNotified, reset,
     }),
-    [state, owned, book, pending, xp, openPackFromInventory, buyPack, startDraft, addGrade, importGrades, correctGrade, deleteGrade, revealGrade, claimPick,
+    [state, owned, book, pending, xp, openPackFromInventory, buyPack, startDraft, addGrade, importGrades, integrations, correctGrade, deleteGrade, revealGrade, claimPick,
       addGoal, removeGoal, addUpcoming, removeUpcoming, saveScenario, removeScenario, submitLearningEvent, practice, recordWrongAnswers, saveBattle, setLineup,
       quickSell, setSetting, setNotify, setTipsOn, markTipSeen, markNotified, reset, onExit],
   );

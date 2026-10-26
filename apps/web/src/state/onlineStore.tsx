@@ -12,7 +12,7 @@ import {
 import { api, ApiError, type ApiCard, type ApiGrade, type ApiHistory, type ApiVaultItem, type ApiXpEntry } from '../api/client';
 import { PORTRAITS } from '../portraits/registry';
 import type { CrestData } from '../components/Crest';
-import { CARD_BY_ID, StoreCtx, type ActionResult, type GameState, type GradeInput, type NotifySettings, type RevealOutcome, type Store } from './store';
+import { CARD_BY_ID, StoreCtx, type ActionResult, type GameState, type GradeInput, type ImportOutcome, type IntegrationProvider, type NotifySettings, type RevealOutcome, type Store } from './store';
 import { todayIso } from './school';
 import type { AcademyOverview, PracticeResult } from '../academy/types';
 
@@ -196,6 +196,15 @@ export function OnlineStoreProvider({ children, onLoggedOut }: { children: React
           return { ok: true, id: res.grade.id } as ActionResult;
         } catch (e) { return fail(e); }
       }),
+      integrations: {
+        list: () => api<{ providers: IntegrationProvider[] }>('GET', '/integrations').then((r) => r.providers).catch(() => []),
+        connect: (id: string) => act(async () => { await api('POST', `/integrations/${id}/connect`, {}); }),
+        sync: (id: string) => act(async () => {
+          try { return (await api<{ result: ImportOutcome }>('POST', `/integrations/${id}/sync`, {})).result; }
+          catch { return { created: 0, duplicate: 0, invalid: 0 }; }
+        }),
+        disconnect: (id: string) => act(async () => { await api('DELETE', `/integrations/${id}`); }),
+      },
       importGrades: (rows: GradeInput[]) => act(async () => {
         try {
           const res = await api<{ created: number; duplicate: number; invalid: number }>('POST', '/grades/import', {

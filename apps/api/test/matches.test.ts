@@ -24,7 +24,7 @@ describe('battle tussen twee accounts via de API', () => {
     const acc = await app.api('POST', `/api/matches/${matchId}/accept`, { token: bram.token });
     expect(acc.status).toBe(200);
     expect(acc.body.match.status).toBe('active');
-    expect(acc.body.battle.state.configVersion).toBe('battle.2026.10-1');
+    expect(acc.body.battle.state.configVersion).toBe('battle.2026.10-2');
     expect((await app.api('POST', `/api/matches/${matchId}/accept`, { token: bram.token })).status).toBe(409);
 
     // validatie via de server

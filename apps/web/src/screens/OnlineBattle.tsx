@@ -138,6 +138,7 @@ export function OnlineBattle({ matchId, me, nameOf, onExit }: { matchId: string;
                 <li key={d.round} data-scorer={d.scorer === mySide ? 'me' : d.scorer === null ? 'none' : 'them'}>
                   <span className="num">R{d.round}</span><span>{MODE_LABEL[d.mode]}</span>
                   <span className="num">{iAttack ? `${d.attackerValue} – ${d.defenderValue}` : `${d.defenderValue} – ${d.attackerValue}`}</span>
+                  {(d.attackerForm || d.defenderForm) ? <span className="duel-form" title="Vorm van de dag: extra per kaart">vorm +{iAttack ? d.attackerForm : d.defenderForm}</span> : <span />}
                   <span>{d.scorer === null ? 'gestopt' : d.scorer === mySide ? 'goal jij' : d.scorer === 'both' ? 'beide' : 'goal tegen'}</span>
                 </li>
               );

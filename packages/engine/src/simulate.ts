@@ -417,7 +417,7 @@ function simMove(events: readonly BattleEvent[], side: Side, rng: ReturnType<typ
 }
 
 /** Winkans (winst = 1, gelijk = 0,5) van elftallen A tegen elftallen B over `games` wedstrijden met wisselende duelmodi. */
-export function matchupWinRate(teamsA: readonly BattleCard[][], teamsB: readonly BattleCard[][], games = 120, seed = 'matchup'): number {
+export function matchupWinRate(teamsA: readonly BattleCard[][], teamsB: readonly BattleCard[][], games = 120, seed = 'matchup', formMax = 0): number {
   const rng = createRng(seed);
   let points = 0;
   for (let g = 0; g < games; g++) {
@@ -428,7 +428,7 @@ export function matchupWinRate(teamsA: readonly BattleCard[][], teamsB: readonly
     let log: BattleEvent[] = [createBattle({
       matchId: `m${g}`, seed: `${seed}:${g}`, at: 0,
       home: { playerId: 'A', cards: tag(homeIsA ? a : b, 'h') }, away: { playerId: 'B', cards: tag(homeIsA ? b : a, 'a') },
-      config: { roundModes: Array.from({ length: 11 }, (_, i) => MATCH_MODES[(i + offset) % MATCH_MODES.length]!), maxConsecutiveTimeouts: null },
+      config: { roundModes: Array.from({ length: 11 }, (_, i) => MATCH_MODES[(i + offset) % MATCH_MODES.length]!), maxConsecutiveTimeouts: null, formMax },
     })];
     for (let t = 1; t < 60; t++) {
       const st = battleState(log);

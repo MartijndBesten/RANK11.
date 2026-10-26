@@ -14,7 +14,9 @@ export type DuelMode = 'rating' | Extract<StatKey, 'pace' | 'defending' | 'techn
 /** Wie scoort bij gelijke duelwaarde. */
 export type TieRule = 'none' | 'both' | 'attacker' | 'defender';
 
-export const BATTLE_CONFIG_VERSION = 'battle.2026.10-1';
+export const BATTLE_CONFIG_VERSION = 'battle.2026.10-2';
+/** Vorm van de dag voor echte wedstrijden (V-018): 0..3 extra per kaart per duel. 0 = uit. */
+export const RANK_FORM_MAX = 3;
 
 export interface BattleConfig {
   /** Versie van deze regels; iedere wedstrijd bewaart de versie waaronder hij is aangemaakt. */
@@ -37,6 +39,13 @@ export interface BattleConfig {
   maxConsecutiveTimeouts: number | null;
   /** Uitslag bij reglementair verlies. */
   forfeitScore: { winner: number; loser: number };
+  /**
+   * Vorm van de dag (V-018): elke gespeelde kaart krijgt per duel 0..`formMax` extra bij zijn duelwaarde.
+   * Deterministisch uit de wedstrijdseed, dus server en app rekenen hetzelfde en het is achteraf te controleren.
+   * De bonus staat in het duelresultaat (geen verborgen willekeur). 0 = uit. Zo wint de sterkere kaart meestal,
+   * maar blijft een kleine verrassing mogelijk.
+   */
+  formMax: number;
 }
 
 export const DEFAULT_BATTLE_CONFIG: BattleConfig = {
@@ -50,7 +59,14 @@ export const DEFAULT_BATTLE_CONFIG: BattleConfig = {
   moveTimeoutMs: 30_000,
   maxConsecutiveTimeouts: 3,
   forfeitScore: { winner: 3, loser: 0 },
+  formMax: 0,
 };
+
+/** Vorm van de dag voor één kaart in één duel: deterministisch uit de seed, een geheel getal 0..max. */
+export function formBonus(seed: string, round: number, side: Side, cardId: string, max: number): number {
+  if (max <= 0) return 0;
+  return createRng(`${seed}:vorm:${round}:${side}:${cardId}`).int(0, max);
+}
 
 export const LIVE_MOVE_TIMEOUT_MS = 30_000;
 export const ASYNC_MOVE_TIMEOUT_MS = 24 * 60 * 60 * 1000;
@@ -116,6 +132,9 @@ export interface DuelResult {
   scorer: Side | 'both' | null;
   autoAttacker: boolean;
   autoDefender: boolean;
+  /** Vorm van de dag die in `attackerValue`/`defenderValue` is meegeteld (alleen gevuld als `formMax` > 0). */
+  attackerForm?: number;
+  defenderForm?: number;
 }
 
 export interface BattleResult {
@@ -184,6 +203,7 @@ function validateConfig(c: BattleConfig): void {
     fail('Maximaal aantal time-outs moet een positief geheel getal of null zijn.');
   }
   if (c.forfeitScore.winner <= c.forfeitScore.loser) fail('Reglementaire uitslag moet een winnaar hebben.');
+  if (!Number.isInteger(c.formMax) || c.formMax < 0 || c.formMax > 10) fail('Vorm van de dag (formMax) moet een geheel getal van 0 t/m 10 zijn.');
 }
 
 function validateTeam(team: BattleTeam, config: BattleConfig, label: string): void {
@@ -348,14 +368,17 @@ export function battleState(events: readonly BattleEvent[]): BattleState {
       const mode = state.currentMode as DuelMode;
       const aCard = internal.cards[attacker].get(open.cardId) as BattleCard;
       const dCard = internal.cards[ev.side].get(ev.cardId) as BattleCard;
-      const attackerValue = duelValue(aCard, mode, config);
-      const defenderValue = duelValue(dCard, mode, config);
+      const aForm = formBonus(first.seed, state.round, attacker, open.cardId, config.formMax);
+      const dForm = formBonus(first.seed, state.round, ev.side, ev.cardId, config.formMax);
+      const attackerValue = duelValue(aCard, mode, config) + aForm;
+      const defenderValue = duelValue(dCard, mode, config) + dForm;
       const scorer = scorerFor(config.tieRule, attacker, attackerValue, defenderValue);
       if (scorer === 'both') { state.score.home++; state.score.away++; }
       else if (scorer) state.score[scorer]++;
       state.duels.push({
         round: state.round, mode, attacker, attackerCardId: open.cardId, defenderCardId: ev.cardId,
         attackerValue, defenderValue, scorer, autoAttacker: openAuto, autoDefender: ev.auto,
+        ...(config.formMax > 0 ? { attackerForm: aForm, defenderForm: dForm } : {}),
       });
       state.openCard = null;
       openAuto = false;

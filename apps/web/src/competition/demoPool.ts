@@ -4,7 +4,7 @@
  * gradeLeague); alleen de tegenstanders zijn verzonnen. Online tegen echte klasgenoten volgt via apps/api.
  */
 import {
-  autoBestLineup, battleState, computeStandings, createBattle, createRng, FORMATIONS, gradeLeagueTable, lowestAvailableCard,
+  autoBestLineup, battleState, computeStandings, createBattle, createRng, FORMATIONS, gradeLeagueTable, lowestAvailableCard, RANK_FORM_MAX,
   playCard, roundRobin, duelValue, type BattleCard, type BattleEvent, type Goal, type Grade, type LeagueResult, type Player, type Side,
 } from '@rank11/engine';
 import { CATALOG } from '../state/store';
@@ -54,7 +54,7 @@ export function newBattle(matchId: string, home: { id: string; cards: BattleCard
     matchId, seed: matchId, at,
     home: { playerId: home.id, cards: home.cards },
     away: { playerId: away.id, cards: away.cards },
-    config: { roundModes: [...ROUND_MODES], moveTimeoutMs: 24 * 3600 * 1000, maxConsecutiveTimeouts: null },
+    config: { roundModes: [...ROUND_MODES], moveTimeoutMs: 24 * 3600 * 1000, maxConsecutiveTimeouts: null, formMax: RANK_FORM_MAX },
   })];
 }
 

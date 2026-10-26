@@ -70,7 +70,8 @@
 .battle-end { display: grid; justify-items: center; gap: 8px; text-align: center; padding: 30px 0; }
 .battle-end h2 { margin: 0; font-size: 54px; }
 .battle-log ol { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
-.battle-log li { display: grid; grid-template-columns: 36px 1fr auto 90px; gap: 8px; font-size: 13px; padding: 6px 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.03); color: var(--text-dim); }
+.battle-log li { display: grid; grid-template-columns: 34px 1fr auto auto 84px; gap: 8px; align-items: center; font-size: 13px; padding: 6px 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.03); color: var(--text-dim); }
+.duel-form { font-size: 11px; color: var(--electric-hot); background: rgba(58, 168, 255, 0.12); border-radius: 6px; padding: 1px 6px; white-space: nowrap; justify-self: end; }
 .battle-log li[data-scorer='me'] { color: var(--up); background: rgba(47, 227, 154, 0.08); }
 .battle-log li[data-scorer='them'] { color: #ff9aa5; background: rgba(255, 90, 106, 0.07); }
 .invite-box { display: grid; gap: 8px; justify-items: start; margin: 0 16px 12px; padding: 12px; border-radius: 12px; border: 1px dashed rgba(242, 207, 115, 0.5); background: rgba(242, 207, 115, 0.06); }

@@ -5,7 +5,7 @@
 import { requireUser } from '../auth.ts';
 import { newId, randomSeed } from '../crypto.ts';
 import { auditStmt, isConstraintError, many, one, run, stmt } from '../db.ts';
-import { BATTLE_CONFIG_VERSION, createBattle, LIVE_MOVE_TIMEOUT_MS, type BattleTeam } from '../engine.ts';
+import { BATTLE_CONFIG_VERSION, createBattle, LIVE_MOVE_TIMEOUT_MS, RANK_FORM_MAX, type BattleTeam } from '../engine.ts';
 import type { Env } from '../env.ts';
 import { cardDef, toBattleCard } from '../game.ts';
 import { ApiError, badRequest, conflict, forbidden, json, notFound, num, readJson, str, type Ctx } from '../http.ts';
@@ -160,7 +160,7 @@ export async function accept(ctx: Ctx): Promise<Response> {
     matchId: match.id, seed, at: ctx.now,
     home: toTeam(match.home_user_id, homeCards),
     away: toTeam(match.away_user_id, awayCards),
-    config: { moveTimeoutMs: match.timing === 'live' ? LIVE_MOVE_TIMEOUT_MS : match.deadline_hours * 3600_000 },
+    config: { moveTimeoutMs: match.timing === 'live' ? LIVE_MOVE_TIMEOUT_MS : match.deadline_hours * 3600_000, formMax: RANK_FORM_MAX },
   });
   // Eerst claimen (pending → active), dan de DO starten; bij een fout terugdraaien.
   const claimed = await run(db,

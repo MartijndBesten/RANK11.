@@ -357,3 +357,50 @@ describe('battle: eventlog als enige waarheid', () => {
     expect(created.home.cards[0]?.rating).toBe(70);
   });
 });
+
+describe('vorm van de dag (V-018)', () => {
+  it('staat standaard uit: geen vormvelden en geen effect op de duelwaarde', () => {
+    const s = battleState(playOut(start(flat('h', 80), flat('a', 70))));
+    expect(s.config.formMax).toBe(0);
+    expect(s.duels.every((d) => d.attackerForm === undefined && d.defenderForm === undefined)).toBe(true);
+    // Zonder vorm is de duelwaarde precies de rating (modus 'rating').
+    expect(s.duels[0]!.attackerValue).toBe(80);
+  });
+
+  it('is begrensd (0..formMax), deterministisch uit de seed en zit in de duelwaarde', () => {
+    const log = playOut(start(flat('h', 80), flat('a', 80), { formMax: 3 }, 'vorm-seed'));
+    const s = battleState(log);
+    for (const d of s.duels) {
+      expect(d.attackerForm).toBeGreaterThanOrEqual(0);
+      expect(d.attackerForm).toBeLessThanOrEqual(3);
+      expect(d.defenderForm).toBeGreaterThanOrEqual(0);
+      expect(d.defenderForm).toBeLessThanOrEqual(3);
+      expect(d.attackerValue).toBe(80 + d.attackerForm!);
+      expect(d.defenderValue).toBe(80 + d.defenderForm!);
+    }
+    // Zelfde seed → zelfde vorm (reproduceerbaar, niet willekeurig per run).
+    const again = battleState(playOut(start(flat('h', 80), flat('a', 80), { formMax: 3 }, 'vorm-seed')));
+    expect(again.duels.map((d) => d.attackerForm)).toEqual(s.duels.map((d) => d.attackerForm));
+    // Andere seed → (vrijwel altijd) een ander vormverloop.
+    const other = battleState(playOut(start(flat('h', 80), flat('a', 80), { formMax: 3 }, 'andere-seed')));
+    expect(other.duels.map((d) => d.attackerForm)).not.toEqual(s.duels.map((d) => d.attackerForm));
+  });
+
+  it('een groot ratingverschil wordt niet omgedraaid door de vorm', () => {
+    // 85 tegen 75: het verschil (10) is groter dan de maximale vormswing (3), dus het sterkere elftal (home)
+    // heeft in elk duel de hoogste waarde, ongeacht wie aanvalt.
+    const s = battleState(playOut(start(flat('h', 85), flat('a', 75), { formMax: 3 })));
+    for (const d of s.duels) {
+      const homeValue = d.attacker === 'home' ? d.attackerValue : d.defenderValue;
+      const awayValue = d.attacker === 'home' ? d.defenderValue : d.attackerValue;
+      expect(homeValue).toBeGreaterThan(awayValue);
+    }
+    expect(s.score.home).toBeGreaterThan(s.score.away);
+  });
+
+  it('formMax buiten 0..10 wordt geweigerd', () => {
+    expect(() => resolveBattleConfig({ formMax: -1 })).toThrow(BattleError);
+    expect(() => resolveBattleConfig({ formMax: 11 })).toThrow(BattleError);
+    expect(() => resolveBattleConfig({ formMax: 2.5 })).toThrow(BattleError);
+  });
+});

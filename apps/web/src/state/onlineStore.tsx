@@ -29,6 +29,7 @@ interface Loaded {
   vault: ApiVaultItem[];
   planning: { goals: GameState['goals']; upcoming: GameState['upcoming'] };
   draft: { pity: Record<string, number>; active: { id: string; session: DraftSession } | null };
+  settings: { tips: boolean; tipsSeen: string[] };
 }
 
 interface Prefs { settings: GameState['settings']; notified: string[]; scenarios: GameState['scenarios'] }
@@ -56,7 +57,7 @@ function withPhoto<T extends Player>(p: T): T {
 }
 
 async function loadAll(): Promise<Loaded> {
-  const [me, club, wallet, collection, lineup, packs, grades, xp, vault, planning, draft] = await Promise.all([
+  const [me, club, wallet, collection, lineup, packs, grades, xp, vault, planning, draft, settings] = await Promise.all([
     api<{ user: Loaded['user'] }>('GET', '/me'),
     api<{ club: Loaded['club'] }>('GET', '/club'),
     api<{ balances: Loaded['balances'] }>('GET', '/wallet'),
@@ -68,10 +69,11 @@ async function loadAll(): Promise<Loaded> {
     api<{ items: ApiVaultItem[] }>('GET', '/vault'),
     api<Loaded['planning']>('GET', '/planning'),
     api<Loaded['draft']>('GET', '/draft'),
+    api<{ settings: Loaded['settings'] }>('GET', '/settings'),
   ]);
   return {
     user: me.user, club: club.club, balances: wallet.balances, cards: collection.cards, lineup, unopened: packs.unopened,
-    grades: grades.grades, history: grades.history ?? [], xp, vault: vault.items, planning, draft,
+    grades: grades.grades, history: grades.history ?? [], xp, vault: vault.items, planning, draft, settings: settings.settings,
   };
 }
 
@@ -81,6 +83,17 @@ export function OnlineStoreProvider({ children, onLoggedOut }: { children: React
   const [data, setData] = useState<Loaded | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [prefs, setPrefs] = useState<Prefs>(loadPrefs);
+  // Speluitleg staat per gebruiker op de server; lokaal direct bijwerken, op de achtergrond opslaan.
+  const [tips, setTips] = useState<GameState['tips'] | null>(null);
+  useEffect(() => { if (data) setTips({ on: data.settings.tips, seen: data.settings.tipsSeen }); }, [data]);
+  const updateTips = useCallback((fn: (t: GameState['tips']) => GameState['tips']) => {
+    setTips((prev) => {
+      const base = prev ?? { on: true, seen: [] };
+      const next = fn(base);
+      if (next !== base) void api('PUT', '/settings', { tips: next.on, tipsSeen: next.seen }).catch(() => undefined);
+      return next;
+    });
+  }, []);
   const refreshing = useRef<Promise<void> | null>(null);
 
   const refresh = useCallback(async () => {
@@ -130,10 +143,11 @@ export function OnlineStoreProvider({ children, onLoggedOut }: { children: React
       progressGrants: [],
       competition: { results: [], battles: {} },
       notified: prefs.notified, settings: prefs.settings,
+      tips: tips ?? { on: data.settings.tips, seen: data.settings.tipsSeen },
     };
     const owned = state.collection.map((id) => CARD_BY_ID.get(id)).filter((p): p is Player => !!p);
     return { state, owned, grades, history, pending, vault, instancesByDef, formation };
-  }, [data, prefs]);
+  }, [data, prefs, tips]);
 
   const value = useMemo<Store | null>(() => {
     if (!data || !derived) return null;
@@ -256,12 +270,14 @@ export function OnlineStoreProvider({ children, onLoggedOut }: { children: React
       }),
       setSetting: (key, v) => updatePrefs((p) => ({ ...p, settings: { ...p.settings, [key]: v } })),
       setNotify: (changes: Partial<NotifySettings>) => updatePrefs((p) => ({ ...p, settings: { ...p.settings, notify: { ...p.settings.notify, ...changes } } })),
+      setTipsOn: (on) => updateTips((t) => (t.on === on ? t : { ...t, on })),
+      markTipSeen: (id) => updateTips((t) => (t.seen.includes(id) ? t : { ...t, seen: [...t.seen, id] })),
       markNotified: (ids) => updatePrefs((p) => ({ ...p, notified: [...new Set([...p.notified, ...ids])] })),
       reset: () => undefined,
       logout: async () => { await api('POST', '/auth/logout').catch(() => undefined); onLoggedOut(); },
     };
     return store;
-  }, [data, derived, refresh, updatePrefs, onLoggedOut]);
+  }, [data, derived, refresh, updatePrefs, onLoggedOut, updateTips]);
 
   const draftIdRef = useRef<string | null>(null);
 

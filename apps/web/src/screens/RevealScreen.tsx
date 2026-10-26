@@ -10,6 +10,7 @@ import { IconCoin, IconDown, IconUp, IconVault, IconVoucher, IconXp } from '../c
 import { useReducedMotion } from '../lib/motion';
 import { sfx } from '../lib/sound';
 import './reveal.css';
+import { Help } from '../components/Help';
 
 type Tone = 'elite' | 'good' | 'pass' | 'support';
 const toneFor = (v: number): Tone => (v >= 8.5 ? 'elite' : v >= 6.5 ? 'good' : v >= 5.5 ? 'pass' : 'support');
@@ -30,6 +31,7 @@ export function RevealScreen({ nav }: { nav: Nav }) {
         <div className="eyebrow">Cijferkluis</div>
         <h1 className="display">{pending.length ? `${pending.length} nieuw` : 'Alles onthuld'}</h1>
       </header>
+      <Help id="kluis" />
 
       <div className="vault-grid">
         <section className="vault-pending" aria-label="Nieuwe cijfers">

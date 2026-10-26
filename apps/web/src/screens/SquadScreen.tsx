@@ -10,6 +10,7 @@ import { PlayerCard } from '../components/PlayerCard';
 import { Sheet } from '../components/Sheet';
 import { sfx } from '../lib/sound';
 import './squad.css';
+import { Help } from '../components/Help';
 
 const BENCH = ['bench0', 'bench1', 'bench2', 'bench3', 'bench4', 'bench5', 'bench6'];
 const FIT_LABEL: Record<Fit, string> = { exact: 'Positie', alt: 'Alternatief', related: 'Verwant −3', off: 'Uit positie' };
@@ -99,6 +100,7 @@ export function SquadScreen(_: { nav: Nav }) {
           </div>
         </div>
       </header>
+      <Help id="elftal" />
 
       <div className="squad-layout">
         <div className="squad-pitch-col">

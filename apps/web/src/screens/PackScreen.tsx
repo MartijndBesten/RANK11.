@@ -7,6 +7,7 @@ import { Sheet } from '../components/Sheet';
 import { PackOdds } from '../components/PackOdds';
 import { IconCoin, IconInfo } from '../components/Icons';
 import './packs.css';
+import { Help } from '../components/Help';
 
 export function PackScreen({ nav }: { nav: Nav }) {
   const { state, buyPack } = useStore();
@@ -20,6 +21,7 @@ export function PackScreen({ nav }: { nav: Nav }) {
         <div className="eyebrow">Packs</div>
         <h1 className="display">Mijn packs</h1>
       </header>
+      <Help id="packs" />
 
       {mine.length === 0 ? (
         <div className="panel empty">

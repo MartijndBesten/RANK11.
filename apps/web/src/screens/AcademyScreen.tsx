@@ -8,6 +8,7 @@ import { subjectById } from '../state/school';
 import type { AcademyOverview, PracticeResult } from '../academy/types';
 import { IconCheck, IconClose, IconInfo } from '../components/Icons';
 import './academy.css';
+import { Help } from '../components/Help';
 
 export const STATUS_LABEL: Record<AcademyDecisionStatus, string> = {
   rewarded: 'Beloond',
@@ -107,6 +108,7 @@ function Overview({ nav }: { nav: Nav }) {
         </div>
         <button className="btn" onClick={() => nav.go('academy-oefenen')}>Oefenen</button>
       </div>
+      <Help id="academy" />
 
       {due > 0 && (
         <button className="panel electric acad-due" onClick={() => nav.go('academy-oefenen')}>

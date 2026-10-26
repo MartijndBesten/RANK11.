@@ -9,6 +9,7 @@ import { Sparkline } from '../components/charts';
 import { IconCalendar, IconClock, IconDown, IconPack, IconTarget, IconUp, IconVault } from '../components/Icons';
 import { Countdown } from '../components/Countdown';
 import './hub.css';
+import { Help } from '../components/Help';
 
 export function useLineup() {
   const { state } = useStore();
@@ -39,6 +40,7 @@ export function Hub({ nav }: { nav: Nav }) {
 
   return (
     <div className="page home">
+      <Help id="start" />
       <section className="panel home-hero" aria-label="Je cijfers in één oogopslag">
         <div className="home-hero-main">
           <div className="eyebrow">{d.period.name} · zelf ingevoerd</div>

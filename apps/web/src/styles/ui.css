@@ -211,3 +211,13 @@ button.row:hover .row-title { color: #fff; }
 .auth .seg button { flex: 1; }
 .auth-demo { display: grid; gap: 6px; justify-items: start; border-top: 1px solid var(--line); padding-top: 12px; }
 .auth-demo .link-btn { justify-self: start; }
+
+/* Speluitleg: kort, in de pagina (geen pop-up). */
+.help-row { display: flex; justify-content: flex-end; margin: -4px 0 4px; }
+.help-q { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-dim); padding: 4px 2px; }
+.help-q:hover { color: var(--text); }
+.help-card { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; margin: 4px 0 12px; border: 1px solid rgba(58, 168, 255, 0.35); border-radius: var(--radius); background: linear-gradient(180deg, rgba(58, 168, 255, 0.10), rgba(58, 168, 255, 0.04)); }
+.help-icon { flex: none; color: var(--electric-hot); margin-top: 1px; }
+.help-body { min-width: 0; display: grid; gap: 6px; }
+.help-body p { margin: 0; color: var(--text-dim); font-size: 14px; line-height: 1.45; max-width: 62ch; }
+.help-actions { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-top: 4px; }

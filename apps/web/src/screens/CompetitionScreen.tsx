@@ -8,6 +8,7 @@ import { BattleView } from './BattleView';
 import { OnlineCompetition } from './OnlineCompetition';
 import { IconInfo, IconLeague } from '../components/Icons';
 import './competition.css';
+import { Help } from '../components/Help';
 
 const formClass = { W: 'up', G: 'flat', V: 'down' } as const;
 
@@ -193,6 +194,7 @@ function DemoCompetition({ nav, sub }: { nav: Nav; sub: string }) {
   return (
     <div className="page">
       <div className="page-head"><div><div className="eyebrow">Competitie · {POOL_NAME}</div><h1 className="display">Drie leagues</h1></div></div>
+      <Help id="competitie" />
       <DemoNote />
       <div className="leagues">
         <section className="panel league-card rank" role="button" tabIndex={0} onClick={() => nav.go('competitie-rankleague')} onKeyDown={(e) => e.key === 'Enter' && nav.go('competitie-rankleague')}>

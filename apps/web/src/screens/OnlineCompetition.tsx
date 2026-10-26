@@ -10,6 +10,7 @@ import { useStore } from '../state/store';
 import { OnlineBattle } from './OnlineBattle';
 import { IconLeague } from '../components/Icons';
 import './competition.css';
+import { Help } from '../components/Help';
 
 interface Pool { id: string; name: string; role: 'admin' | 'member'; memberCount: number; maxMembers: number }
 interface Member { userId: string; username: string; role: string; club: { name: string; short: string } | null }
@@ -205,6 +206,7 @@ export function OnlineCompetition({ nav, sub }: { nav: Nav; sub: string }) {
     <div className="page">
       <div className="page-head"><div><div className="eyebrow">Competitie · {pool.name}</div><h1 className="display">Drie leagues</h1></div>
         {pools.length > 1 && <select className="select" style={{ maxWidth: 220 }} value={pool.id} onChange={(e) => setPoolId(e.target.value)} aria-label="Kies pool">{pools.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select>}</div>
+      <Help id="competitie" />
       <ServerNote />
       <div className="leagues">
         <section className="panel league-card rank" role="button" tabIndex={0} onClick={() => nav.go('competitie-rankleague')} onKeyDown={(e) => e.key === 'Enter' && nav.go('competitie-rankleague')}>
@@ -279,6 +281,7 @@ function PoolsView({ pools, active, members, me, onSelect, onChanged }: {
     <div className="page">
       <div className="page-head"><div><div className="eyebrow">Competitie</div><h1 className="display">Pools</h1>
         <p className="dim small">Een pool is een besloten groep. Alleen leden zien elkaar; cijfers zijn nooit zichtbaar.</p></div></div>
+      <Help id="competitie" />
       <ServerNote />
       {msg && <p className="form-ok" role="status">{msg}</p>}
       <div className="page-cols">

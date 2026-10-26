@@ -45,6 +45,8 @@ export interface AcademyDecisionLog {
   subjectId?: string; topic?: string; questionCount?: number; correctCount?: number; mistakesFixed?: number; at?: number;
 }
 
+export interface TipsState { on: boolean; seen: string[] }
+
 export interface GameState {
   version: 3;
   club: { name: string; crest: CrestData };
@@ -78,6 +80,8 @@ export interface GameState {
   competition: { results: LeagueResult[]; battles: Record<string, BattleEvent[]> };
   /** Kluisbeloningen waarvoor de melding al getoond is (precies één keer per cijfer). */
   notified: string[];
+  /** Speluitleg: automatisch tonen aan/uit en welke uitleg al gezien is (via het vraagteken altijd terug te lezen). */
+  tips: TipsState;
   settings: { sound: boolean; reducedMotion: boolean; academy: boolean; notify: NotifySettings };
 }
 
@@ -158,6 +162,7 @@ function initialState(): GameState {
     progressGrants: [],
     competition: { results: [], battles: {} },
     notified: [],
+    tips: { on: true, seen: [] },
     settings: { sound: true, reducedMotion: false, academy: true, notify: { rewards: true, goals: true, competition: true, quietFrom: '21:30', quietTo: '07:30' } },
   };
 }
@@ -168,7 +173,7 @@ function load(): GameState {
     if (raw) {
       const parsed = JSON.parse(raw) as GameState;
       // Alleen bewaarde kaarten die nog in de catalogus bestaan (catalogus kan krimpen tot spelers met portret).
-      if (parsed.version === 3) return { ...parsed, academy: { ...parsed.academy, items: parsed.academy.items ?? [] }, competition: parsed.competition ?? { results: [], battles: {} }, progressGrants: parsed.progressGrants ?? [], collection: parsed.collection.filter((id) => CARD_BY_ID.has(id)) };
+      if (parsed.version === 3) return { ...parsed, academy: { ...parsed.academy, items: parsed.academy.items ?? [] }, competition: parsed.competition ?? { results: [], battles: {} }, progressGrants: parsed.progressGrants ?? [], tips: parsed.tips ?? { on: true, seen: [] }, collection: parsed.collection.filter((id) => CARD_BY_ID.has(id)) };
     }
   } catch {
     /* privémodus of geblokkeerde opslag: gewoon met demo-data starten */
@@ -252,6 +257,10 @@ export interface Store {
   quickSell: (cardIds: string[]) => MaybePromise<number>;
   setSetting: (key: 'sound' | 'reducedMotion' | 'academy', value: boolean) => void;
   setNotify: (changes: Partial<NotifySettings>) => void;
+  /** Speluitleg automatisch tonen (aan/uit). Uitleg blijft via het vraagteken terug te lezen. */
+  setTipsOn: (on: boolean) => void;
+  /** Uitleg gezien of overgeslagen: niet meer vanzelf tonen. */
+  markTipSeen: (id: string) => void;
   markNotified: (gradeIds: string[]) => void;
   reset: () => void;
   /** Online: uitloggen. Demo: terug naar het startscherm. */
@@ -575,6 +584,13 @@ export function StoreProvider({ children, onExit }: { children: ReactNode; onExi
     update((s) => ({ ...s, settings: { ...s.settings, notify: { ...s.settings.notify, ...changes } } }));
   }, [update]);
 
+  const setTipsOn = useCallback((on: boolean) => {
+    update((s) => ({ ...s, tips: { ...s.tips, on } }));
+  }, [update]);
+  const markTipSeen = useCallback((id: string) => {
+    update((s) => (s.tips.seen.includes(id) ? s : { ...s, tips: { ...s.tips, seen: [...s.tips.seen, id] } }));
+  }, [update]);
+
   const markNotified = useCallback((gradeIds: string[]) => {
     update((s) => ({ ...s, notified: [...new Set([...s.notified, ...gradeIds])] }));
   }, [update]);
@@ -590,11 +606,11 @@ export function StoreProvider({ children, onExit }: { children: ReactNode; onExi
       mode: 'demo' as const, user: null, can: { quickSell: true, demoCompetition: true, academy: true, exit: !!onExit }, draftPick: () => undefined, logout: () => onExit?.(),
       state, owned, grades: book.grades, pending, history: book.history, xp, openPackFromInventory, buyPack, startDraft,
       addGrade, correctGrade, deleteGrade, revealGrade, claimPick, addGoal, removeGoal, addUpcoming, removeUpcoming,
-      saveScenario, removeScenario, submitLearningEvent, practice, recordWrongAnswers, saveBattle, setLineup, quickSell, setSetting, setNotify, markNotified, reset,
+      saveScenario, removeScenario, submitLearningEvent, practice, recordWrongAnswers, saveBattle, setLineup, quickSell, setSetting, setNotify, setTipsOn, markTipSeen, markNotified, reset,
     }),
     [state, owned, book, pending, xp, openPackFromInventory, buyPack, startDraft, addGrade, correctGrade, deleteGrade, revealGrade, claimPick,
       addGoal, removeGoal, addUpcoming, removeUpcoming, saveScenario, removeScenario, submitLearningEvent, practice, recordWrongAnswers, saveBattle, setLineup,
-      quickSell, setSetting, setNotify, markNotified, reset, onExit],
+      quickSell, setSetting, setNotify, setTipsOn, markTipSeen, markNotified, reset, onExit],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

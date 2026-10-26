@@ -11,14 +11,15 @@ function Toggle({ label, note, on, onChange }: { label: string; note?: string; o
   );
 }
 
-/** Instellingen: geluid, animaties, Academy, meldingen met stille uren, en demo opnieuw beginnen. */
+/** Instellingen: speluitleg, geluid, animaties, Academy, meldingen met stille uren, en demo opnieuw beginnen. */
 export function SettingsSheet({ onClose }: { onClose: () => void }) {
-  const { state, setSetting, setNotify, reset, mode, user, logout, can } = useStore();
+  const { state, setSetting, setNotify, setTipsOn, reset, mode, user, logout, can } = useStore();
   const [confirm, setConfirm] = useState(false);
   const n = state.settings.notify;
   return (
     <Sheet title="Instellingen" onClose={onClose}>
       <div className="eyebrow" style={{ marginTop: 4 }}>Spel</div>
+      <Toggle label="Speluitleg" note="Korte uitleg de eerste keer dat je iets opent. Teruglezen kan altijd via 'Hoe werkt dit?'." on={state.tips.on} onChange={setTipsOn} />
       <Toggle label="Geluid" on={state.settings.sound} onChange={(v) => setSetting('sound', v)} />
       <Toggle label="Volledige animaties" note="Uit = korte animaties (ook bij systeeminstelling 'minder beweging')." on={!state.settings.reducedMotion} onChange={(v) => setSetting('reducedMotion', !v)} />
       <Toggle label="RANK Academy" note="Toont de Academy-tab. Nu alleen met de interne oefenmodule; een echte leeromgeving is nog niet gekoppeld." on={state.settings.academy} onChange={(v) => setSetting('academy', v)} />
@@ -36,7 +37,7 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
       {mode === 'online' ? (
         <>
           <div className="eyebrow" style={{ marginTop: 18 }}>Account</div>
-          <p className="hint">Ingelogd als <b>{user?.username}</b>. Je cijfers, club, collectie en beloningen staan op de (lokale test)server. Voorkeuren hierboven gelden alleen voor dit toestel.</p>
+          <p className="hint">Ingelogd als <b>{user?.username}</b>. Je cijfers, club, collectie en beloningen staan op de (lokale test)server. Speluitleg onthouden we bij je account; de andere voorkeuren gelden alleen voor dit toestel.</p>
           <div style={{ marginTop: 10 }}><button className="btn ghost small" onClick={() => { onClose(); void logout(); }}>Uitloggen</button></div>
         </>
       ) : (

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ComponentType } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState, type ComponentType } from 'react';
 import iconUrl from './assets/icon.svg';
 import { inQuietHours, useStore } from './state/store';
 import { Crest } from './components/Crest';
@@ -8,18 +8,23 @@ import {
 import { setSoundEnabled, sfx } from './lib/sound';
 import { useReducedMotion } from './lib/motion';
 import { Hub } from './screens/Hub';
-import { PackScreen } from './screens/PackScreen';
-import { PackOpening } from './screens/PackOpening';
-import { RevealScreen } from './screens/RevealScreen';
-import { DraftScreen } from './screens/DraftScreen';
-import { SquadScreen } from './screens/SquadScreen';
-import { CollectionScreen } from './screens/CollectionScreen';
-import { GradesScreen } from './screens/grades/GradesScreen';
-import { CompetitionScreen } from './screens/CompetitionScreen';
-import { AcademyScreen } from './screens/AcademyScreen';
-import { SettingsSheet } from './screens/SettingsSheet';
 import { SubNav } from './components/SubNav';
 import './styles/ui.css';
+
+// Route-schermen worden pas geladen als je ze opent (code-splitting): snellere eerste lading op mobiel.
+// In de single-file preview worden alle chunks weer in één bestand gebundeld (vite.config build:single).
+const named = <P extends Record<string, unknown>>(load: () => Promise<Record<string, unknown>>, key: string) =>
+  lazy(() => load().then((m) => ({ default: m[key] as ComponentType<P> })));
+const PackScreen = named<{ nav: Nav }>(() => import('./screens/PackScreen'), 'PackScreen');
+const PackOpening = named<{ packId: string; onDone: () => void }>(() => import('./screens/PackOpening'), 'PackOpening');
+const RevealScreen = named<{ nav: Nav }>(() => import('./screens/RevealScreen'), 'RevealScreen');
+const DraftScreen = named<{ nav: Nav }>(() => import('./screens/DraftScreen'), 'DraftScreen');
+const SquadScreen = named<{ nav: Nav }>(() => import('./screens/SquadScreen'), 'SquadScreen');
+const CollectionScreen = named<{ nav: Nav }>(() => import('./screens/CollectionScreen'), 'CollectionScreen');
+const GradesScreen = named<{ nav: Nav; sub: string }>(() => import('./screens/grades/GradesScreen'), 'GradesScreen');
+const CompetitionScreen = named<{ nav: Nav; sub: string }>(() => import('./screens/CompetitionScreen'), 'CompetitionScreen');
+const AcademyScreen = named<{ nav: Nav; sub: string }>(() => import('./screens/AcademyScreen'), 'AcademyScreen');
+const SettingsSheet = named<{ onClose: () => void }>(() => import('./screens/SettingsSheet'), 'SettingsSheet');
 
 export type Tab = 'home' | 'club' | 'competitie' | 'cijfers' | 'academy';
 /** Route = tab of tab-sub (alleen letters, cijfers en '-' zodat het preview-anker werkt). */
@@ -128,15 +133,17 @@ export function App() {
               badges={{ kluis: pending.length, packs: unopened }} />
           )}
           <div className="route" key={key}>
-            {route.tab === 'home' && <Hub nav={nav} />}
-            {route.tab === 'club' && route.sub === 'elftal' && <SquadScreen nav={nav} />}
-            {route.tab === 'club' && route.sub === 'collectie' && <CollectionScreen nav={nav} />}
-            {route.tab === 'club' && route.sub === 'packs' && <PackScreen nav={nav} />}
-            {route.tab === 'club' && route.sub === 'draft' && <DraftScreen nav={nav} />}
-            {route.tab === 'cijfers' && route.sub === 'kluis' && <RevealScreen nav={nav} />}
-            {route.tab === 'cijfers' && route.sub !== 'kluis' && <GradesScreen nav={nav} sub={route.sub} />}
-            {route.tab === 'competitie' && <CompetitionScreen nav={nav} sub={route.sub} />}
-            {route.tab === 'academy' && <AcademyScreen nav={nav} sub={route.sub} />}
+            <Suspense fallback={<div className="route-loading" aria-hidden="true" />}>
+              {route.tab === 'home' && <Hub nav={nav} />}
+              {route.tab === 'club' && route.sub === 'elftal' && <SquadScreen nav={nav} />}
+              {route.tab === 'club' && route.sub === 'collectie' && <CollectionScreen nav={nav} />}
+              {route.tab === 'club' && route.sub === 'packs' && <PackScreen nav={nav} />}
+              {route.tab === 'club' && route.sub === 'draft' && <DraftScreen nav={nav} />}
+              {route.tab === 'cijfers' && route.sub === 'kluis' && <RevealScreen nav={nav} />}
+              {route.tab === 'cijfers' && route.sub !== 'kluis' && <GradesScreen nav={nav} sub={route.sub} />}
+              {route.tab === 'competitie' && <CompetitionScreen nav={nav} sub={route.sub} />}
+              {route.tab === 'academy' && <AcademyScreen nav={nav} sub={route.sub} />}
+            </Suspense>
           </div>
         </main>
 
@@ -162,8 +169,8 @@ export function App() {
         </button>
       )}
 
-      {opening && <PackOpening packId={opening} onDone={() => setOpening(null)} />}
-      {settings && <SettingsSheet onClose={() => setSettings(false)} />}
+      {opening && <Suspense fallback={null}><PackOpening packId={opening} onDone={() => setOpening(null)} /></Suspense>}
+      {settings && <Suspense fallback={null}><SettingsSheet onClose={() => setSettings(false)} /></Suspense>}
     </div>
   );
 }

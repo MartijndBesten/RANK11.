@@ -43,6 +43,10 @@ Scripts staan in `tools/e2e/`. Online-scripts draaien tegen `node tools/dev-onli
 
 Screenshots: `docs/review/v4/` (online-stack met twee testaccounts, Academy) en `docs/review/v5/` (speluitleg).
 
+## Prestatie
+
+- Code-splitting: route-schermen laden pas bij openen. Eerste JS-bundel 559 kB → 258 kB (gzip 165 → 82 kB). Getest dat elk scherm laadt in demo, online en de single-file preview; E2E en overflow (18×8) blijven groen.
+
 ## Bevindingen ronde 6
 
 - V-018: battle-winkans getest over ratingverschillen (sim); gelijke teams 50%, krappe wedstrijden onderdog 12%→23%, groot verschil nooit omgedraaid.

@@ -35,7 +35,7 @@ Volledig overzicht, los van de ontwikkeling: `docs/BESLOTEN-TEST.md`.
 | T4 | `npm audit` meldt undici in wrangler | Alleen lokaal gereedschap, niet in de Worker-bundel |
 | T5 | Preview zonder server | De reviewpreview is één statische pagina in demomodus |
 | T6 | Portretbatch op CPU | Ongeveer 55 seconden per portret, hervatbaar in blokken |
-| T7 | Bundlegrootte | Code-splitting per tab is nog niet gedaan |
+| T7 | Bundlegrootte | Opgelost: route-schermen zijn lazy chunks (React.lazy). Eerste bundel 559 kB → 258 kB (gzip 165 → 82 kB); single-file preview blijft één bestand |
 | T9 | Live battle niet in de app | De API heeft live wedstrijden via WebSocket (30 s per zet); de app gebruikt alleen asynchroon met verversen elke 3 s |
 | T10 | Online store herlaadt alles na iedere actie | Eenvoudig en consistent, maar ±11 verzoeken per actie. Voor een test met een klas prima; later gericht verversen |
 | T11 | Demo en server lopen via twee codepaden | Zelfde engine, maar de demo-store en de serverroutes zijn apart. De E2E-scripts dekken beide; wijzigingen in de regels moeten in beide getest worden |

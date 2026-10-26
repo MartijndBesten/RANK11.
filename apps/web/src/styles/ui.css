@@ -233,3 +233,6 @@ button.row:hover .row-title { color: #fff; }
 .koppel-status.na { color: var(--warn); background: rgba(255, 181, 71, 0.12); }
 .koppel-status.err { color: var(--down); background: rgba(255, 90, 106, 0.12); }
 .koppel-note { margin-top: 6px; }
+
+/* Korte, onzichtbare plek terwijl een scherm (lazy chunk) laadt. */
+.route-loading { min-height: 50vh; }

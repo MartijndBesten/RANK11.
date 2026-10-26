@@ -41,6 +41,8 @@ jobs:
         run: npm run build
       - name: Configureer Pages
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - name: Upload statische demo
         uses: actions/upload-pages-artifact@v3
         with:

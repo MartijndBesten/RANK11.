@@ -10,5 +10,6 @@ export default defineConfig(({ mode }) => ({
     outDir: mode === 'single' ? 'dist-single' : 'dist',
     assetsInlineLimit: mode === 'single' ? 100_000_000 : 4096,
   },
-  server: { port: 5173 },
+  // Lokale online-stack: /api gaat naar wrangler dev (tools/dev-online.mjs). Zelfde origin, dus het sessiecookie werkt.
+  server: { port: 5173, proxy: { '/api': { target: 'http://127.0.0.1:8787', ws: true } } },
 }));

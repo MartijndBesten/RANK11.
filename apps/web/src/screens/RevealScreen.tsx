@@ -119,7 +119,7 @@ function DirectResult({ outcome, nav }: { outcome: RevealOutcome; nav: Nav }) {
           <div className="rv-pick-row">
             {outcome.pickOptions.map((p) => (
               <div key={p.id} className={`rv-pick-card ${picked && picked !== p.id ? 'faded' : ''}`}>
-                <PlayerCard player={p} size="sm" selected={picked === p.id} onClick={picked ? undefined : () => { setPicked(p.id); claimPick(p.id); }} />
+                <PlayerCard player={p} size="sm" selected={picked === p.id} onClick={picked ? undefined : () => { setPicked(p.id); void claimPick(p.id, outcome.grantId); }} />
               </div>
             ))}
           </div>
@@ -279,7 +279,7 @@ function RevealSequence({ gradeId, onClose, onOpenPack }: { gradeId: string; onC
       )}
 
       {step === 'reward' && outcome && (
-        <RewardPanel outcome={outcome} reduced={reduced} onClose={onClose} onOpenPack={onOpenPack} onPick={claimPick} />
+        <RewardPanel outcome={outcome} reduced={reduced} onClose={onClose} onOpenPack={onOpenPack} onPick={(id) => claimPick(id, outcome.grantId)} />
       )}
     </div>
   );

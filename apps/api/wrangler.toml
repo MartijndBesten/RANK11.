@@ -23,6 +23,9 @@ name = "rank11-api-dev"
 
 [env.dev.vars]
 ENVIRONMENT = "dev"
+FEATURE_MARKET = "false" # V-015: transfermarkt uit
+FEATURE_ACADEMY = "true"
+ASYNC_DEADLINE_HOURS = "48" # V-014
 ALLOWED_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173"
 PBKDF2_ITERATIONS = "100000"
 SESSION_TTL_DAYS = "30"
@@ -46,6 +49,9 @@ name = "rank11-api-test"
 
 [env.test.vars]
 ENVIRONMENT = "test"
+FEATURE_MARKET = "false" # V-015: transfermarkt uit
+FEATURE_ACADEMY = "true"
+ASYNC_DEADLINE_HOURS = "48" # V-014
 ALLOWED_ORIGINS = "" # invullen met de origin van de testfrontend bij uitrol
 PBKDF2_ITERATIONS = "100000"
 SESSION_TTL_DAYS = "30"

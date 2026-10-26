@@ -3,7 +3,7 @@
  * van kaartinstanties naar battlekaarten. De catalogus is deterministisch (seed), dus een
  * kaartinstantie verwijst alleen naar `card_def_id` + catalogusversie.
  */
-import { createRng, FORMATIONS, generateCatalog, RELATED_POSITIONS, type BattleCard, type Player } from './engine.ts';
+import { generateCatalog, starterSquad as engineStarterSquad, type BattleCard, type Player } from './engine.ts';
 
 export const CATALOG_SEED = 'rank11-catalog-v1';
 export const CATALOG_VERSION = `${CATALOG_SEED}:200`;
@@ -41,21 +41,10 @@ export function toBattleCard(instanceId: string, def: Player): BattleCard {
 }
 
 /**
- * Startelftal (aanname, zie README): één brons/zilver-kaart per plek van een 4-3-3, met een
- * cryptografische seed die in de audit wordt bewaard. Zelfde seed = zelfde elftal.
+ * Startelftal (V-013): 11 basisspelers op een 4-3-3 (in formatievolgorde) plus 7 reserves, uit de engine.
+ * Cryptografische seed in de audit; zelfde seed = zelfde selectie.
  */
 export function starterSquad(seed: string): Player[] {
-  const rng = createRng(`starter:${seed}`);
-  const formation = FORMATIONS['4-3-3'];
-  if (!formation) throw new Error('Formatie 4-3-3 ontbreekt in de engine.');
-  const pool = getCatalog().filter((p) => !p.temporary && (p.rarity === 'bronze' || p.rarity === 'silver'));
-  const taken = new Set<string>();
-  return formation.slots.map((slot) => {
-    const free = (list: Player[]) => list.filter((p) => !taken.has(p.baseId));
-    const exact = free(pool.filter((p) => p.position === slot.position));
-    const related = free(pool.filter((p) => RELATED_POSITIONS[slot.position].includes(p.position)));
-    const choice = rng.pick(exact.length ? exact : related.length ? related : free(pool));
-    taken.add(choice.baseId);
-    return choice;
-  });
+  const squad = engineStarterSquad(getCatalog(), `starter:${seed}`);
+  return [...squad.starters.map((s) => s.player), ...squad.reserves];
 }

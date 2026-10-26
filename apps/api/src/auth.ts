@@ -10,6 +10,7 @@ import {
 } from './crypto.ts';
 import { auditStmt, isConstraintError, one, run, stmt } from './db.ts';
 import { intVar, type Env } from './env.ts';
+import { starterStatements } from './modules/collection.ts';
 import { allowedOrigins, ApiError, badRequest, conflict, json, readJson, str, type Ctx, type User } from './http.ts';
 
 export const SESSION_COOKIE = 'rank11_session';
@@ -86,6 +87,12 @@ export async function register(ctx: Ctx): Promise<Response> {
   if (invite.kind === 'pool') {
     statements.push(stmt(db, 'INSERT INTO pool_members (pool_id, user_id, role, joined_at) VALUES (?, ?, ?, ?)', invite.pool_id, userId, 'member', ctx.now));
   }
+  // Standaardclub op naam van de speler (later aan te passen via PUT /api/club).
+  const short = username.replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase().padEnd(3, 'X');
+  statements.push(stmt(db, 'INSERT INTO clubs (user_id, name, short, crest_json, updated_at) VALUES (?, ?, ?, ?, ?)', userId, `FC ${username}`.slice(0, 24), short,
+    JSON.stringify({ shape: 'shield', symbol: 'star', pattern: 'sash', primary: '#0b1f4d', secondary: '#1f6bff', accent: '#f2cf73' }), ctx.now));
+  // V-013: iedereen begint met een compleet startelftal met reserves (in dezelfde transactie als het account).
+  statements.push(...starterStatements(db, userId, ctx.now).statements);
   statements.push(session.statement, auditStmt(db, userId, 'account.register', userId, { via: invite.kind, inviteId: invite.id }, ctx.now));
   try {
     await db.batch(statements);

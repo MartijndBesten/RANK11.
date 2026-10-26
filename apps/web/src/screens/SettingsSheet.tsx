@@ -13,7 +13,7 @@ function Toggle({ label, note, on, onChange }: { label: string; note?: string; o
 
 /** Instellingen: geluid, animaties, Academy, meldingen met stille uren, en demo opnieuw beginnen. */
 export function SettingsSheet({ onClose }: { onClose: () => void }) {
-  const { state, setSetting, setNotify, reset } = useStore();
+  const { state, setSetting, setNotify, reset, mode, user, logout, can } = useStore();
   const [confirm, setConfirm] = useState(false);
   const n = state.settings.notify;
   return (
@@ -33,19 +33,30 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
       </div>
       <p className="hint" style={{ marginTop: 8 }}>Geen meldingen om terug te lokken, geen reeksen die je kwijtraakt. Pushmeldingen buiten de app bestaan nog niet.</p>
 
-      <div className="eyebrow" style={{ marginTop: 18 }}>Prototype</div>
-      <p className="hint">Alle gegevens staan alleen op dit toestel (localStorage). Er is nog geen account of server aan deze preview gekoppeld.</p>
-      <div style={{ marginTop: 10 }}>
-        {confirm ? (
-          <span className="confirm-inline" role="group" aria-label="Demo opnieuw beginnen bevestigen">
-            <span className="dim small">Je lokale voortgang wordt gewist.</span>
-            <button className="btn ghost small" onClick={() => { reset(); setConfirm(false); onClose(); }}>Opnieuw beginnen</button>
-            <button className="link-btn" onClick={() => setConfirm(false)}>Annuleren</button>
-          </span>
-        ) : (
-          <button className="btn ghost small" onClick={() => setConfirm(true)}>Demo opnieuw beginnen</button>
-        )}
-      </div>
+      {mode === 'online' ? (
+        <>
+          <div className="eyebrow" style={{ marginTop: 18 }}>Account</div>
+          <p className="hint">Ingelogd als <b>{user?.username}</b>. Je cijfers, club, collectie en beloningen staan op de (lokale test)server. Voorkeuren hierboven gelden alleen voor dit toestel.</p>
+          <div style={{ marginTop: 10 }}><button className="btn ghost small" onClick={() => { onClose(); void logout(); }}>Uitloggen</button></div>
+        </>
+      ) : (
+        <>
+          <div className="eyebrow" style={{ marginTop: 18 }}>Demo</div>
+          <p className="hint">Alle gegevens staan alleen op dit toestel (localStorage). Deze demo is niet met een server verbonden.</p>
+          <div style={{ marginTop: 10, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+            {confirm ? (
+              <span className="confirm-inline" role="group" aria-label="Demo opnieuw beginnen bevestigen">
+                <span className="dim small">Je lokale voortgang wordt gewist.</span>
+                <button className="btn ghost small" onClick={() => { reset(); setConfirm(false); onClose(); }}>Opnieuw beginnen</button>
+                <button className="link-btn" onClick={() => setConfirm(false)}>Annuleren</button>
+              </span>
+            ) : (
+              <button className="btn ghost small" onClick={() => setConfirm(true)}>Demo opnieuw beginnen</button>
+            )}
+            {can.exit && <button className="link-btn" onClick={() => { onClose(); void logout(); }}>Naar inloggen</button>}
+          </div>
+        </>
+      )}
     </Sheet>
   );
 }

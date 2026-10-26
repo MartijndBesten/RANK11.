@@ -6,7 +6,7 @@
 import { requireUser } from '../auth.ts';
 import { newId, randomSeed } from '../crypto.ts';
 import { auditStmt, isConstraintError, many, one, stmt } from '../db.ts';
-import { createRng, oddsTable, openPack, PACKS } from '../engine.ts';
+import { createRng, FORMATIONS, oddsTable, openPack, PACKS } from '../engine.ts';
 import { CATALOG_VERSION, cardDef, cardView, getCatalog, starterSquad } from '../game.ts';
 import { badRequest, conflict, json, notFound, readJson, str, type Ctx } from '../http.ts';
 
@@ -30,38 +30,47 @@ export async function getCollection(ctx: Ctx): Promise<Response> {
   return json({ catalogVersion: CATALOG_VERSION, cards: rows.map(viewCard) });
 }
 
+/** Schrijfopdrachten voor het startelftal (11 basisspelers + reserves) en de opstelling; eenmalig per account. */
+export function starterStatements(db: D1Database, userId: string, now: number) {
+  const seed = randomSeed();
+  const squad = starterSquad(seed);
+  const instances = squad.map((def) => ({ id: newId('card'), def }));
+  const statements = [
+    stmt(db, 'INSERT INTO starter_grants (user_id, seed, catalog_version, created_at) VALUES (?, ?, ?, ?)', userId, seed, CATALOG_VERSION, now),
+    ...instances.map((c) => stmt(db,
+      `INSERT INTO card_instances (id, user_id, card_def_id, catalog_version, acquired_via, source_ref, acquired_at) VALUES (?, ?, ?, ?, 'starter', ?, ?)`,
+      c.id, userId, c.def.id, CATALOG_VERSION, `starter:${userId}`, now)),
+    stmt(db, `INSERT INTO lineups (user_id, card_ids_json, formation_id, bench_json, updated_at) VALUES (?, ?, '4-3-3', ?, ?)
+              ON CONFLICT(user_id) DO UPDATE SET card_ids_json = excluded.card_ids_json, formation_id = excluded.formation_id, bench_json = excluded.bench_json, updated_at = excluded.updated_at`,
+      userId, JSON.stringify(instances.slice(0, LINEUP_SIZE).map((c) => c.id)), JSON.stringify(instances.slice(LINEUP_SIZE, LINEUP_SIZE + 7).map((c) => c.id)), now),
+    auditStmt(db, userId, 'collection.starter', userId, { seed, catalogVersion: CATALOG_VERSION, cards: squad.map((p) => p.id) }, now),
+  ];
+  return { seed, instances, statements };
+}
+
 export async function claimStarter(ctx: Ctx): Promise<Response> {
   const user = requireUser(ctx);
   const db = ctx.env.DB;
   if (await one(db, 'SELECT 1 AS x FROM starter_grants WHERE user_id = ?', user.id)) throw conflict('already_claimed', 'Je startelftal is al uitgereikt.');
-  const seed = randomSeed();
-  const squad = starterSquad(seed);
-  const instances = squad.map((def) => ({ id: newId('card'), def }));
+  const { seed, instances, statements } = starterStatements(db, user.id, ctx.now);
   try {
-    await db.batch([
-      stmt(db, 'INSERT INTO starter_grants (user_id, seed, catalog_version, created_at) VALUES (?, ?, ?, ?)', user.id, seed, CATALOG_VERSION, ctx.now),
-      ...instances.map((c) => stmt(db,
-        `INSERT INTO card_instances (id, user_id, card_def_id, catalog_version, acquired_via, source_ref, acquired_at) VALUES (?, ?, ?, ?, 'starter', ?, ?)`,
-        c.id, user.id, c.def.id, CATALOG_VERSION, `starter:${user.id}`, ctx.now)),
-      stmt(db, `INSERT INTO lineups (user_id, card_ids_json, updated_at) VALUES (?, ?, ?)
-                ON CONFLICT(user_id) DO UPDATE SET card_ids_json = excluded.card_ids_json, updated_at = excluded.updated_at`,
-        user.id, JSON.stringify(instances.map((c) => c.id)), ctx.now),
-      auditStmt(db, user.id, 'collection.starter', user.id, { seed, catalogVersion: CATALOG_VERSION, cards: squad.map((p) => p.id) }, ctx.now),
-    ]);
+    await db.batch(statements);
   } catch (err) {
     if (isConstraintError(err)) throw conflict('already_claimed', 'Je startelftal is al uitgereikt.');
     throw err;
   }
-  return json({ seed, cards: instances.map((c) => cardView(c.id, c.def)), lineup: instances.map((c) => c.id) }, 201);
+  return json({ seed, cards: instances.map((c) => cardView(c.id, c.def)), lineup: instances.slice(0, LINEUP_SIZE).map((c) => c.id) }, 201);
 }
 
 export async function getLineup(ctx: Ctx): Promise<Response> {
   const user = requireUser(ctx);
-  const row = await one<{ card_ids_json: string; updated_at: number }>(ctx.env.DB, 'SELECT card_ids_json, updated_at FROM lineups WHERE user_id = ?', user.id);
+  const row = await one<{ card_ids_json: string; formation_id: string; bench_json: string; updated_at: number }>(ctx.env.DB,
+    'SELECT card_ids_json, formation_id, bench_json, updated_at FROM lineups WHERE user_id = ?', user.id);
   if (!row) throw notFound();
-  return json({ cardIds: JSON.parse(row.card_ids_json) as string[], updatedAt: row.updated_at });
+  return json({ cardIds: JSON.parse(row.card_ids_json) as string[], formationId: row.formation_id, bench: JSON.parse(row.bench_json) as string[], updatedAt: row.updated_at });
 }
 
+/** Elftal: precies 11 eigen, unieke kaarten in formatievolgorde, plus optioneel formatie en reservebank (max 7). */
 export async function putLineup(ctx: Ctx): Promise<Response> {
   const user = requireUser(ctx);
   const body = await readJson(ctx.req);
@@ -69,13 +78,18 @@ export async function putLineup(ctx: Ctx): Promise<Response> {
   if (!Array.isArray(ids) || ids.length !== LINEUP_SIZE || ids.some((i) => typeof i !== 'string')) {
     throw badRequest(`Een elftal bestaat uit precies ${LINEUP_SIZE} kaarten.`);
   }
-  if (new Set(ids).size !== ids.length) throw badRequest('Een kaart kan maar één keer in het elftal staan.');
+  const bench = body.bench === undefined ? [] : body.bench;
+  if (!Array.isArray(bench) || bench.length > 7 || bench.some((i) => typeof i !== 'string')) throw badRequest('De reservebank heeft maximaal 7 kaarten.');
+  const formationId = body.formationId === undefined ? '4-3-3' : str(body, 'formationId', { max: 10 });
+  if (!FORMATIONS[formationId]) throw badRequest('Onbekende formatie.');
+  const all = [...ids, ...bench] as string[];
+  if (new Set(all).size !== all.length) throw badRequest('Een kaart kan maar één keer in het elftal staan.');
   const owned = new Set((await userCards(ctx.env.DB, user.id)).map((c) => c.id));
-  if (ids.some((id) => !owned.has(id as string))) throw badRequest('Je kunt alleen eigen kaarten opstellen.');
-  await ctx.env.DB.prepare(`INSERT INTO lineups (user_id, card_ids_json, updated_at) VALUES (?, ?, ?)
-    ON CONFLICT(user_id) DO UPDATE SET card_ids_json = excluded.card_ids_json, updated_at = excluded.updated_at`)
-    .bind(user.id, JSON.stringify(ids), ctx.now).run();
-  return json({ cardIds: ids, updatedAt: ctx.now });
+  if (all.some((id) => !owned.has(id))) throw badRequest('Je kunt alleen eigen kaarten opstellen.');
+  await ctx.env.DB.prepare(`INSERT INTO lineups (user_id, card_ids_json, formation_id, bench_json, updated_at) VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(user_id) DO UPDATE SET card_ids_json = excluded.card_ids_json, formation_id = excluded.formation_id, bench_json = excluded.bench_json, updated_at = excluded.updated_at`)
+    .bind(user.id, JSON.stringify(ids), formationId, JSON.stringify(bench), ctx.now).run();
+  return json({ cardIds: ids, formationId, bench, updatedAt: ctx.now });
 }
 
 // --- Wallet (grootboek) -----------------------------------------------------------------

@@ -9,7 +9,7 @@ const WEIGHTS = [1, 2, 3, 4];
 export function GradeForm({ initial, submitLabel, onSubmit, withReason = false }: {
   initial?: Partial<GradeInput>;
   submitLabel: string;
-  onSubmit: (input: GradeInput, reason?: string) => ActionResult;
+  onSubmit: (input: GradeInput, reason?: string) => ActionResult | Promise<ActionResult>;
   withReason?: boolean;
 }) {
   const [subjectId, setSubject] = useState(initial?.subjectId ?? SUBJECTS[0]!.id);
@@ -23,12 +23,19 @@ export function GradeForm({ initial, submitLabel, onSubmit, withReason = false }
   const v = parseNum(value);
   const valueInvalid = value !== '' && !(v >= 1 && v <= 10);
 
-  const submit = (e: FormEvent) => {
+  const [busy, setBusy] = useState(false);
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
+    if (busy) return;
     if (!value.trim() || Number.isNaN(v)) return setError('Vul een cijfer in, bijvoorbeeld 7,4.');
-    const res = onSubmit({ subjectId, testName, value: v, weight: parseNum(weight), date }, reason.trim() || undefined);
-    if (!res.ok) setError(res.error);
-    else setError(null);
+    setBusy(true);
+    try {
+      const res = await onSubmit({ subjectId, testName, value: v, weight: parseNum(weight), date }, reason.trim() || undefined);
+      if (!res.ok) setError(res.error);
+      else setError(null);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -72,7 +79,7 @@ export function GradeForm({ initial, submitLabel, onSubmit, withReason = false }
         </label>
       )}
       {error && <p className="form-error" role="alert">{error}</p>}
-      <button className="btn" type="submit">{submitLabel}</button>
+      <button className="btn" type="submit" disabled={busy}>{busy ? 'Bezig…' : submitLabel}</button>
     </form>
   );
 }

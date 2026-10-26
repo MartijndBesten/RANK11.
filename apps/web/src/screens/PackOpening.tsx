@@ -25,9 +25,10 @@ export function PackOpening({ packId, onDone }: { packId: string; onDone: () => 
   useEffect(() => {
     if (ran.current) return;
     ran.current = true;
-    const r = openPackFromInventory(packId);
-    if (!r) onDone();
-    else setResult(r);
+    Promise.resolve(openPackFromInventory(packId)).then((r) => {
+      if (!r) onDone();
+      else setResult(r);
+    }, () => onDone());
   }, [openPackFromInventory, packId, onDone]);
 
   useEffect(() => {
@@ -105,7 +106,7 @@ export function PackOpening({ packId, onDone }: { packId: string; onDone: () => 
           <div className="op-actions">
             <p className="dim small">Alle kaarten staan in je collectie.</p>
             {duplicates.length > 0 && sold === null && (
-              <button className="btn ghost small" onClick={() => setSold(quickSell(duplicates.map((d) => d.id)))}>
+              <button className="btn ghost small" onClick={async () => setSold(await quickSell(duplicates.map((d) => d.id)))}>
                 Dubbele kaarten verkopen · {duplicates.reduce((s, d) => s + quickSellValue(d), 0).toLocaleString('nl-NL')} coins
               </button>
             )}

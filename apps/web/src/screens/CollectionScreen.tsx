@@ -169,7 +169,7 @@ export function CollectionScreen(_: { nav: Nav }) {
   );
 }
 
-function CardDetail({ entry, onClose, onSell }: { entry: Entry; onClose: () => void; onSell: () => number }) {
+function CardDetail({ entry, onClose, onSell }: { entry: Entry; onClose: () => void; onSell: () => number | Promise<number> }) {
   const { player: p, count, inLineup } = entry;
   const [confirm, setConfirm] = useState(false);
   const [sold, setSold] = useState<number | null>(null);
@@ -217,7 +217,7 @@ function CardDetail({ entry, onClose, onSell }: { entry: Entry; onClose: () => v
         ) : confirm ? (
           <span className="confirm-inline" role="group" aria-label="Verkoop bevestigen">
             <span className="dim small">{count > 1 ? 'Eén exemplaar' : 'Deze kaart'} verdwijnt uit je collectie.</span>
-            <button className="btn small" onClick={() => { setSold(onSell()); setConfirm(false); }}>Verkopen</button>
+            <button className="btn small" onClick={async () => { setSold(await onSell()); setConfirm(false); }}>Verkopen</button>
             <button className="link-btn" onClick={() => setConfirm(false)}>Annuleren</button>
           </span>
         ) : (

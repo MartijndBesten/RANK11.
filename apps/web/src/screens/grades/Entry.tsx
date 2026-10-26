@@ -38,8 +38,8 @@ export function GradeEntry({ nav }: { nav: Nav }) {
               </div>
             </div>
           ) : (
-            <GradeForm key={formKey} submitLabel="Opslaan" onSubmit={(input) => {
-              const res = addGrade(input);
+            <GradeForm key={formKey} submitLabel="Opslaan" onSubmit={async (input) => {
+              const res = await addGrade(input);
               if (res.ok && res.id) setDone(res.id);
               return res;
             }} />

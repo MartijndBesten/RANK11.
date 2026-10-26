@@ -86,18 +86,19 @@ De beslissing heeft altijd een status, een reden en de (eventueel afgekapte) XP-
 | `not-linked` | geen actieve koppeling voor deze leerling |
 | `duplicate` | `eventId` eerder verwerkt (in de geschiedenis of in de ledger) |
 | `abandoned` | niet afgerond |
-| `too-fast` | duur < 8 s × aantal vragen ("Te kort om betrouwbaar te belonen.") |
-| `no-learning-value` | herhaling zonder verbetering en zonder herstelde fouten |
+| `too-fast` | alleen als een configuratie `minSecondsPerQuestion` > 0 instelt; standaard uit (V-016) |
+| `no-learning-value` | herhaling zonder verbetering en zonder herstelde fouten, of een identieke vragenset (`contentKey` al eerder gezien) |
 | `capped` | alles valt weg door het dag- (150) of weekplafond (600) |
 | `rewarded` | anders |
 
 XP-regels:
-- **Eerste keer een `activityId` afgerond:** 20 XP, plus 30 XP bij ≥ 80% goed.
-- **Herhaling:** alleen als er ≥ 20 uur zit tussen deze en de vorige poging **en** de score minstens 10 procentpunt hoger is dan de beste eerdere score: 15 XP. Komt de score daarmee voor het eerst op ≥ 80%, dan ook de 30 XP.
-- **Herstelde fouten:** 25 XP per eerder foute vraag die nu goed is, maximaal 4 per activiteit. Dit geldt ook bij een herhaling.
+- **Afronding:** 20 XP. Met een `contentKey` (de interne oefenmodule stuurt die altijd mee): één keer per `activityId` per dag. Zonder `contentKey` (een vaste oefentoets van een externe leeromgeving): één keer in totaal.
+- **Hoge score (≥ 80%):** 30 XP, alleen de eerste keer dat je die drempel voor deze activiteit haalt.
+- **Betere score bij herhaling:** alleen als er ≥ 20 uur zit tussen deze en de vorige poging **en** de score minstens 10 procentpunt hoger is dan de beste eerdere score: 15 XP.
+- **Herstelde fouten:** 25 XP per eerder foute vraag die nu goed is, maximaal 4 per activiteit. Bij de interne module telt alleen een echte herkansing in een latere sessie (de vraag komt pas na minstens 1 dag terug).
 - Alles gaat door `applyCaps` (zie `MOTIVATION-ENGINE.md`).
 
-In de web-app tellen alleen pogingen met status `rewarded`, `capped` of `no-learning-value` als eerdere poging. Een te snelle of afgebroken poging blokkeert dus niet de 20 XP voor de eerste echte afronding.
+Alleen pogingen met status `rewarded`, `capped` of `no-learning-value` tellen als eerdere poging. Een afgebroken poging blokkeert dus niet de 20 XP voor de eerste echte afronding.
 
 `academySubjectSummary` geeft per vak: aantal afgeronde activiteiten, gemiddelde score, moeilijkste onderwerp (vanaf twee onderwerpen) en verdiende Academy-XP.
 
@@ -112,6 +113,33 @@ In de web-app tellen alleen pogingen met status `rewarded`, `capped` of `no-lear
 - Aan het eind maakt de module een `LearningEvent` met echte start- en eindtijd en een uniek `eventId`. Dat event gaat door `submitLearningEvent` → `validateEvent` → `resolvePlayer` → `academyReward`. Afbreken levert een event met status `abandoned`.
 - De uitkomst wordt eerlijk getoond: status, XP-regels, afgekapte XP en reden (bijvoorbeeld "te snel").
 - Alles gebeurt lokaal in de browser. Er is geen handtekening, want er is geen netwerkverkeer. De module laat de regels zien; ze is geen beveiligde bron.
+
+### 7.1 Oefenmodule als gedeelde engine (`practice.ts`, 26-10-2026)
+
+De vraagbanken staan nu in `packages/engine/src/practice.ts`, zodat de **server** sessies maakt en nakijkt. Antwoorden worden nooit van de app vertrouwd.
+
+- **Onderwerpen met een vaste itempool**, zodat voortgang in procenten betekenis heeft:
+  - Wiskunde: procenten, breuken en vergelijkingen (elk 24 vaste vragen);
+  - Frans: woordenschat (24);
+  - Engels: irregular verbs (24).
+- **Vraag-id's** zijn stabiel en deterministisch, inclusief de volgorde van de meerkeuzeopties. Negatieve getallen staan als `n`, bijvoorbeeld `wi-vgl-3-n4-11`.
+- **`createPracticeSession({ subjectId, topic?, seed, itemStates, now })`** stelt een sessie samen in deze volgorde:
+  1. herkansingen die aan de beurt zijn (`fix`);
+  2. herhalingen die aan de beurt zijn (`review`);
+  3. minstens twee nieuwe vragen als die er zijn (`new`);
+  4. als laatste vragen die nog niet aan de beurt zijn (`extra`).
+- **Itemstatus:** de sessie bewaart de status van haar items als momentopname (alleen op de server).
+- **`publicSession()`** stuurt de app de vragen zonder antwoorden.
+- **`gradePracticeSession(session, answers, now)`** kijkt na en verwerkt de herhaling:
+  - een fout antwoord maakt de vraag na 1 dag opnieuw aan de beurt;
+  - goed bij een herhaling geeft intervallen van 1, 3, 7 en 14 dagen;
+  - na 3 keer gespreid goed is een vraag beheerst;
+  - goed op een `extra`-vraag schuift het schema niet op;
+  - `mistakesFixed` telt alleen herkansingen die in een latere sessie goed zijn.
+- **`practiceEvent()`** maakt er een `LearningEvent` van, met `contentKey` (een hash van de vragenset).
+- **`topicProgress(itemStates)`** geeft per onderwerp het aantal vragen dat beheerst, in leerproces, aan de beurt of nieuw is, plus het percentage beheerst.
+
+`apps/web/src/academy/demoProvider.ts` gebruikt deze module nog niet. De koppeling met de app en de server is een volgende stap.
 
 ## 8. leren.martijndenbesten.com
 

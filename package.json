@@ -3,13 +3,19 @@
   "private": true,
   "version": "0.1.0",
   "description": "RANK11. — Your grades. Your squad. Voetbalkaartgame op basis van schoolcijfers.",
-  "workspaces": ["packages/*", "apps/*"],
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
     "dev": "npm run dev -w apps/web",
     "build": "npm run build -w apps/web",
     "build:single": "npm run build:single -w apps/web",
-    "test": "npm test -w packages/engine && npm test -w apps/api",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "test": "npm test -w packages/engine && npm test -w apps/api && npm run check:pii",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "check:pii": "node tools/check-pii.mjs"
   },
-  "engines": { "node": ">=22" }
+  "engines": {
+    "node": ">=22"
+  }
 }

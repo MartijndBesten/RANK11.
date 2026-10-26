@@ -3,7 +3,7 @@
  * De periode-indeling is een aanpasbaar voorbeeld (scholen verschillen); in de functionele fase
  * komt deze uit de poolinstellingen.
  */
-import type { Goal, Grade, Period, UpcomingTest } from '@rank11/engine';
+import { DEFAULT_PERIODS, type Goal, type Grade, type Period, type UpcomingTest } from '@rank11/engine';
 
 export interface Subject { id: string; name: string; short: string; color: string }
 
@@ -22,12 +22,7 @@ export const subjectById = (id: string): Subject =>
   SUBJECTS.find((s) => s.id === id) ?? { id, name: id, short: id.slice(0, 2).toUpperCase(), color: '#888' };
 export const subjectName = (id: string) => subjectById(id).name;
 
-export const PERIODS: Period[] = [
-  { id: 'p1', name: 'Periode 1', start: '2026-08-24', end: '2026-10-09' },
-  { id: 'p2', name: 'Periode 2', start: '2026-10-12', end: '2026-12-18' },
-  { id: 'p3', name: 'Periode 3', start: '2027-01-04', end: '2027-03-26' },
-  { id: 'p4', name: 'Periode 4', start: '2027-03-29', end: '2027-07-09' },
-];
+export const PERIODS: Period[] = DEFAULT_PERIODS;
 
 export const todayIso = () => new Date().toISOString().slice(0, 10);
 export const addDays = (iso: string, days: number) => {

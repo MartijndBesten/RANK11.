@@ -14,6 +14,11 @@ export interface Env {
   /** Mislukte inlogpogingen per IP per kwartier. */
   LOGIN_MAX_FAILURES_IP?: string;
   ENVIRONMENT?: string;
+  /** Feature flags: 'true'/'false'. Transfermarkt staat standaard uit (V-015). */
+  FEATURE_MARKET?: string;
+  FEATURE_ACADEMY?: string;
+  /** Deadline in uren voor asynchrone wedstrijden (per zet en voor accepteren); standaard 48 (V-014). */
+  ASYNC_DEADLINE_HOURS?: string;
 }
 
 export function intVar(value: string | undefined, fallback: number): number {

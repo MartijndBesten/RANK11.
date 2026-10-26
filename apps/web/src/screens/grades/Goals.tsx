@@ -22,16 +22,16 @@ export function GoalsView({ nav }: { nav: Nav }) {
   const [testError, setTestError] = useState<string | null>(null);
   const goalPack = PACKS[DEFAULT_MOTIVATION_CONFIG.progress.goalPackId]?.name ?? 'pack';
 
-  const submitGoal = (e: FormEvent) => {
+  const submitGoal = async (e: FormEvent) => {
     e.preventDefault();
     const t = parseNum(target);
     if (!(t >= 1 && t <= 10)) return setGoalError('Kies een doel tussen 1 en 10.');
-    addGoal({ scope, subjectId: scope === 'subject' ? goalSubject : undefined, target: Math.round(t * 10) / 10 });
+    await addGoal({ scope, subjectId: scope === 'subject' ? goalSubject : undefined, target: Math.round(t * 10) / 10 });
     setGoalError(null);
   };
-  const submitTest = (e: FormEvent) => {
+  const submitTest = async (e: FormEvent) => {
     e.preventDefault();
-    const res = addUpcoming({ subjectId: tSubject, name: tName, date: tDate, weight: parseNum(tWeight) });
+    const res = await addUpcoming({ subjectId: tSubject, name: tName, date: tDate, weight: parseNum(tWeight) });
     if (!res.ok) setTestError(res.error);
     else { setTestError(null); setTName(''); }
   };

@@ -9,8 +9,12 @@ import { idempotent } from './idempotency.ts';
 import { getClub, putClub } from './modules/clubs.ts';
 import { buyPack, claimStarter, getCollection, getLineup, getWallet, listPacks, openPackGrant, putLineup } from './modules/collection.ts';
 import { createCompetition, getCompetition, listCompetitions, poolStandings } from './modules/competitions.ts';
-import { correctGrade, createGrade, deleteGrade, gradeHistory, listGrades } from './modules/grades.ts';
+import { correctGrade, createGrade, deleteGrade, gradeHistory, listGrades, listXp } from './modules/grades.ts';
 import { accept, challenge, decline, getMatch, getMatchEvents, listPoolMatches, matchSocket, move, resignMatch } from './modules/matches.ts';
+import { getConfig } from './modules/config.ts';
+import { draftStatus, pickInDraft, startDraft } from './modules/drafts.ts';
+import { createGoal, createUpcoming, deleteGoal, deleteUpcoming, getPlanning } from './modules/planning.ts';
+import { claimPick, listVault, markSeen } from './modules/vault.ts';
 import { createInvite, createPool, getPool, joinPool, listMembers, listPools, setMemberRole } from './modules/pools.ts';
 
 export { MatchDO } from './match/MatchDO.ts';
@@ -20,6 +24,7 @@ const req = { required: true };
 
 export const router = new Router()
   .add('GET', '/api/health', async () => new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } }))
+  .add('GET', '/api/config', getConfig)
   // accounts
   .add('POST', '/api/auth/register', register)
   .add('POST', '/api/auth/login', login)
@@ -58,6 +63,21 @@ export const router = new Router()
   .add('PUT', '/api/grades/:gradeId', idempotent(correctGrade, req))
   .add('DELETE', '/api/grades/:gradeId', idempotent(deleteGrade, req))
   .add('GET', '/api/grades/:gradeId/history', gradeHistory)
+  .add('GET', '/api/xp', listXp)
+  // doelen en geplande toetsen
+  .add('GET', '/api/planning', getPlanning)
+  .add('POST', '/api/goals', idempotent(createGoal, opt))
+  .add('DELETE', '/api/goals/:goalId', idempotent(deleteGoal, opt))
+  .add('POST', '/api/upcoming', idempotent(createUpcoming, opt))
+  .add('DELETE', '/api/upcoming/:testId', idempotent(deleteUpcoming, opt))
+  // cijferkluis
+  .add('GET', '/api/vault', listVault)
+  .add('POST', '/api/vault/:grantId/seen', idempotent(markSeen, opt))
+  .add('POST', '/api/vault/:grantId/pick', idempotent(claimPick, req))
+  // draft
+  .add('GET', '/api/draft', draftStatus)
+  .add('POST', '/api/draft', idempotent(startDraft, req))
+  .add('POST', '/api/draft/:draftId/pick', idempotent(pickInDraft, opt))
   // collectie, elftal, wallet, packs
   .add('GET', '/api/collection', getCollection)
   .add('POST', '/api/collection/starter', idempotent(claimStarter, opt))
@@ -68,7 +88,7 @@ export const router = new Router()
   .add('POST', '/api/packs/buy', idempotent(buyPack, req))
   .add('POST', '/api/packs/:grantId/open', idempotent(openPackGrant, req));
 
-const PUBLIC = new Set(['/api/health', '/api/auth/register', '/api/auth/login']);
+const PUBLIC = new Set(['/api/health', '/api/config', '/api/auth/register', '/api/auth/login']);
 
 export async function handle(request: Request, env: Env): Promise<Response> {
   if (request.method === 'OPTIONS') return preflight(request, env);

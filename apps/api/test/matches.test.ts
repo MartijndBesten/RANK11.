@@ -126,6 +126,7 @@ describe('battle tussen twee accounts via de API', () => {
     const app = createApp();
     const { poolId, users } = await poolWith(app, ['Gijs', 'Hana', 'Ilse']);
     const [gijs, hana, ilse] = users as [TestUser, TestUser, TestUser];
+    app.db.db.prepare('DELETE FROM lineups WHERE user_id = ?').run(gijs.id); // elftal ontbreekt
     const noLineup = await app.api('POST', `/api/pools/${poolId}/matches`, { token: gijs.token, body: { opponentId: hana.id } });
     expect(noLineup.status).toBe(409);
     expect(noLineup.body.error.code).toBe('no_lineup');

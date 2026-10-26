@@ -181,12 +181,20 @@ export interface RevealOutcome {
   reward: RewardResult;
   xpEntries: XpEntry[];
   pickOptions?: Player[];
+  /** Online: de toekenning op de server (voor de spelerskeuze). */
+  grantId?: string;
 }
 
 export interface GradeInput { subjectId: string; testName: string; value: number; weight: number; date: string }
 export type ActionResult = { ok: true; id?: string } | { ok: false; error: string; duplicateOf?: string };
 
-interface Store {
+type MaybePromise<T> = T | Promise<T>;
+
+/** Gedeelde store-interface: lokale demo (localStorage) of online (server). Muterende acties kunnen async zijn. */
+export interface Store {
+  mode: 'demo' | 'online';
+  /** Ingelogde speler (alleen online). */
+  user?: { id: string; username: string } | null;
   state: GameState;
   owned: Player[];
   /** Alle actuele cijfers (afgeleid uit de eventlog), inclusief cijfers waarvan de beloning nog wacht. */
@@ -194,32 +202,39 @@ interface Store {
   pending: PendingGrade[];
   history: Map<string, { at: string; type: GradeEvent['type']; before?: Grade; after?: Grade; reason?: string }[]>;
   xp: { total: number; byCategory: Record<'performance' | 'progress' | 'academy', number>; level: ReturnType<typeof clubLevel> };
-  openPackFromInventory: (packId: string) => PackResult | null;
-  buyPack: (packId: string) => boolean;
-  startDraft: () => DraftSession | null;
-  addGrade: (input: GradeInput) => ActionResult;
-  correctGrade: (gradeId: string, changes: Partial<GradeInput>, reason?: string) => ActionResult;
-  deleteGrade: (gradeId: string, reason?: string) => ActionResult;
+  /** Wat deze modus kan (bijv. snel verkopen of de demo-competitie). */
+  can: { quickSell: boolean; demoCompetition: boolean; academy: boolean; exit: boolean };
+  openPackFromInventory: (packId: string) => MaybePromise<PackResult | null>;
+  buyPack: (packId: string) => MaybePromise<boolean>;
+  startDraft: () => MaybePromise<DraftSession | null>;
+  /** Online: keuze in de draft vastleggen op de server (lokaal geen effect). */
+  draftPick: (slotId: string, playerId: string) => MaybePromise<void>;
+  addGrade: (input: GradeInput) => MaybePromise<ActionResult>;
+  correctGrade: (gradeId: string, changes: Partial<GradeInput>, reason?: string) => MaybePromise<ActionResult>;
+  deleteGrade: (gradeId: string, reason?: string) => MaybePromise<ActionResult>;
   revealGrade: (gradeId: string) => RevealOutcome | null;
-  claimPick: (cardId: string) => void;
-  addGoal: (goal: Omit<Goal, 'id' | 'createdAt'>) => void;
-  removeGoal: (goalId: string) => void;
-  addUpcoming: (test: Omit<UpcomingTest, 'id'>) => ActionResult;
-  removeUpcoming: (testId: string) => void;
+  claimPick: (cardId: string, grantId?: string) => MaybePromise<void>;
+  addGoal: (goal: Omit<Goal, 'id' | 'createdAt'>) => MaybePromise<void>;
+  removeGoal: (goalId: string) => MaybePromise<void>;
+  addUpcoming: (test: Omit<UpcomingTest, 'id'>) => MaybePromise<ActionResult>;
+  removeUpcoming: (testId: string) => MaybePromise<void>;
   saveScenario: (scenario: Omit<Scenario, 'id'>) => void;
   removeScenario: (id: string) => void;
   submitLearningEvent: (event: LearningEvent) => AcademyDecision;
   recordWrongAnswers: (wrong: string[], fixed: string[]) => void;
   saveBattle: (matchId: string, events: BattleEvent[], result?: LeagueResult) => void;
-  setLineup: (formationId: string, lineup: Record<string, string>) => void;
-  quickSell: (cardIds: string[]) => number;
+  setLineup: (formationId: string, lineup: Record<string, string>) => MaybePromise<void>;
+  quickSell: (cardIds: string[]) => MaybePromise<number>;
   setSetting: (key: 'sound' | 'reducedMotion' | 'academy', value: boolean) => void;
   setNotify: (changes: Partial<NotifySettings>) => void;
   markNotified: (gradeIds: string[]) => void;
   reset: () => void;
+  /** Online: uitloggen. Demo: terug naar het startscherm. */
+  logout: () => MaybePromise<void>;
 }
 
-const Ctx = createContext<Store | null>(null);
+export const StoreCtx = createContext<Store | null>(null);
+const Ctx = StoreCtx;
 
 export function quickSellValue(p: Player): number {
   const base = p.rating >= 85 ? 2500 : p.rating >= 80 ? 900 : p.rating >= 75 ? 400 : p.rating >= 65 ? 150 : 60;
@@ -231,7 +246,7 @@ const overallOf = (list: Grade[]) => {
   return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
 };
 
-export function StoreProvider({ children }: { children: ReactNode }) {
+export function StoreProvider({ children, onExit }: { children: ReactNode; onExit?: () => void }) {
   const [state, setState] = useState<GameState>(load);
 
   const update = useCallback((fn: (s: GameState) => GameState) => {
@@ -463,13 +478,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<Store>(
     () => ({
+      mode: 'demo' as const, user: null, can: { quickSell: true, demoCompetition: true, academy: true, exit: !!onExit }, draftPick: () => undefined, logout: () => onExit?.(),
       state, owned, grades: book.grades, pending, history: book.history, xp, openPackFromInventory, buyPack, startDraft,
       addGrade, correctGrade, deleteGrade, revealGrade, claimPick, addGoal, removeGoal, addUpcoming, removeUpcoming,
       saveScenario, removeScenario, submitLearningEvent, recordWrongAnswers, saveBattle, setLineup, quickSell, setSetting, setNotify, markNotified, reset,
     }),
     [state, owned, book, pending, xp, openPackFromInventory, buyPack, startDraft, addGrade, correctGrade, deleteGrade, revealGrade, claimPick,
       addGoal, removeGoal, addUpcoming, removeUpcoming, saveScenario, removeScenario, submitLearningEvent, recordWrongAnswers, saveBattle, setLineup,
-      quickSell, setSetting, setNotify, markNotified, reset],
+      quickSell, setSetting, setNotify, markNotified, reset, onExit],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

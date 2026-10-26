@@ -27,6 +27,12 @@ export interface LearningEvent {
   /** Aantal vragen dat eerder fout was en nu goed beantwoord is. */
   mistakesFixed: number;
   status: 'completed' | 'abandoned';
+  /**
+   * Optioneel: sleutel van de vragenset (bijv. hash van de vraag-id's). Met een sleutel telt "eerste afronding"
+   * per dag per activiteit en levert een identieke sessie niets op; zonder sleutel (vaste oefentoets van een externe
+   * leeromgeving) telt de eerste afronding één keer en daarna alleen een betere score.
+   */
+  contentKey?: string;
 }
 
 export interface LearningProvider {
@@ -55,6 +61,7 @@ export function validateEvent(e: unknown): LearningEvent {
   if (Number.isNaN(Date.parse(x.startedAt as string)) || Number.isNaN(Date.parse(x.completedAt as string))) throw new AcademyEventError('Ongeldige tijden.');
   if (Date.parse(x.completedAt as string) < Date.parse(x.startedAt as string)) throw new AcademyEventError('Afronding vóór start.');
   if (x.status !== 'completed' && x.status !== 'abandoned') throw new AcademyEventError('Ongeldige status.');
+  if (x.contentKey !== undefined) str(x.contentKey, 'contentKey');
   return x as LearningEvent;
 }
 
@@ -147,26 +154,34 @@ export function academyReward(config: MotivationConfig, e: LearningEvent, ctx: A
     return none('duplicate', 'Dit event is al verwerkt.');
   }
   if (e.status !== 'completed') return none('abandoned', 'Niet afgerond.');
+  // Geen verplichte minimumtijd meer (V-016); alleen als een configuratie er expliciet een instelt.
   const seconds = (Date.parse(e.completedAt) - Date.parse(e.startedAt)) / 1000;
-  if (seconds < e.questionCount * a.minSecondsPerQuestion) return none('too-fast', 'Te kort om betrouwbaar te belonen.');
+  if (a.minSecondsPerQuestion > 0 && seconds < e.questionCount * a.minSecondsPerQuestion) return none('too-fast', 'Te kort om betrouwbaar te belonen.');
 
   const date = e.completedAt.slice(0, 10);
   const base = { category: 'academy' as const, date, source: { kind: 'academy' as const, id: e.eventId }, configVersion: config.version };
   const prior = ctx.history.filter((h) => h.activityId === e.activityId && h.status === 'completed');
   const entries: XpEntry[] = [];
-
-  if (prior.length === 0) {
-    entries.push({ ...base, key: `acad:${e.eventId}:af`, xp: a.completeXp, label: `Oefening ${e.topic} afgerond` });
-    if (score >= a.highScoreMin) entries.push({ ...base, key: `acad:${e.eventId}:score`, xp: a.highScoreXp, label: `${Math.round(score * 100)}% goed` });
-  } else {
-    // Herhaling: cooldown en alleen XP voor aantoonbare leerwaarde (hogere score dan ooit eerder).
+  // Een identieke vragenset nog een keer maken levert niets op (geen farmen door herhalen).
+  if (e.contentKey && prior.some((h) => h.contentKey === e.contentKey)) {
+    return none('no-learning-value', 'Deze oefening heb je al precies zo gemaakt.');
+  }
+  const firstEver = prior.length === 0;
+  const bestBefore = firstEver ? 0 : Math.max(...prior.map(scoreOf));
+  // Afronding: met vragenset-sleutel één keer per activiteit per dag, zonder sleutel één keer in totaal.
+  const freshCompletion = e.contentKey ? !prior.some((h) => h.completedAt.slice(0, 10) === date) : firstEver;
+  if (freshCompletion) entries.push({ ...base, key: `acad:${e.eventId}:af`, xp: a.completeXp, label: `Oefening ${e.topic} afgerond` });
+  if (!firstEver) {
+    // Herhaling: alleen XP voor aantoonbare leerwaarde (hoger dan ooit eerder), met cooldown.
     const last = prior.reduce((x, h) => (h.completedAt > x.completedAt ? h : x));
     const hours = (Date.parse(e.completedAt) - Date.parse(last.completedAt)) / 3.6e6;
-    const bestBefore = Math.max(...prior.map(scoreOf));
     if (hours >= a.repeatCooldownHours && score - bestBefore >= a.improvedScoreMinDelta) {
       entries.push({ ...base, key: `acad:${e.eventId}:beter`, xp: a.improvedScoreXp, label: `Score verbeterd naar ${Math.round(score * 100)}%` });
-      if (score >= a.highScoreMin && bestBefore < a.highScoreMin) entries.push({ ...base, key: `acad:${e.eventId}:score`, xp: a.highScoreXp, label: `${Math.round(score * 100)}% goed` });
     }
+  }
+  // Hoge score: alleen de eerste keer dat je die drempel voor deze activiteit haalt.
+  if (score >= a.highScoreMin && bestBefore < a.highScoreMin && (firstEver || entries.length > 0)) {
+    entries.push({ ...base, key: `acad:${e.eventId}:score`, xp: a.highScoreXp, label: `${Math.round(score * 100)}% goed` });
   }
   const fixed = Math.min(e.mistakesFixed, a.mistakeFixedMaxPerActivity);
   if (fixed > 0) entries.push({ ...base, key: `acad:${e.eventId}:fouten`, xp: fixed * a.mistakeFixedXp, label: `${fixed} eerdere fout${fixed === 1 ? '' : 'en'} verbeterd` });

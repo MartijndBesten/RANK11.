@@ -57,8 +57,8 @@ function parse(raw: string, academyOn: boolean): { tab: Tab; sub: string } {
 }
 
 export function App() {
-  const { state, pending, xp, markNotified } = useStore();
-  const academyOn = state.settings.academy;
+  const { state, pending, xp, markNotified, can } = useStore();
+  const academyOn = state.settings.academy && can.academy;
   const [route, setRoute] = useState(() => parse(location.hash.replace('#', ''), academyOn));
   const [immersive, setImmersive] = useState(false);
   const [opening, setOpening] = useState<string | null>(null);

@@ -1,6 +1,8 @@
 # RANK11. — Beloningseconomie
 
-**Stand:** 25-10-2026 · **Code:** `packages/engine/src/rewards.ts`, `packs.ts`, `draft.ts`, `market.ts`, `simulate.ts`; snel verkopen in `apps/web/src/state/store.tsx` · **Simulaties:** `docs/SIMULATIES.md` (`node --experimental-strip-types tools/sim/balans.ts`)
+**Stand:** 26-10-2026 · **Code:** `packages/engine/src/rewards.ts`, `economy.ts`, `starter.ts`, `packs.ts`, `draft.ts`, `market.ts`, `simulate.ts`; snel verkopen in `apps/web/src/state/store.tsx` · **Simulaties:** `docs/SIMULATIES.md` (`node --experimental-transform-types tools/sim/balans.ts`)
+
+> **Economie v2 (V-011, 26-10-2026):** zie §9. In de engine staan nu twee configuraties naast elkaar: de oude `DEFAULT_REWARD_CONFIG` (`2026.10-proto.1`, nog in gebruik door app en server) en de nieuwe `FAIR_REWARD_CONFIG` (`2026.10-eerlijk.1`) met de voortgangslaag `DEFAULT_PROGRESS_CONFIG` (`2026.10-voortgang.1`). Overschakelen is een bewuste stap in app en server; bestaande toekenningen behouden hun configuratieversie.
 
 ## 1. Spelregels voor de economie
 
@@ -98,19 +100,67 @@ Kopen is één atomaire overgang. `marketInvariants` controleert dat coins allee
 | Moeite 5,6 · 3 cijfers/week | 335 | 0,13 | 0,00 | Starter 0,99 · Goud 0,52 · Toetsweek 0,12 · Elite 0,01 |
 | Toetsweek 7,0 · 8 cijfers/week | 2284 | 2,85 | 0,17 | Elite 0,76 · Toetsweek 1,92 · Goud 2,57 · Starter 1,77 |
 
-**Bevinding:** een leerling die moeite heeft, verdient ongeveer 17× minder draft-vouchers dan een sterke leerling (0,13 tegen 2,19 per week) en vrijwel nooit een Elitepack. Dat botst met het uitgangspunt "verbetering moet lonen" (onderzoek C7). De motivatie-engine compenseert dat alleen in XP, niet in kaarten.
-
-**Opties (besluit Martijn):**
-
-1. **Vooruitgang ook in kaarten belonen:** bij Vooruitgang-XP (gemiddelde +0,2, herstel) een Goudpack of een voucher toekennen, met een weekplafond.
-2. **Voucher bij herstel:** een voldoende na een onvoldoende (≥ +1,5) geeft altijd 1 draft-voucher.
-3. **Tiers vlakker maken:** bijvoorbeeld de voucher al vanaf 6,5, en het Elitepack alleen voor 8,5+ én verbetering.
-4. **Niets veranderen,** en de draft en toernooien normaliseren (ratingplafond of alleen draft), zodat collectieverschil minder telt.
-
-Advies: 1 en 2 combineren. Dat raakt het minst aan bestaande beloningen en sluit aan bij het onderzoek.
+**Bevinding (oude configuratie):** een leerling die moeite heeft, verdiende ongeveer 17× minder draft-vouchers dan een sterke leerling (0,13 tegen 2,19 per week) en vrijwel nooit een Elitepack. Besluit Martijn (V-011): beloningen aanzienlijk eerlijker maken. Uitwerking in §9.
 
 ## 8. Te controleren voordat de economie live gaat
 
 - Coin-inflatie op langere termijn: de belasting op de markt is nu de enige afvoer naast packs kopen.
 - De lokale API en de web-app moeten dezelfde XP-bron gebruiken.
 - Iedere configuratiewijziging opnieuw door `tools/sim/balans.ts` halen en `draft-odds.json` bijwerken.
+
+## 9. Economie v2: eerlijker (V-011)
+
+**Besluit Martijn:** goede cijfers moeten voordeel blijven geven, maar persoonlijke verbetering, doelen en Academy-oefeningen moeten ook een serieuze route vormen naar sterke spelers en draft-vouchers. Simuleer verschillende leerlingprofielen over een volledig schooljaar en voorkom extreme verschillen.
+
+### 9.1 Cijferbeloning per toets (`FAIR_REWARD_CONFIG`, `2026.10-eerlijk.1`)
+
+| Tier | Vanaf | Coins | Pack | Voucher | Verschil met oud |
+|---|---:|---:|---|---:|---|
+| Herstelkans | 1 | 100 | – | – | was 0 coins |
+| Voldoende | 5,5 | 200 | Starterspack | – | was 150 coins |
+| Goed | 6,5 | 250 | Goudpack | – | gelijk |
+| Sterk | 7,5 | 300 | Goudpack | – | was Toetsweekpack + voucher |
+| Uitstekend | 8,5 | 400 | Toetsweekpack | 1 | was Elitepack |
+| Legendarisch | 9,5 | 600 | Elitepack | 1 | was spelerskeuze 90+ |
+
+XP-bedragen, weging, limieten (4 per dag, 12 per week) en correctieregels zijn ongewijzigd.
+
+### 9.2 Voortgangsbeloningen (`progressRewards`, `DEFAULT_PROGRESS_CONFIG`, `2026.10-voortgang.1`)
+
+De server roept `progressRewards(config, { grades, goals, ledger, grants, periods, today })` aan na ieder cijfer en ieder leerevent. Hij krijgt alleen nieuwe toekenningen terug: iedere toekenning heeft een vaste sleutel en eerder toegekende sleutels komen nooit terug.
+
+| Soort | Wanneer | Beloning | Sleutel |
+|---|---|---|---|
+| Doel bereikt | Persoonlijk doel na het instellen bereikt (niet als het al gehaald was) | 1 voucher + 300 coins (het doelpack komt al uit de motivatie-engine) | `pr-doel:<doel>` |
+| Vooruitgang | Periodegemiddelde van een vak ≥ 0,6 boven je eigen gemiddelde van daarvoor, minstens 3 cijfers in de periode | Goudpack + 1 voucher + 200 coins, één keer per vak per periode | `pr-vooruit:<periode>:<vak>` |
+| Persoonlijk topcijfer | Cijfer ≥ 1,0 boven je eigen vakgemiddelde (minstens 2 eerdere cijfers) en voldoende | 1 voucher + 100 coins, één keer per vak per periode | `pr-top:<periode>:<vak>` |
+| Herstel | Voldoende direct na een onvoldoende, ≥ 1,0 hoger | Goudpack + 150 coins, één keer per vak per periode | `pr-herstel:<periode>:<vak>` |
+| Academy-mijlpaal | Iedere 150 Academy-XP | Goudpack (max. 2 per week; de rest schuift door) | `pr-acad-pack:<n>` |
+| Academy-mijlpaal | Iedere 400 Academy-XP | 1 voucher (schuift door als de weeklimiet vol is) | `pr-acad-voucher:<n>` |
+
+**Weeklimiet:** hooguit 2 vouchers per week uit voortgang, alle soorten samen. Wordt een toekenning daardoor afgekapt, dan blijven pack en coins staan en staat het aantal in `cappedVouchers`. Academy-vouchermijlpalen gaan niet verloren maar schuiven door naar een volgende week.
+
+Het persoonlijk topcijfer werkt voor ieder niveau: een 6,6 bij een eigen gemiddelde van 5,2 telt net zo goed als een 9,2 bij een gemiddelde van 8,0.
+
+### 9.3 Startelftal (V-013, `starterSquad`)
+
+Iedere nieuwe speler krijgt 18 verschillende kaarten: 11 basisspelers die precies op een 4-3-3 passen en 7 reserves (keeper, centrale verdediger, back, twee middenvelders, vleugel, spits). De kaarten zijn vooral brons en zilver in de band 61-72, met hooguit 2 goudkaarten van maximaal 77. Er zitten geen speciale, tijdelijke of legendarische kaarten bij. Het startelftal is deterministisch per seed, zodat de server de seed in de audit kan vastleggen. Over 8 seeds verschilt de teamrating hooguit 6 punten.
+
+### 9.4 Resultaat over een volledig schooljaar
+
+`simulateSchoolYear` speelt 40 schoolweken (4 periodes) per profiel, met cijfertrend, doelgedrag en Academy-sessies. Het gebruikt `computeReward`, `gradeXp`, `progressRewards` en `academyReward`, opent alle packs en bepaalt het beste 4-3-3-elftal. De actuele tabel staat in `SIMULATIES.md`. Kerncijfers (4 seeds):
+
+| Profiel | Vouchers per jaar oud → nieuw | Teamrating oud → nieuw | Spelers 85+ oud → nieuw |
+|---|---:|---:|---:|
+| Sterk (≈8,1) | 96,5 → 54,0 | 98,0 → 96,8 | 43 → 37 |
+| Gemiddeld (≈6,8) | 30,3 → 28,5 | 96,3 → 95,3 | 34 → 30 |
+| Moeite, gemotiveerd (≈5,4) | 3,8 → 39,0 | 92,5 → 94,8 | 16 → 27 |
+| Stijger (5,5 → 7,0) | 11,0 → 41,3 | 95,3 → 95,3 | 27 → 29 |
+| Oefenaar Academy (≈6,6) | 27,8 → 46,8 | 96,3 → 95,8 | 31 → 30 |
+
+- De verhouding vouchers tussen het hoogste en laagste gemotiveerde profiel daalt van **25,7×** naar **1,9×** (doel ≤ 2,5×).
+- De sterke leerling houdt de meeste vouchers, het beste elftal en de meeste 85+-spelers.
+- Wie niet actief meedoet (geen doelen, niet oefenen, weinig cijfers invoeren), verdient minder. Dat is de bedoeling.
+- De tests in `packages/engine/test/economy.test.ts` bewaken deze grenzen: sterk heeft het maximum, de verhouding blijft ≤ 2,5× en het teamverschil ≤ 5 punten.
+
+**Kanttekening:** in beide economieën komen er veel packs per jaar binnen (honderd of meer). Ieder actief profiel eindigt daardoor rond een teamrating van 95. Het onderscheid zit in het aantal 85+- en speciale kaarten. Of het totale aantal packs omlaag moet, is een aparte afweging.

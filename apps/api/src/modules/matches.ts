@@ -5,28 +5,33 @@
 import { requireUser } from '../auth.ts';
 import { newId, randomSeed } from '../crypto.ts';
 import { auditStmt, isConstraintError, many, one, run, stmt } from '../db.ts';
-import { ASYNC_MOVE_TIMEOUT_MS, BATTLE_CONFIG_VERSION, createBattle, LIVE_MOVE_TIMEOUT_MS, type BattleTeam } from '../engine.ts';
+import { BATTLE_CONFIG_VERSION, createBattle, LIVE_MOVE_TIMEOUT_MS, type BattleTeam } from '../engine.ts';
 import type { Env } from '../env.ts';
 import { cardDef, toBattleCard } from '../game.ts';
-import { ApiError, badRequest, conflict, forbidden, json, notFound, readJson, str, type Ctx } from '../http.ts';
+import { ApiError, badRequest, conflict, forbidden, json, notFound, num, readJson, str, type Ctx } from '../http.ts';
+import { asyncDeadlineHours } from './config.ts';
 import type { MatchMeta } from '../match/room.ts';
 import { LINEUP_SIZE } from './collection.ts';
 import { requireMember } from './pools.ts';
 
 interface MatchRow {
   id: string; pool_id: string; fixture_id: string | null; home_user_id: string; away_user_id: string; challenger_id: string;
-  status: 'pending' | 'active' | 'finished' | 'declined'; timing: 'live' | 'async'; config_version: string;
+  status: 'pending' | 'active' | 'finished' | 'declined'; timing: 'live' | 'async'; config_version: string; deadline_hours: number;
   home_goals: number | null; away_goals: number | null; winner_user_id: string | null; forfeit_by: string | null;
   decided_early: number | null; created_at: number; accepted_at: number | null; finished_at: number | null;
 }
 
-const MATCH_COLUMNS = `id, pool_id, fixture_id, home_user_id, away_user_id, challenger_id, status, timing, config_version,
+const MATCH_COLUMNS = `id, pool_id, fixture_id, home_user_id, away_user_id, challenger_id, status, timing, config_version, deadline_hours,
   home_goals, away_goals, winner_user_id, forfeit_by, decided_early, created_at, accepted_at, finished_at`;
 
-export function matchView(r: MatchRow) {
+/** Een open uitdaging verloopt na de deadline (afgeleid, niet opgeslagen). */
+const isExpired = (r: Pick<MatchRow, 'status' | 'created_at' | 'deadline_hours'>, now: number) => r.status === 'pending' && now >= r.created_at + r.deadline_hours * 3600_000;
+
+export function matchView(r: MatchRow, now = Date.now()) {
   return {
     id: r.id, poolId: r.pool_id, fixtureId: r.fixture_id, homeUserId: r.home_user_id, awayUserId: r.away_user_id,
-    challengerId: r.challenger_id, status: r.status, timing: r.timing, configVersion: r.config_version,
+    challengerId: r.challenger_id, status: isExpired(r, now) ? 'expired' : r.status, timing: r.timing, configVersion: r.config_version,
+    deadlineHours: r.deadline_hours, acceptBefore: r.status === 'pending' ? r.created_at + r.deadline_hours * 3600_000 : null,
     result: r.status === 'finished'
       ? { homeGoals: r.home_goals, awayGoals: r.away_goals, winnerUserId: r.winner_user_id, forfeitBy: r.forfeit_by, decidedEarly: r.decided_early === 1 }
       : null,
@@ -97,6 +102,8 @@ export async function challenge(ctx: Ctx): Promise<Response> {
   const opponent = await one(db, 'SELECT 1 AS x FROM pool_members WHERE pool_id = ? AND user_id = ?', poolId, opponentId);
   if (!opponent) throw notFound();
   const timing = body.timing === 'live' ? 'live' : 'async';
+  // Asynchroon is de standaard; deadline per zet en voor accepteren is instelbaar (1-168 uur, standaard uit de omgeving: 48).
+  const deadlineHours = num(body, 'deadlineHours', { min: 1, max: 168, integer: true, optional: true }) ?? asyncDeadlineHours(ctx.env);
 
   let home = user.id;
   let away = opponentId;
@@ -118,18 +125,18 @@ export async function challenge(ctx: Ctx): Promise<Response> {
   const id = newId('match');
   try {
     await db.batch([
-      stmt(db, `INSERT INTO matches (id, pool_id, fixture_id, home_user_id, away_user_id, challenger_id, status, timing, config_version,
+      stmt(db, `INSERT INTO matches (id, pool_id, fixture_id, home_user_id, away_user_id, challenger_id, status, timing, config_version, deadline_hours,
                 ${home === user.id ? 'home_lineup_json' : 'away_lineup_json'}, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)`,
-        id, poolId, fixtureId, home, away, user.id, timing, BATTLE_CONFIG_VERSION, JSON.stringify(mine), ctx.now),
-      auditStmt(db, user.id, 'match.challenge', id, { poolId, opponentId, fixtureId, timing }, ctx.now),
+                VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)`,
+        id, poolId, fixtureId, home, away, user.id, timing, BATTLE_CONFIG_VERSION, deadlineHours, JSON.stringify(mine), ctx.now),
+      auditStmt(db, user.id, 'match.challenge', id, { poolId, opponentId, fixtureId, timing, deadlineHours }, ctx.now),
     ]);
   } catch (err) {
     if (isConstraintError(err)) throw conflict('fixture_taken', 'Voor deze wedstrijd loopt al een uitdaging.');
     throw err;
   }
   const row = await one<MatchRow>(db, `SELECT ${MATCH_COLUMNS} FROM matches WHERE id = ?`, id);
-  return json({ match: matchView(row as MatchRow) }, 201);
+  return json({ match: matchView(row as MatchRow, ctx.now) }, 201);
 }
 
 export async function accept(ctx: Ctx): Promise<Response> {
@@ -139,6 +146,7 @@ export async function accept(ctx: Ctx): Promise<Response> {
   const opponentId = match.challenger_id === match.home_user_id ? match.away_user_id : match.home_user_id;
   if (user.id !== opponentId) throw forbidden('Alleen de uitgedaagde speler kan accepteren.');
   if (match.status !== 'pending') throw conflict('not_pending', 'Deze uitdaging is niet meer open.');
+  if (isExpired(match, ctx.now)) throw conflict('expired', 'Deze uitdaging is verlopen.');
   const challengerSide = match.challenger_id === match.home_user_id ? 'home' : 'away';
   const challengerRow = await one<{ home_lineup_json: string | null; away_lineup_json: string | null }>(db,
     'SELECT home_lineup_json, away_lineup_json FROM matches WHERE id = ?', match.id);
@@ -152,7 +160,7 @@ export async function accept(ctx: Ctx): Promise<Response> {
     matchId: match.id, seed, at: ctx.now,
     home: toTeam(match.home_user_id, homeCards),
     away: toTeam(match.away_user_id, awayCards),
-    config: { moveTimeoutMs: match.timing === 'live' ? LIVE_MOVE_TIMEOUT_MS : ASYNC_MOVE_TIMEOUT_MS },
+    config: { moveTimeoutMs: match.timing === 'live' ? LIVE_MOVE_TIMEOUT_MS : match.deadline_hours * 3600_000 },
   });
   // Eerst claimen (pending → active), dan de DO starten; bij een fout terugdraaien.
   const claimed = await run(db,
@@ -169,7 +177,7 @@ export async function accept(ctx: Ctx): Promise<Response> {
   }
   await auditStmt(db, user.id, 'match.accept', match.id, { seed, configVersion: created.config.configVersion }, ctx.now).run();
   const row = await one<MatchRow>(db, `SELECT ${MATCH_COLUMNS} FROM matches WHERE id = ?`, match.id);
-  return json({ match: matchView(row as MatchRow), battle: view });
+  return json({ match: matchView(row as MatchRow, ctx.now), battle: view });
 }
 
 export async function decline(ctx: Ctx): Promise<Response> {
@@ -178,7 +186,7 @@ export async function decline(ctx: Ctx): Promise<Response> {
   if (user.id !== match.home_user_id && user.id !== match.away_user_id) throw forbidden('Je speelt niet mee in deze wedstrijd.');
   const changed = await run(ctx.env.DB, `UPDATE matches SET status = 'declined' WHERE id = ? AND status = 'pending'`, match.id);
   if (changed === 0) throw conflict('not_pending', 'Deze uitdaging is niet meer open.');
-  return json({ match: { ...matchView(match), status: 'declined' } });
+  return json({ match: { ...matchView(match, ctx.now), status: 'declined' } });
 }
 
 export async function getMatch(ctx: Ctx): Promise<Response> {
@@ -187,7 +195,7 @@ export async function getMatch(ctx: Ctx): Promise<Response> {
   const battle = match.status === 'active' || match.status === 'finished' ? await callDO(ctx.env, match.id, '/state') : null;
   // De DO kan de wedstrijd net hebben afgerond (time-out); lees de metadata opnieuw.
   const fresh = battle ? await one<MatchRow>(ctx.env.DB, `SELECT ${MATCH_COLUMNS} FROM matches WHERE id = ?`, match.id) : match;
-  return json({ match: matchView(fresh ?? match), battle });
+  return json({ match: matchView(fresh ?? match, ctx.now), battle });
 }
 
 export async function getMatchEvents(ctx: Ctx): Promise<Response> {
@@ -231,5 +239,5 @@ export async function listPoolMatches(ctx: Ctx): Promise<Response> {
   const poolId = ctx.params.poolId as string;
   await requireMember(ctx.env.DB, poolId, user.id);
   const rows = await many<MatchRow>(ctx.env.DB, `SELECT ${MATCH_COLUMNS} FROM matches WHERE pool_id = ? ORDER BY created_at DESC LIMIT 200`, poolId);
-  return json({ matches: rows.map(matchView) });
+  return json({ matches: rows.map((r) => matchView(r, ctx.now)) });
 }

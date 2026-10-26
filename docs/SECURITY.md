@@ -92,3 +92,12 @@ Besluit Martijn (beurt 3): leerlingen voeren zelf in, zonder controle door ouder
 5. Gelijkeniscontrole van alle portretten door een mens; merkcheck van verzonnen club- en spelersnamen.
 6. Moderatiebeleid voor pools (gebruikersnamen, clubnamen) en een meldknop.
 7. Expliciete goedkeuring van Martijn voor de uitrol.
+
+## 11. Agenten en externe verzoeken
+
+Aanleiding: [INCIDENT-2026-10-25-user-agent.md](INCIDENT-2026-10-25-user-agent.md).
+
+- Stuur nooit persoonsgegevens (e-mailadres, naam, telefoonnummer, tokens, sessiegegevens) mee in headers, query's, formulieren of zoektermen naar derden, tenzij Martijn dat voor die dienst expliciet heeft gevraagd.
+- Vraagt een dienst contactinformatie in de User-Agent (zoals Wikimedia), gebruik dan een generieke waarde, bijvoorbeeld `RANK11-research/1.0 (contact via repository)`, nooit een persoonlijk adres.
+- Onderzoeksopdrachten aan agenten vermelden deze regel expliciet.
+- `npm run check:pii` (onderdeel van `npm test`) controleert alle getrackte tekstbestanden op e-mailadressen en telefoonnummers. Een vondst laat de tests falen.

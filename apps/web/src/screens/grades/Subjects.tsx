@@ -106,7 +106,7 @@ export function SubjectsView({ nav }: { nav: Nav }) {
                     {confirmDel === g.id && (
                       <span className="confirm-inline del-confirm" role="group" aria-label="Verwijderen bevestigen">
                         <span className="small dim">{isPending ? 'Verwijderen?' : 'Verwijderen? De XP van dit cijfer gaat eraf.'}</span>
-                        <button className="btn ghost small" onClick={() => { deleteGrade(g.id, 'Verwijderd door speler'); setConfirmDel(null); }}>Verwijder</button>
+                        <button className="btn ghost small" onClick={async () => { await deleteGrade(g.id, 'Verwijderd door speler'); setConfirmDel(null); }}>Verwijder</button>
                         <button className="link-btn" onClick={() => setConfirmDel(null)}>Annuleren</button>
                       </span>
                     )}
@@ -129,10 +129,10 @@ export function SubjectsView({ nav }: { nav: Nav }) {
 
       {editing && (
         <Sheet title="Cijfer aanpassen" onClose={() => setEditing(null)}>
-          <GradeForm withReason submitLabel="Correctie opslaan" initial={editing} onSubmit={(input, reason) => {
+          <GradeForm withReason submitLabel="Correctie opslaan" initial={editing} onSubmit={async (input, reason) => {
             const changes = Object.fromEntries(Object.entries(input).filter(([k, v]) => editing[k as keyof Grade] !== v));
             if (!Object.keys(changes).length) return { ok: false, error: 'Er is niets veranderd.' };
-            const res = correctGrade(editing.id, changes, reason);
+            const res = await correctGrade(editing.id, changes, reason);
             if (res.ok) setEditing(null);
             return res;
           }} />

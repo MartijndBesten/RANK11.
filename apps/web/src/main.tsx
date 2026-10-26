@@ -2,8 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './fonts';
 import './styles/base.css';
-import { StoreProvider } from './state/store';
-import { App } from './App';
+import { Root } from './Root';
 import { Gallery } from './Gallery';
 
 // Kaartengalerij: ?gallery lokaal, #kaarten in de preview (die geeft alleen #ankers door).
@@ -17,9 +16,7 @@ createRoot(document.getElementById('root')!).render(
         <Gallery />
       </>
     ) : (
-      <StoreProvider>
-        <App />
-      </StoreProvider>
+      <Root />
     )}
   </StrictMode>,
 );

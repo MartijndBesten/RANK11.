@@ -83,8 +83,8 @@ export function DraftScreen({ nav }: { nav: Nav }) {
           <button
             className="btn"
             disabled={state.vouchers < event.voucherCost}
-            onClick={() => {
-              const s = startDraft();
+            onClick={async () => {
+              const s = await startDraft();
               if (s) { sfx.whoosh(); setSession(s); nav.setImmersive(true); }
             }}
           >
@@ -127,6 +127,7 @@ export function DraftScreen({ nav }: { nav: Nav }) {
 }
 
 function DraftPicking({ session, setSession, onExit }: { session: DraftSession; setSession: (s: DraftSession) => void; onExit: () => void }) {
+  const { draftPick } = useStore();
   const reduced = useReducedMotion();
   const formation = draftFormation(session);
   const lineup = draftLineup(session);
@@ -162,6 +163,7 @@ function DraftPicking({ session, setSession, onExit }: { session: DraftSession; 
   const choose = (p: Player) => {
     sfx.reveal();
     setSession(pickDraft(session, slot.slotId, p.id));
+    void draftPick(slot.slotId, p.id);
   };
 
   return (

@@ -5,16 +5,20 @@
  * Cijfers zijn alleen zichtbaar voor de leerling zelf; geen enkele pool-query leest deze tabellen.
  */
 import { requireUser } from '../auth.ts';
-import { newId } from '../crypto.ts';
+import { newId, randomSeed } from '../crypto.ts';
+import { getCatalog } from '../game.ts';
+import { activeGoals } from './planning.ts';
+import { progressStatements, progressView } from '../progress.ts';
 import { auditStmt, isConstraintError, many, one, stmt } from '../db.ts';
 import {
-  categoryTotals, clubLevel, computeReward, correctionXp, DEFAULT_MOTIVATION_CONFIG, DEFAULT_REWARD_CONFIG, deletionXp, gradeKey,
+  categoryTotals, clubLevel, computeReward, createRng, correctionXp, DEFAULT_MOTIVATION_CONFIG, deletionXp, FAIR_REWARD_CONFIG, gradeKey,
   GradeValidationError, gradeXp, overallAverage, sortedTiers, subjectAverages, validateGrade, weightedAverage,
   type Grade, type MotivationConfig, type RewardConfig, type RewardResult, type XpEntry,
 } from '../engine.ts';
 import { badRequest, conflict, json, notFound, readJson, type Ctx } from '../http.ts';
 
-export const REWARD_CONFIG: RewardConfig = DEFAULT_REWARD_CONFIG;
+/** V-011: eerlijkere beloningsconfiguratie (voucher vanaf 8,5; vooruitgang via progressRewards). */
+export const REWARD_CONFIG: RewardConfig = FAIR_REWARD_CONFIG;
 export const MOTIVATION_CONFIG: MotivationConfig = DEFAULT_MOTIVATION_CONFIG;
 
 interface XpRow {
@@ -190,11 +194,25 @@ export async function createGrade(ctx: Ctx): Promise<Response> {
     previous,
   });
   // XP via de motivatie-engine: zelfde regels, plafonds en sleutels als in de web-app. Doelen kent de API nog niet.
+  const goals = await activeGoals(db, user.id);
+  const ledgerBefore = await loadXpLedger(db, user.id);
   const xpEntries = gradeXp(MOTIVATION_CONFIG, {
-    grade: toEngine(row), before: existing.map(toEngine), goals: [], ledger: await loadXpLedger(db, user.id), enteredOn: isoDay(ctx.now),
+    grade: toEngine(row), before: existing.map(toEngine), goals, ledger: ledgerBefore, enteredOn: isoDay(ctx.now),
   });
-  const rewarded: RewardResult = { ...result, xp: xpEntries.reduce((sum, e) => sum + e.xp, 0) };
+  const progress = await progressStatements(db, user.id, {
+    grades: [...existing.map(toEngine), toEngine(row)], goals, ledger: [...ledgerBefore, ...xpEntries], today: isoDay(ctx.now),
+  }, { kind: 'grade', id }, ctx.now);
+  const rewarded: RewardResult & { pickOptions?: string[] } = { ...result, xp: xpEntries.reduce((sum, e) => sum + e.xp, 0) };
+  // Spelerskeuze (Legendarisch): de server trekt de opties nu, zodat ze vastliggen en niet te herrollen zijn.
+  if (rewarded.pick) {
+    const pool = getCatalog().filter((p) => !p.temporary && p.rating >= rewarded.pick!.minRating);
+    rewarded.pickOptions = createRng(randomSeed()).shuffle(pool).slice(0, rewarded.pick.options).map((p) => p.id);
+  }
   const reward = rewardStatements(db, user.id, id, rewarded, previous, ctx.now);
+  // Doel bereikt: het doelpack komt als losse packtoekenning (uniek per doel).
+  const goalPacks = xpEntries.filter((e) => e.packId && e.source.kind === 'goal').map((e) =>
+    stmt(db, `INSERT OR IGNORE INTO pack_grants (id, user_id, pack_id, source, source_ref, created_at) VALUES (?, ?, ?, 'reward', ?, ?)`,
+      newId('pg'), user.id, e.packId, `goal:${e.source.id}`, ctx.now));
   try {
     await db.batch([
       stmt(db, `INSERT INTO grades (${GRADE_COLUMNS}, user_id, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
@@ -203,12 +221,14 @@ export async function createGrade(ctx: Ctx): Promise<Response> {
         newId('gh'), id, user.id, 'create', JSON.stringify(view(row)), ctx.now),
       ...reward.statements,
       ...xpStatements(db, user.id, xpEntries, ctx.now),
+      ...goalPacks,
+      ...progress.statements,
     ]);
   } catch (err) {
     if (isConstraintError(err)) throw conflict('duplicate_grade', 'Dit cijfer staat er al.');
     throw err;
   }
-  return json({ grade: view(row), reward: rewardView(rewarded, reward.grantId), xp: xpView(xpEntries) }, 201);
+  return json({ grade: view(row), reward: rewardView(rewarded, reward.grantId), xp: xpView(xpEntries), progress: progress.grants.map(progressView) }, 201);
 }
 
 async function ownedGrade(db: D1Database, userId: string, id: string): Promise<GradeRow> {
@@ -282,11 +302,25 @@ export async function listGrades(ctx: Ctx): Promise<Response> {
   const user = requireUser(ctx);
   const rows = await activeGrades(ctx.env.DB, user.id);
   const engine = rows.map(toEngine);
+  // ?history=1: volledige mutatiegeschiedenis (ook van verwijderde cijfers) in één keer.
+  const history = ctx.url.searchParams.get('history') === '1'
+    ? (await many<{ grade_id: string; action: string; before_json: string | null; after_json: string | null; at: number }>(ctx.env.DB,
+      'SELECT grade_id, action, before_json, after_json, at FROM grade_history WHERE user_id = ? ORDER BY at, rowid', user.id))
+      .map((r) => ({ gradeId: r.grade_id, action: r.action, before: r.before_json ? JSON.parse(r.before_json) : null, after: r.after_json ? JSON.parse(r.after_json) : null, at: r.at }))
+    : undefined;
   return json({
+    ...(history ? { history } : {}),
     grades: rows.map(view),
     averages: { overall: overallAverage(engine), subjects: Object.fromEntries(subjectAverages(engine)) },
     xp: xpSummary(await loadXpLedger(ctx.env.DB, user.id)),
   });
+}
+
+/** XP-grootboek van de leerling (nieuwste eerst) met samenvatting. */
+export async function listXp(ctx: Ctx): Promise<Response> {
+  const user = requireUser(ctx);
+  const ledger = await loadXpLedger(ctx.env.DB, user.id);
+  return json({ summary: xpSummary(ledger), ledger: [...ledger].reverse().slice(0, 200) });
 }
 
 export async function gradeHistory(ctx: Ctx): Promise<Response> {

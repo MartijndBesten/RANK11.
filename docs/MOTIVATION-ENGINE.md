@@ -16,7 +16,7 @@ Elke soort wordt apart berekend en apart begrensd. Het totaal (som) bepaalt het 
 | **Vooruitgang-XP** (`progress`) | hoger vakgemiddelde, herstel na een onvoldoende, bereikt doel | `gradeXp` |
 | **Academy-XP** (`academy`) | afgeronde oefenactiviteit met leerwaarde | `academyReward` |
 
-## 3. Configuratie (exacte waarden)
+## 3. Configuratie (exacte waarden, versie `2026.10-motivatie.2`)
 
 **Prestatie**
 
@@ -45,7 +45,8 @@ Een 6,4 levert dus 50 XP, een 7,0 80 XP, een 8,6 110 XP en een 9,6 150 XP. Ook e
 | Score ≥ 80% | +30 XP |
 | Eerder foute vraag nu goed | 25 XP per vraag, max. 4 per activiteit |
 | Herhaling met ≥ 10 procentpunt beter dan ooit | 15 XP (na ≥ 20 uur sinds de vorige poging) |
-| Minimale duur | 8 seconden per vraag |
+| Minimale duur | geen (sinds `2026.10-motivatie.2`, V-016); het veld `minSecondsPerQuestion` blijft bestaan en staat op 0 |
+| Afronding met vragenset-sleutel (`contentKey`) | één keer per activiteit per dag; een identieke vragenset levert niets op |
 | Plafond per dag / per week | 150 / 600 XP |
 
 **Levels:** niveau 1 → 2 kost 250 XP; ieder volgend niveau ×1,18 (afgerond). `clubLevel(totaal)` geeft niveau, XP in het huidige niveau en de benodigde XP.
@@ -125,3 +126,8 @@ XP is los van coins, packs en vouchers. Die laatste komen uit de beloningsconfig
 - Prestatie-XP beloont nog steeds hoge cijfers sterker (50 vs 150 XP). Vooruitgang-XP compenseert deels, maar alleen voor wie al eerdere cijfers in het vak heeft.
 - Academy: herkansingsvragen leveren XP op zodra ze goed zijn, ook direct in de volgende sessie. Het onderzoek (C4) adviseert een interval; dat zit nog niet in de engine (alleen de score-verbeterbonus heeft een wachttijd van 20 uur).
 - In de demo-oefenmodule heeft iedere sessie van een vak dezelfde `activityId`; de 20 XP voor "eerste keer afgerond" komt dus één keer per vak.
+
+## 9. Wijziging 26-10-2026 (V-016 en V-011)
+
+- **Geen verplichte minimumtijd per vraag.** Echte voortgang wordt beloond en herhaald farmen wordt voorkomen. Afronding telt met een vragenset-sleutel één keer per activiteit per dag. Een identieke vragenset levert niets op. Een betere score levert alleen XP op boven je beste score ooit, met een wachttijd van 20 uur. XP voor een verbeterde fout krijg je alleen voor een echte herkansing in een latere sessie (zie `practice.ts`). De plafonds per dag en per week blijven gelden.
+- **Kaarten voor vooruitgang:** de motivatie-engine geeft XP. De voortgangslaag `progressRewards` (`economy.ts`) geeft voor dezelfde soorten prestaties ook packs en vouchers. Zie `REWARD-ECONOMY.md` §9.

@@ -147,13 +147,16 @@ describe('Academy', () => {
     expect(d.status).toBe('rewarded');
     expect(d.entries.map((x) => x.xp)).toEqual([20, 30, 4 * 25]); // fouten begrensd op 4 per activiteit
   });
-  it('dubbel event, uitgeschakeld, afgebroken en te snel', () => {
+  it('dubbel event, uitgeschakeld, afgebroken en (optionele) tijdregel', () => {
     const e = ev();
     const first = academyReward(M, e, ctx());
     expect(academyReward(M, e, ctx({ history: [e], ledger: first.entries })).status).toBe('duplicate');
     expect(academyReward(M, ev(), ctx({ enabled: false })).status).toBe('disabled');
     expect(academyReward(M, ev({ status: 'abandoned' }), ctx()).status).toBe('abandoned');
-    expect(academyReward(M, ev({ completedAt: '2026-10-20T15:00:30Z' }), ctx()).status).toBe('too-fast');
+    // De tijdregel staat standaard uit (V-016), maar werkt nog als een configuratie hem expliciet instelt.
+    expect(academyReward(M, ev({ completedAt: '2026-10-20T15:00:30Z' }), ctx()).status).toBe('rewarded');
+    const strict = { ...M, academy: { ...M.academy, minSecondsPerQuestion: 8 } };
+    expect(academyReward(strict, ev({ completedAt: '2026-10-20T15:00:30Z' }), ctx()).status).toBe('too-fast');
   });
   it('herhalen: niets zonder verbetering of binnen cooldown, wel bij een betere score', () => {
     const e1 = ev({ correctCount: 6 });

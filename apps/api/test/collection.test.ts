@@ -5,7 +5,9 @@ import { createApp, idem, platformCode, register, type TestApp, type TestUser } 
 
 afterEach(() => { vi.useRealTimers(); });
 
-const cardCount = (app: TestApp, user: TestUser) => (app.db.db.prepare('SELECT COUNT(*) AS n FROM card_instances WHERE user_id = ?').get(user.id) as { n: number }).n;
+const rawCount = (app: TestApp, user: TestUser) => (app.db.db.prepare('SELECT COUNT(*) AS n FROM card_instances WHERE user_id = ?').get(user.id) as { n: number }).n;
+/** Kaarten naast het startelftal. */
+const cardCount = (app: TestApp, user: TestUser) => rawCount(app, user) - (app.db.db.prepare(`SELECT COUNT(*) AS n FROM card_instances WHERE user_id = ? AND acquired_via = 'starter'`).get(user.id) as { n: number }).n;
 const coins = (app: TestApp, user: TestUser) => (app.db.db.prepare(`SELECT COALESCE(SUM(delta), 0) AS s FROM wallet_ledger WHERE user_id = ? AND currency = 'coins'`).get(user.id) as { s: number }).s;
 
 async function earnCoins(app: TestApp, user: TestUser, grades: number) {
@@ -16,30 +18,32 @@ async function earnCoins(app: TestApp, user: TestUser, grades: number) {
 }
 
 describe('startelftal, collectie en elftal', () => {
-  it('startelftal: eenmalig, 11 kaarten, opgesteld, seed in de audit en reproduceerbaar', async () => {
+  it('startelftal (V-013): automatisch bij registratie, compleet met reserves, opgesteld, seed in de audit en reproduceerbaar', async () => {
     const app = createApp();
     const u = await register(app, 'Starter', await platformCode(app));
-    const res = await app.api('POST', '/api/collection/starter', { token: u.token });
-    expect(res.status).toBe(201);
-    expect(res.body.cards).toHaveLength(11);
-    expect(res.body.cards.every((c: { rarity: string }) => c.rarity === 'bronze' || c.rarity === 'silver')).toBe(true);
-    expect(starterSquad(res.body.seed).map((p) => p.id)).toEqual(res.body.cards.map((c: { cardDefId: string }) => c.cardDefId));
     const audit = app.db.db.prepare(`SELECT detail_json FROM audit_log WHERE action = 'collection.starter'`).get() as { detail_json: string };
-    expect(JSON.parse(audit.detail_json).seed).toBe(res.body.seed);
-    expect((await app.api('POST', '/api/collection/starter', { token: u.token })).status).toBe(409);
-    expect(cardCount(app, u)).toBe(11);
-    const lineup = await app.api('GET', '/api/lineup', { token: u.token });
-    expect(lineup.body.cardIds).toEqual(res.body.lineup);
+    const seed = JSON.parse(audit.detail_json).seed as string;
+    const squad = starterSquad(seed);
+    expect(squad).toHaveLength(18);
     const col = await app.api('GET', '/api/collection', { token: u.token });
-    expect(col.body.cards).toHaveLength(11);
+    const defOf = new Map(col.body.cards.map((c: { id: string; cardDefId: string }) => [c.id, c.cardDefId]));
+    expect([...defOf.values()].sort()).toEqual(squad.map((p) => p.id).sort());
+    expect(col.body.cards.every((c: { rarity: string }) => ['bronze', 'silver', 'gold'].includes(c.rarity))).toBe(true);
+    expect(rawCount(app, u)).toBe(18);
+    // Opstelling: de 11 basisspelers in formatievolgorde (4-3-3), de 7 reserves op de bank.
+    const lineup = await app.api('GET', '/api/lineup', { token: u.token });
+    expect(lineup.body.formationId).toBe('4-3-3');
+    expect(lineup.body.cardIds.map((id: string) => defOf.get(id))).toEqual(squad.slice(0, 11).map((p) => p.id));
+    expect(lineup.body.bench.map((id: string) => defOf.get(id))).toEqual(squad.slice(11).map((p) => p.id));
+    expect((await app.api('POST', '/api/collection/starter', { token: u.token })).status).toBe(409);
   });
 
   it('elftal: precies 11 eigen, unieke kaarten', async () => {
     const app = createApp();
     const a = await register(app, 'Eigenaar', await platformCode(app));
     const b = await register(app, 'Ander', await platformCode(app));
-    const mine = (await app.api('POST', '/api/collection/starter', { token: a.token })).body.lineup as string[];
-    const theirs = (await app.api('POST', '/api/collection/starter', { token: b.token })).body.lineup as string[];
+    const mine = (await app.api('GET', '/api/lineup', { token: a.token })).body.cardIds as string[];
+    const theirs = (await app.api('GET', '/api/lineup', { token: b.token })).body.cardIds as string[];
     expect((await app.api('PUT', '/api/lineup', { token: a.token, body: { cardIds: mine.slice(0, 10) } })).status).toBe(400);
     expect((await app.api('PUT', '/api/lineup', { token: a.token, body: { cardIds: [...mine.slice(0, 10), mine[0]] } })).status).toBe(400);
     expect((await app.api('PUT', '/api/lineup', { token: a.token, body: { cardIds: [...mine.slice(0, 10), theirs[0]] } })).status).toBe(400);
@@ -49,7 +53,8 @@ describe('startelftal, collectie en elftal', () => {
   it('club: naam, afkorting en embleem als JSON-parameters', async () => {
     const app = createApp();
     const u = await register(app, 'Clubbaas', await platformCode(app));
-    expect((await app.api('GET', '/api/club', { token: u.token })).status).toBe(404);
+    // Bij registratie krijgt iedereen een standaardclub op eigen naam.
+    expect((await app.api('GET', '/api/club', { token: u.token })).body.club.name).toMatch(/^FC /);
     const crest = { shape: 'shield', symbol: 'lion', pattern: 'stripes', primary: '#0F2C6B', secondary: '#ffffff', accent: '#e8b33a' };
     const put = await app.api('PUT', '/api/club', { token: u.token, body: { name: 'FC Zuidwijk', short: 'fcz', crest } });
     expect(put.status).toBe(200);

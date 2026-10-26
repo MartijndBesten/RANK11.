@@ -27,13 +27,13 @@ describe('cijfers en beloningen', () => {
     expect(res.status).toBe(201);
     expect(res.body.grade).toMatchObject({ status: 'self', value: 7, subjectId: 'wiskunde' });
     // XP uit de motivatie-engine: 50 per cijfer + 30 bonus voor een 7; coins/pack uit de beloningsconfig.
-    expect(res.body.reward).toMatchObject({ status: 'rewarded', tierId: 'good', xp: 80, coins: 250, packId: 'gold', configVersion: '2026.10-proto.1' });
+    expect(res.body.reward).toMatchObject({ status: 'rewarded', tierId: 'good', xp: 80, coins: 250, packId: 'gold', configVersion: '2026.10-eerlijk.1' });
     expect(res.body.xp).toMatchObject({ total: 80, entries: [{ key: 'perf:toets:wiskunde:hoofdstuk 3:2026-10-20', category: 'performance', xp: 80 }] });
     expect(ledger(app, user)).toEqual({ coins: 250 });
     expect(xpRows(app, user)).toEqual([{ key: 'perf:toets:wiskunde:hoofdstuk 3:2026-10-20', category: 'performance', xp: 80, capped_by: null }]);
     expect(packs(app, user)).toEqual(['gold']);
     const grant = app.db.db.prepare('SELECT config_version, kind, dedupe_key FROM reward_grants').get() as Record<string, string>;
-    expect(grant).toEqual({ config_version: '2026.10-proto.1', kind: 'initial', dedupe_key: 'toets:wiskunde:hoofdstuk 3:2026-10-20' });
+    expect(grant).toEqual({ config_version: '2026.10-eerlijk.1', kind: 'initial', dedupe_key: 'toets:wiskunde:hoofdstuk 3:2026-10-20' });
     const wallet = await app.api('GET', '/api/wallet', { token: user.token });
     expect(wallet.body.balances).toEqual({ coins: 250, xp: 0, vouchers: 0 });
     const list = await app.api('GET', '/api/grades', { token: user.token });
@@ -75,21 +75,22 @@ describe('cijfers en beloningen', () => {
     const up = await app.api('PUT', `/api/grades/${id}`, { token: user.token, idem: idem(), body: { value: 8 } });
     expect(up.status).toBe(200);
     // XP: een 8 is 110 Prestatie-XP, er was 80 → alleen het verschil van 30.
-    expect(up.body.reward).toMatchObject({ status: 'correction', tierId: 'great', xp: 30, coins: 150, vouchers: 1, packId: 'exam' });
+    // V-011: Sterk (7,5+) geeft nu een Goudpack zonder voucher; de correctie levert alleen het coinverschil op.
+    expect(up.body.reward).toMatchObject({ status: 'correction', tierId: 'great', xp: 30, coins: 50, vouchers: 0, packId: 'gold' });
     expect(up.body.xp.total).toBe(30);
-    expect(ledger(app, user)).toEqual({ coins: 400, vouchers: 1 });
+    expect(ledger(app, user)).toEqual({ coins: 300 });
     expect(xpTotal(app, user)).toBe(110);
-    expect(packs(app, user)).toEqual(['gold', 'exam']);
+    expect(packs(app, user)).toEqual(['gold']);
 
     const down = await app.api('PUT', `/api/grades/${id}`, { token: user.token, idem: idem(), body: { value: 6 } });
     expect(down.body.reward).toMatchObject({ status: 'duplicate', xp: 0, coins: 0 });
-    expect(ledger(app, user)).toEqual({ coins: 400, vouchers: 1 });
+    expect(ledger(app, user)).toEqual({ coins: 300 });
     expect(xpTotal(app, user)).toBe(110);
 
     const back = await app.api('PUT', `/api/grades/${id}`, { token: user.token, idem: idem(), body: { value: 8 } });
     expect(back.body.reward.status).toBe('duplicate'); // tier 'great' was al toegekend
     expect(back.body.xp.total).toBe(0); // 110 XP voor een 8 was al toegekend
-    expect(ledger(app, user)).toEqual({ coins: 400, vouchers: 1 });
+    expect(ledger(app, user)).toEqual({ coins: 300 });
 
     const del = await app.api('DELETE', `/api/grades/${id}`, { token: user.token, idem: idem() });
     expect(del.status).toBe(200);
@@ -106,7 +107,7 @@ describe('cijfers en beloningen', () => {
     expect(reentry.status).toBe(201);
     expect(reentry.body.reward.status).toBe('duplicate');
     expect(reentry.body.xp.total).toBe(0); // dezelfde toets opnieuw invoeren levert geen nieuwe XP op
-    expect(ledger(app, user)).toEqual({ coins: 400, vouchers: 1 });
+    expect(ledger(app, user)).toEqual({ coins: 300 });
     expect(xpTotal(app, user)).toBe(0);
   });
 
@@ -114,7 +115,7 @@ describe('cijfers en beloningen', () => {
     const { app, user } = await setup();
     // Verschillende toetsdatums: bij gelijke datum is de volgorde (en dus "herstel na onvoldoende") niet gedefinieerd.
     const low = await app.api('POST', '/api/grades', { token: user.token, idem: idem(), body: grade({ value: 4.2, testName: 'SO 1', date: '2026-10-14' }) });
-    expect(low.body.reward).toMatchObject({ status: 'support', xp: 50, coins: 0, packId: null });
+    expect(low.body.reward).toMatchObject({ status: 'support', xp: 50, coins: 100, packId: null });
     for (let i = 2; i <= 4; i++) {
       const r = await app.api('POST', '/api/grades', { token: user.token, idem: idem(), body: grade({ testName: `SO ${i}`, date: `2026-10-1${4 + i}` }) });
       expect(r.body.reward.status).toBe('rewarded');

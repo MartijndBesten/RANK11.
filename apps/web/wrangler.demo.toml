@@ -1,0 +1,16 @@
+# Publieke RANK11.-demo: Worker die de statische demo-build uit R2 serveert.
+# Geen servercode-logica, geen D1, geen cron. Losstaand van apps/api en van alle andere Denckh.-projecten.
+# De build-bestanden staan in R2-bucket 'rank11-demo' (upload via account-token, los van deze worker-deploy).
+name = "rank11-demo"
+main = "demo-worker.js"
+compatibility_date = "2025-10-01"
+workers_dev = false
+
+# Eigen URL op het martijndenbesten.com-domein; Cloudflare maakt hiervoor het (proxied) DNS-record.
+routes = [
+  { pattern = "rank11-demo.martijndenbesten.com", custom_domain = true },
+]
+
+[[r2_buckets]]
+binding = "ASSETS"
+bucket_name = "rank11-demo"

@@ -20,6 +20,7 @@ Status 26-10-2026 (ronde 4): **engine gebouwd en getest**. Met een account speel
 - Status wordt nooit opgeslagen: `battleState(events)` leidt alles af uit de eventlog (`created`, `played`, `forfeit`).
 - Toss met de gelogde seed bepaalt wie in ronde 1 aanvalt; daarna wisselt de aanval.
 - Per ronde: de aanvaller legt open, de verdediger reageert. Hogere duelwaarde wint; gelijk volgens `tieRule` (standaard: geen doelpunt).
+- **Vorm van de dag (V-018):** elke kaart krijgt per duel 0..3 extra, deterministisch uit de wedstrijdseed en zichtbaar in het duel. Sterkere kaarten winnen meestal; een klein verschil geeft de onderdog meer kans zonder dat een wedstrijd willekeurig aanvoelt.
 - Duelmodus: standaard `rating`. De demo-league wisselt per ronde tussen rating, snelheid, techniek en verdedigen (`roundModes`), zodat meer dan alleen de hoogste rating telt.
 - `stopWhenDecided`: de wedstrijd stopt zodra de achterstand niet meer in te halen is.
 - Bedenktijd: live 30 s, asynchroon 24 uur. Bij een verlopen deadline speelt de server de laagste kaart; drie keer achter elkaar te laat betekent reglementair verlies (3-0).

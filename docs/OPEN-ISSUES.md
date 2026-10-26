@@ -1,6 +1,6 @@
 # Open punten
 
-Stand: 26 oktober 2026 (ronde 5). Besluiten die Martijn moet nemen, staan als vraag in `VRAGEN.md`. Dit bestand bevat de technische en inhoudelijke punten.
+Stand: 26 oktober 2026 (ronde 6). Besluiten die Martijn moet nemen, staan als vraag in `VRAGEN.md`. Dit bestand bevat de technische en inhoudelijke punten.
 
 ## Blokkerend voor een test met echte gebruikers
 
@@ -23,8 +23,9 @@ Volledig overzicht, los van de ontwikkeling: `docs/BESLOTEN-TEST.md`.
 | I7 | Periode-indeling is een voorbeeld | `packages/engine/src/periods.ts`; scholen verschillen. Moet in de poolinstellingen komen |
 | I8 | Doel telt alleen voor cijfers na het instellen | Een doel dat je instelt na een cijfer dat het al haalt, levert pas iets op bij het volgende cijfer. Bewust (geen beloning achteraf), maar de app legt dat nog niet uit |
 | I9 | Economie v3 bijstellen na echte data | Alles staat in configuratieversies (`economy.ts`, `motivation.ts`); de simulatie (`tools/sim/balans.ts`) en de tests bewaken de grenzen. Echte speeldata kan andere keuzes vragen |
-| I10 | Battles zijn gevoelig voor kleine verschillen | 1-2 punten teamrating geeft al een duidelijk lagere winkans; er is weinig geluk of tactiek. De economie houdt actieve leerlingen nu dicht bij elkaar, maar een kleine geluksfactor of blind verdedigen zou de onderdog meer kans geven. Besluit: V-018 |
-| I11 | Magister alleen via de school | Geen officiële route per leerling. Datamodel is voorbereid (`source: 'magister'`, `externalRef`, `verified`). Zie `docs/onderzoek/MAGISTER.md` |
+| I10 | Battles gevoelig voor kleine verschillen | Opgelost met de vorm van de dag (V-018): kleine, zichtbare, begrensde geluksfactor. Grote verschillen blijven beslissend |
+| I11 | Magister alleen via de school | Koppelarchitectuur is gebouwd en getest (voorbeeldbron); de Magister-provider is niet geactiveerd. Activeren vraagt een toegestane route + ouderlijke toestemming. Zie `docs/onderzoek/MAGISTER.md` |
+| I12 | Periodieke sync nog niet aangezet | De sync-engine en `linkedUsers` staan klaar; een cron/scheduled handler die periodiek synchroniseert is nog niet toegevoegd (pas zinvol met een echte, geautoriseerde bron) |
 
 ## Technisch
 
@@ -38,6 +39,12 @@ Volledig overzicht, los van de ontwikkeling: `docs/BESLOTEN-TEST.md`.
 | T9 | Live battle niet in de app | De API heeft live wedstrijden via WebSocket (30 s per zet); de app gebruikt alleen asynchroon met verversen elke 3 s |
 | T10 | Online store herlaadt alles na iedere actie | Eenvoudig en consistent, maar ±11 verzoeken per actie. Voor een test met een klas prima; later gericht verversen |
 | T11 | Demo en server lopen via twee codepaden | Zelfde engine, maar de demo-store en de serverroutes zijn apart. De E2E-scripts dekken beide; wijzigingen in de regels moeten in beide getest worden |
+
+## Opgelost in ronde 6
+
+- V-018 vorm van de dag in battles (kleine geluksfactor).
+- Cijferimport uit bestand + snellere handmatige invoer.
+- Koppelarchitectuur met versleutelde tokens; herkomst los van verificatie.
 
 ## Opgelost in ronde 5
 

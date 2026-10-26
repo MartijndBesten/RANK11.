@@ -8,7 +8,7 @@ const U = process.env.RANK11_URL || 'http://localhost:5173/';
 const MODE = process.argv[2] === 'online' ? 'online' : 'demo';
 const SIZES = [[360, 740], [375, 667], [390, 844], [430, 932], [844, 390], [740, 360], [820, 1180], [1180, 820]];
 const SCREENS = ['home', 'club-elftal', 'club-collectie', 'club-packs', 'club-draft', 'competitie', 'competitie-gradeleague', 'competitie-rankleague', 'competitie-pools',
-  'cijfers', 'cijfers-vakken', 'cijfers-invoeren', 'cijfers-doelen', 'cijfers-watals', 'cijfers-kluis', 'academy', 'academy-oefenen'];
+  'cijfers', 'cijfers-vakken', 'cijfers-invoeren', 'cijfers-importeren', 'cijfers-doelen', 'cijfers-watals', 'cijfers-kluis', 'academy', 'academy-oefenen'];
 // Bewust horizontaal scrollende stroken.
 const SCROLLERS = '[style*="overflow"], .bench-row, .formations, .draft-events, .dp-offers, .filters, .subnav-track, .subject-picker, .lt-scroll, .cl-series, .hub-event-cards';
 

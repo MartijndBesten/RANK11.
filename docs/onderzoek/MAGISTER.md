@@ -72,3 +72,24 @@ Nu wordt hiervoor niets extra gebouwd.
 - som.today/partnerprogramma; docs.zportal.nl (Zermelo-authenticatie); support.zermelo.nl release 26.04 (13-04-2026)
 - wetten.overheid.nl: UAVG (BWBR0040940) art. 5; Wetboek van Strafrecht art. 138ab
 - AVG (EU 2016/679) art. 8, 15 en 20
+
+## Addendum ronde 6 (26-10-2026): voorbereiding gebouwd, koppeling niet geactiveerd
+
+Op verzoek is de volledige koppelarchitectuur gebouwd, los van externe toestemming. **De echte Magister-synchronisatie is bewust niet geactiveerd**: er wordt geen interne Magister-API benaderd, het mobiele-app-client-id `M6LOAPP` wordt niet gebruikt, en er wordt nooit om een Magister-wachtwoord gevraagd.
+
+**Wat is gebouwd en getest (werkt nu):**
+- Een provider-onafhankelijke opzet (`apps/api/src/modules/integrations/`): `providers.ts`, `mapping.ts`, `sync.ts`, `crypto.ts`, `routes.ts`.
+- Een werkende **voorbeeldbron** (`sample`) met synthetische cijfers: koppelen → synchroniseren → ontkoppelen, volledig getest. Dit bewijst de hele keten.
+- **Mapping** van externe cijfers (Nederlandse komma, vakherkenning, niet-numeriek overslaan) naar het cijfermodel.
+- **Synchronisatie** via dezelfde cijferinvoer als handmatig (`insertGrade`), met **deduplicatie** op externe sleutel én op vak+waarde+datum: opnieuw synchroniseren geeft nooit dubbele XP, coins, packs of vouchers.
+- **Versleutelde tokenopslag** (AES-GCM, sleutel uit `INTEGRATION_KEY`); tokens gaan nooit naar de app of in logs.
+- **Herkomst** (`source`: manual/import/magister) staat los van **verificatie** (`status`: self/confirmed).
+- **Koppelscherm** in Instellingen met status, Nu synchroniseren en Ontkoppelen; Magister staat er als "nog niet beschikbaar".
+- Bestandsimport (plakken/CSV) als werkende, toegestane route die vandaag al cijfers binnenhaalt.
+
+**Wat `magister` als provider nog mist om te activeren (jouw actie):**
+1. Een **officieel toegestane route**: toelating als Magister-partner (Sanoma Schoologica) óf een schoolroute met verwerkersovereenkomst, waarbij de school de koppeling aanzet. Zonder dat blijft de interne API verboden terrein.
+2. Van die partij: hoe cijfers **uitgelezen** mogen worden (endpoint/standaard, scopes), en de authenticatie die daarbij hoort.
+3. **Ouderlijke toestemming** (onder 16) en een DPIA, omdat het om schoolgegevens van een minderjarige gaat.
+
+Zodra 1–3 geregeld zijn, hoeft alleen `PROVIDERS.magister` een `fetchGrades` (en de bijbehorende, geautoriseerde authenticatie) te krijgen; de rest van de keten — mapping, sync, dedup, tokenopslag, UI — staat klaar. Voor een geautoriseerde bron zet de sync de cijfers als `status: 'confirmed'` (geverifieerd) weg.

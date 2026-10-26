@@ -1,4 +1,4 @@
-# Testrapport — ronde 5 (26 oktober 2026)
+# Testrapport — ronde 6 (26 oktober 2026)
 
 Het oudere `TESTRAPPORT.md` beschrijft ronde 1 en 2. Dit bestand geeft de actuele stand.
 
@@ -6,7 +6,7 @@ Statusladder: GEBOUWD → OFFLINE GETEST → PRAKTIJKGETEST → LIVE GECONTROLEE
 
 ## Geautomatiseerde tests
 
-`npm test` in de root draait engine, API en de PII-controle. Laatste run: **215 engine-tests en 61 API-tests groen; PII-controle schoon.** Typecheck (engine, web, api): geen fouten.
+`npm test` in de root draait engine, API en de PII-controle. Laatste run: **225 engine-tests en 73 API-tests groen; PII-controle schoon.** Typecheck (engine, web, api): geen fouten.
 
 | Testbestand | Tests | Wat |
 |---|---:|---|
@@ -16,8 +16,9 @@ Statusladder: GEBOUWD → OFFLINE GETEST → PRAKTIJKGETEST → LIVE GECONTROLEE
 | engine `practice` | 9 | herhaling met intervallen 1/3/7/14 dagen, "verbeterd" pas in een latere sessie, beheerst na 3× gespreid goed |
 | engine `starter` | 3 | 11 basisspelers op 4-3-3 + 7 reserves, deterministisch per seed |
 | engine `catalog-packs`, `squad-draft`, `market`, `simulate` | 31 | catalogus, packs, draft, transfermarkt, simulaties |
-| engine `competition/*` | 69 | battle (26), ranglijst (11), schema's (24), toernooi (8) |
-| api (10 bestanden) | 61 | ronde 5 (clubniveau-Goudpack, economieversies, speluitleg per gebruiker met validatie en isolatie), auth, pools, wedstrijden, competities, cijfers, collectie/packs, MatchDO, ronde 4 (config, doelen, kluis, draft, deadline, Academy, Grade League, verkopen), **isolatie** |
+| engine `competition/*` | 73 | battle incl. vorm van de dag V-018 (30), ranglijst (11), schema's (24), toernooi (8) |
+| engine `import` | 6 | parser: NL-komma, volgorde, datums, ongeldige rijen, kopregel |
+| api (12 bestanden) | 73 | import (6: dedup, geen dubbele XP/coins/packs/vouchers bij opnieuw importeren/corrigeren), koppelingen (6: crypto, mapping, sync-dedup, isolatie, Magister 409), plus ronde 5 (clubniveau-Goudpack, economieversies, speluitleg per gebruiker met validatie en isolatie), auth, pools, wedstrijden, competities, cijfers, collectie/packs, MatchDO, ronde 4 (config, doelen, kluis, draft, deadline, Academy, Grade League, verkopen), **isolatie** |
 
 ### Isolatie tussen accounts (`apps/api/test/isolatie.test.ts`)
 
@@ -34,11 +35,19 @@ Scripts staan in `tools/e2e/`. Online-scripts draaien tegen `node tools/dev-onli
 |---|---|---|
 | `online.cjs` | Twee nieuwe testaccounts: registreren, startelftal (11 + 7), onvoldoende → doel → herstelcijfer → hoog cijfer, kluis met 3 beloningen, voortgangsbeloning zichtbaar, pack openen, herladen, uitloggen, inloggen (cijfers blijven), B ziet niets van A (ook niet via `/api/grades`), pool maken + code + lid worden, uitdagen + accepteren, asynchrone battle tot het einde, serverranglijst met beide spelers, Grade League | **20/20 geslaagd**, geen paginafouten |
 | `academy.cjs` | Oefening in demo en online; online: sessie bevat geen antwoorden, XP en voortgang per onderwerp op de server, blijft na herladen | **8/8 geslaagd** |
+| `import.cjs` | Cijferimport demo+online: controleoverzicht 3 goed/2 fout, 3 toegevoegd, tweede keer 0 (dedup), herkomstlabel | **11/11 geslaagd** |
+| `koppelingen.cjs` | Voorbeeldbron koppelen → cijfers binnen → tweede sync 0 (dedup) → label; Magister niet beschikbaar; geen token-lek | **13/13 geslaagd** |
 | `uitleg.cjs` | Speluitleg: eerste keer vanzelf, 'Begrepen', 'Geen uitleg meer tonen', terugroepen via 'Hoe werkt dit?', schakelaar in Instellingen; online per gebruiker op de server (ander toestel, ander account) | **14/14 geslaagd** |
 | `demo.cjs` | Demo zonder account: cijfer, dubbele invoer geweigerd, ongeldig cijfer geweigerd, kluis, onthulling, battle tegen de computer, ranglijst | **9/9 geslaagd** |
-| `overflow.cjs demo` / `online` | 17 schermen × 8 maten (360×740 t/m 1180×820) | Geen horizontale overloop, geen paginafouten, in beide modi |
+| `overflow.cjs demo` / `online` | 18 schermen × 8 maten (incl. Importeren) | Geen horizontale overloop, geen paginafouten, in beide modi |
 
 Screenshots: `docs/review/v4/` (online-stack met twee testaccounts, Academy) en `docs/review/v5/` (speluitleg).
+
+## Bevindingen ronde 6
+
+- V-018: battle-winkans getest over ratingverschillen (sim); gelijke teams 50%, krappe wedstrijden onderdog 12%→23%, groot verschil nooit omgedraaid.
+- Online 'Geen uitleg meer tonen'-achtig patroon: connect synchroniseert nu meteen, zodat demo en online hetzelfde gedrag hebben.
+- Dubbele beloningen uitgesloten bij import, hersync en correctie (gecombineerde test).
 
 ## Bevindingen ronde 5 (opgelost)
 

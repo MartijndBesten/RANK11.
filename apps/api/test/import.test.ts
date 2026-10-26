@@ -52,6 +52,35 @@ describe('cijferimport op de server', () => {
     expect(allGrades(app, u)).toHaveLength(2);
   });
 
+  it('importeren, corrigeren en opnieuw importeren geeft nooit dubbele XP, coins, packs of vouchers', async () => {
+    const app = createApp();
+    const u = await register(app, 'GeenDubbel', await platformCode(app));
+    // Import een 9,6 (Goudpack + voucher) en een 7,0.
+    await importRows(app, u, [row({ subjectId: 'wiskunde', testName: 'Toetsweek', value: 9.6, date: '2026-10-10' }), row({ subjectId: 'en', testName: 'Reading', value: 7.0, date: '2026-10-11' })]);
+    const gradeId = (app.db.db.prepare("SELECT id FROM grades WHERE user_id = ? AND value = 9.6").get(u.id) as { id: string }).id;
+    const snapshot = () => ({
+      grades: (app.db.db.prepare('SELECT COUNT(*) AS n FROM grades WHERE user_id = ? AND deleted_at IS NULL').get(u.id) as { n: number }).n,
+      rewards: rewardCount(app, u), packs: packCount(app, u),
+      coins: (app.db.db.prepare("SELECT COALESCE(SUM(delta),0) AS t FROM wallet_ledger WHERE user_id = ? AND currency = 'coins'").get(u.id) as { t: number }).t,
+      vouchers: (app.db.db.prepare("SELECT COALESCE(SUM(delta),0) AS t FROM wallet_ledger WHERE user_id = ? AND currency = 'vouchers'").get(u.id) as { t: number }).t,
+      xp: xpTotal(app, u),
+    });
+    const before = snapshot();
+    // Opnieuw dezelfde import: niets verandert.
+    await importRows(app, u, [row({ subjectId: 'wiskunde', testName: 'Toetsweek', value: 9.6, date: '2026-10-10' }), row({ subjectId: 'en', testName: 'Reading', value: 7.0, date: '2026-10-11' })]);
+    expect(snapshot()).toEqual(before);
+    // Corrigeren omlaag: geen nieuwe beloning (correctie 'topup' alleen omhoog), daarna opnieuw importeren = dubbel.
+    await app.api('PUT', `/api/grades/${gradeId}`, { token: u.token, idem: idem(), body: { value: 8.0 } });
+    const afterCorrect = snapshot();
+    await importRows(app, u, [row({ subjectId: 'wiskunde', testName: 'Toetsweek', value: 9.6, date: '2026-10-10' })]);
+    // Zelfde toets (vak+naam+datum) → dubbel, geen extra beloning bovenop de correctie.
+    const afterReimport = snapshot();
+    expect(afterReimport.rewards).toBe(afterCorrect.rewards);
+    expect(afterReimport.packs).toBe(afterCorrect.packs);
+    expect(afterReimport.vouchers).toBe(afterCorrect.vouchers);
+    expect(afterReimport.grades).toBe(afterCorrect.grades);
+  });
+
   it('import is alleen voor jezelf en begrensd tot 100 rijen', async () => {
     const app = createApp();
     const u = await register(app, 'Grens', await platformCode(app));

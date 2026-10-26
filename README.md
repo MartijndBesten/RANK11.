@@ -37,6 +37,13 @@ node tools/portretten/manifest.mjs                                   # na nieuwe
 node --experimental-transform-types tools/sim/balans.ts > docs/SIMULATIES.md   # balansrapport + gemeten draftkansen
 ```
 
+## Cijfers koppelen en importeren
+
+- **Bestandsimport (werkt nu):** Cijfers → Importeren. Plak een lijst of kies een `.csv`/`.txt`-bestand; je ziet een controleoverzicht en al aanwezige cijfers worden overgeslagen (geen dubbele beloningen).
+- **Koppelingen (Instellingen → Cijfers koppelen):** een provider-onafhankelijke opzet. De **voorbeeldbron** werkt volledig (koppelen → synchroniseren → ontkoppelen). **Magister** staat op "nog niet beschikbaar": een koppeling per leerling vraagt een officieel toegestane route via de school of een geautoriseerde partner. We benaderen de interne Magister-API niet en vragen nooit om een Magister-wachtwoord. Zie [docs/onderzoek/MAGISTER.md](docs/onderzoek/MAGISTER.md).
+
+Endpoints (server): `POST /api/grades/import`, `GET /api/integrations`, `POST /api/integrations/:provider/connect|sync`, `DELETE /api/integrations/:provider`. Tokens worden versleuteld opgeslagen (`INTEGRATION_KEY`) en gaan nooit naar de app.
+
 ## Uitgangspunten
 
 - Geen echt geld.

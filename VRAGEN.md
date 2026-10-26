@@ -411,7 +411,7 @@ Nog niet verwerkt.
 
 ### V-018 — Kleine geluksfactor in kaartbattles?
 
-status: open
+status: verwerkt
 gesteld_door: claude
 datum: 2026-10-26
 
@@ -429,8 +429,8 @@ Dit is een spelontwerpkeuze (geluk tegenover vaardigheid) en raakt het battlesch
 
 **Antwoord**
 
-Nog niet beantwoord.
+Gekozen: (B) een kleine, zichtbare vorm van de dag. (Martijn via ronde-6-opdracht: "kleine, begrensde geluksfactor; sterkere kaarten winnen meestal; voorkom willekeur.")
 
 **Verwerkt in**
 
-Nog niet verwerkt.
+`packages/engine/src/competition/battle.ts` (`formMax`/`formBonus`, `RANK_FORM_MAX`=3, deterministisch uit de seed, zichtbaar in het duelresultaat). Demo en online gebruiken formMax 3. Sim (`tools/sim`, `battle.test.ts`): gelijke teams 50%, krappe wedstrijd onderdog 12%→23%, verschil van 10 ratingpunten wordt nooit omgedraaid. Zichtbaar als "vorm +N" in het battlescherm. (Claude, 26-10-2026)

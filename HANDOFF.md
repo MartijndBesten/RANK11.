@@ -1,10 +1,45 @@
 # HANDOFF — RANK11.
 
-**Status:** `wacht-op-besluit`. Ronde 5 (economie v3, speluitleg, Magister-onderzoek) is klaar en gepusht. Voor de Magister-koppeling via de interne API ligt een plan klaar; ik bouw pas na akkoord van Martijn.
+**Status:** `wacht-op-review`. Ronde 6 is klaar en gepusht: cijferimport + snellere invoer, de koppelarchitectuur (voorbeeldbron werkt; Magister geregistreerd maar niet geactiveerd), en V-018 (vorm van de dag in battles).
 **Bijgewerkt:** 26-10-2026 (Claude Code, cloudsessie).
 **Branch:** `main` (gepusht)
 **Volgende actor:** Martijn
-**Volgende stap:** akkoord op (of aanpassing van) het Magister-plan uit de chat, inclusief de risicopunten; daarna V-017 en V-018.
+**Volgende stap:** om de echte Magister-synchronisatie te activeren is een officieel toegestane route nodig (Magister-partner of een schoolroute met verwerkersovereenkomst) plus ouderlijke toestemming; zie `docs/onderzoek/MAGISTER.md` (addendum ronde 6). De bestandsimport werkt vandaag al.
+
+## Ronde 6 (26 oktober 2026)
+
+| Opdracht | Status |
+|---|---|
+| 1. Snellere handmatige invoer + bestandsimport | KLAAR: vak+weging onthouden bij "Nog een invoeren"; importscherm (plak/CSV) met controleoverzicht, Nederlandse komma's, dedup. `POST /api/grades/import` via gedeelde `insertGrade`. |
+| 2. Structuur klaar voor officiële Magister-koppeling | KLAAR: provider-architectuur, mapping, sync, versleutelde tokens, ontkoppelen, koppelscherm. Magister geregistreerd als "nog niet beschikbaar"; geen ongeautoriseerde API, geen M6LOAPP, nooit om wachtwoord gevraagd. |
+| 3. V-018 begrensde geluksfactor in battles | KLAAR: vorm van de dag 0..3 per kaart per duel, deterministisch, zichtbaar. Getest over ratingverschillen. |
+| 4. Geen dubbele beloningen bij import/sync/correctie | KLAAR: dedup op externe sleutel én vak+waarde+datum; gecombineerde test (import → hersync → correctie → herimport) bewaakt dit. |
+| 5. Speluitleg behouden | Ongewijzigd; uit te zetten en terug te lezen. Nieuwe tip bij importeren. |
+
+**Herkomst vs verificatie (opdracht 6):** `source` = herkomst (`manual`/`import`/`magister`), `status` = verificatie (`self` = zelf ingevoerd/geïmporteerd, `confirmed` = uit een geautoriseerde bron). Bestandsimport en de voorbeeldbron zijn `self`; een geautoriseerde Magister-sync zou `confirmed` worden.
+
+**Nog nodig om de echte Magister-sync te activeren (externe toestemming/toegang):**
+1. Officieel toegestane route: toelating als Magister-partner (Sanoma Schoologica) óf een schoolroute met verwerkersovereenkomst waarbij de school de koppeling aanzet.
+2. Van die partij: hoe cijfers uitgelezen mogen worden (endpoint/standaard, scopes) en de bijbehorende geautoriseerde authenticatie.
+3. Ouderlijke toestemming (onder 16) en een DPIA.
+Daarna hoeft alleen `PROVIDERS.magister` een `fetchGrades` te krijgen; mapping, sync, dedup, tokenopslag en UI staan klaar.
+
+**Nieuwe endpoints:** `POST /api/grades/import`; `GET /api/integrations`, `GET/POST /api/integrations/:provider`, `/connect`, `/sync`, `DELETE /api/integrations/:provider`.
+
+**Tests:** engine 225 en API 73 groen, typecheck schoon, PII schoon. E2E: online 20/20, import 11/11, koppelingen 13/13, uitleg 14/14, Academy 8/8, demo 9/9; lay-out 18 schermen × 8 maten (demo en online). Alles op mobiel formaat (390×844) getest.
+
+**Commits ronde 6:** `090c4ab` (V-018), `7970af7` (import), `4c9c0a1` (koppelarchitectuur), en de documentatiecommit met deze HANDOFF.
+
+**Bestanden (belangrijkste):**
+- Engine: `packages/engine/src/{import,competition/battle,simulate}.ts`, `grades.ts` (source 'import')
+- Server: `apps/api/migrations/0006_integrations.sql`, `src/modules/integrations/*`, `src/modules/grades.ts` (`insertGrade`, `importGrades`)
+- Web: `apps/web/src/screens/{grades/ImportScreen,Koppelingen,SettingsSheet}.tsx`, `state/{store,onlineStore}.tsx`, battle-UI met "vorm +N"
+- Tools: `tools/e2e/{import,koppelingen}.cjs`, `overflow.cjs` (+importroute)
+- Docs: `README.md`, `docs/{PROJECT-STATUS,TEST-REPORT,OPEN-ISSUES,COMPETITION-SYSTEM}.md`, `docs/onderzoek/MAGISTER.md` (addendum)
+
+**Niet gedaan, bewust:** geen interne Magister-API, geen M6LOAPP, geen wachtwoordopslag; geen publieke uitrol; geen andere Cloudflare-projecten aangeraakt. Periodieke (cron) sync is nog niet aangezet (I12) — pas zinvol met een echte bron.
+
+**Open vragen:** V-003, V-005, V-006, V-007, V-008, V-010, V-017.
 
 ## Ronde 5 (26 oktober 2026)
 

@@ -1,0 +1,57 @@
+name: RANK11 demo publiceren
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/demo-pages.yml'
+      - 'apps/web/**'
+      - 'packages/engine/**'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages-demo
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Dependencies
+        run: npm ci
+      - name: Tests en privacycheck
+        run: npm test
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Bouw speelbare demo (geen backend)
+        run: npm run build
+      - name: Configureer Pages
+        uses: actions/configure-pages@v5
+      - name: Upload statische demo
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/web/dist
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - id: deployment
+        name: Publiceer op GitHub Pages
+        uses: actions/deploy-pages@v4

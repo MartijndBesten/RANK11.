@@ -1,58 +1,99 @@
-import { useMemo, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import {
-  academySubjectSummary, DEFAULT_MOTIVATION_CONFIG, weekStart, type AcademyDecision, type AcademyDecisionStatus,
+  PACKS, PRACTICE_SUBJECTS, type AcademyDecisionStatus, type PracticeSubjectId, type PublicPracticeSession, type TopicProgressRow,
 } from '@rank11/engine';
 import type { Nav } from '../App';
 import { useStore } from '../state/store';
-import { subjectById, todayIso } from '../state/school';
-import {
-  BANKS, buildEvent, buildSession, checkAnswer, formatAnswer, QUESTIONS_PER_SESSION, type AcademySubject, type Session,
-} from '../academy/demoProvider';
-import { IconAcademy, IconCheck, IconClose, IconInfo } from '../components/Icons';
+import { subjectById } from '../state/school';
+import type { AcademyOverview, PracticeResult } from '../academy/types';
+import { IconCheck, IconClose, IconInfo } from '../components/Icons';
 import './academy.css';
-
-const CAPS = DEFAULT_MOTIVATION_CONFIG.academy;
 
 export const STATUS_LABEL: Record<AcademyDecisionStatus, string> = {
   rewarded: 'Beloond',
   duplicate: 'Al verwerkt',
   'not-linked': 'Niet gekoppeld',
-  abandoned: 'Niet afgerond',
-  'too-fast': 'Te snel',
+  abandoned: 'Afgebroken',
+  'too-fast': 'Niet beloond',
   'no-learning-value': 'Geen nieuwe leerwinst',
   capped: 'Plafond bereikt',
   disabled: 'Academy staat uit',
 };
+const statusLabel = (s: string) => STATUS_LABEL[s as AcademyDecisionStatus] ?? s;
 
 const STATUS_EXPLAIN: Partial<Record<AcademyDecisionStatus, string>> = {
-  'too-fast': `Je was sneller dan ${CAPS.minSecondsPerQuestion} seconden per vraag. Zo snel kunnen we niet zien dat je echt hebt geoefend, dus dit levert geen XP op. Je foute antwoorden komen wel terug als herkansing.`,
-  abandoned: 'Een afgebroken oefening levert geen XP op. Je foute antwoorden komen wel terug als herkansing.',
-  'no-learning-value': `Dezelfde oefening opnieuw levert alleen XP op als je score minstens ${Math.round(CAPS.improvedScoreMinDelta * 100)} procentpunt hoger is en er ${CAPS.repeatCooldownHours} uur tussen zit, of als je eerdere fouten nu goed hebt.`,
-  capped: `Je hebt het maximum aan Academy XP bereikt (${CAPS.dailyCap} per dag, ${CAPS.weeklyCap} per week). Oefenen mag altijd; XP komt er morgen of volgende week weer bij.`,
+  abandoned: 'Een afgebroken oefening levert geen XP op. De vragen die je wel beantwoordde, tellen mee voor je herhaling.',
+  'no-learning-value': 'XP is er alleen voor echte vooruitgang: nieuwe stof, verbeterde fouten en een betere score dan eerder. Dezelfde oefening herhalen levert niets op.',
+  capped: 'Je hebt het maximum aan Academy XP voor vandaag of deze week bereikt. Oefenen mag altijd; je voortgang per onderwerp telt gewoon door.',
+  disabled: 'De Academy staat uit in de instellingen.',
 };
 
-const pct = (v: number | null) => (v === null ? '–' : `${Math.round(v * 100)}%`);
+const REASON: Record<string, { label: string; cls: string }> = {
+  fix: { label: 'Herkansing', cls: 'fix' },
+  review: { label: 'Herhaling', cls: 'review' },
+  new: { label: 'Nieuw', cls: 'new' },
+  extra: { label: 'Extra oefening', cls: 'extra' },
+};
 
 export function AcademyScreen({ nav, sub }: { nav: Nav; sub: string }) {
   return sub === 'oefenen' ? <Practice nav={nav} /> : <Overview nav={nav} />;
 }
 
+/** Overzicht laden via de actieve backend (lokaal of server). */
+function useOverview() {
+  const { practice, xp } = useStore();
+  const [data, setData] = useState<AcademyOverview | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const reload = useCallback(() => {
+    practice.overview().then((d) => { setData(d); setError(null); }, (e) => setError(e instanceof Error ? e.message : 'Kan de Academy niet laden.'));
+  }, [practice]);
+  // Opnieuw laden als de Academy-XP verandert (na een oefening).
+  useEffect(() => { reload(); }, [reload, xp.byCategory.academy]);
+  return { data, error, reload };
+}
+
+/** Gestapelde voortgangsbalk: beheerst / aan het leren / nieuw. */
+function TopicBar({ t }: { t: TopicProgressRow }) {
+  const w = (n: number) => `${t.total ? (n / t.total) * 100 : 0}%`;
+  return (
+    <div className="topic-bar" role="img" aria-label={`${t.label}: ${t.mastered} beheerst, ${t.learning} aan het leren, ${t.fresh} nieuw van ${t.total}`}>
+      <i className="m" style={{ width: w(t.mastered) }} />
+      <i className="l" style={{ width: w(t.learning) }} />
+    </div>
+  );
+}
+
+function TopicRows({ rows, onPractice }: { rows: TopicProgressRow[]; onPractice?: (t: TopicProgressRow) => void }) {
+  return (
+    <ul className="rows topic-rows">
+      {rows.map((t) => (
+        <li key={`${t.subjectId}-${t.topic}`}>
+          <button className="row topic-row" onClick={onPractice ? () => onPractice(t) : undefined} disabled={!onPractice}>
+            <div className="row-main">
+              <span className="row-title">{t.label}</span>
+              <TopicBar t={t} />
+              <span className="row-sub">{t.mastered} beheerst · {t.learning} aan het leren · {t.fresh} nieuw{t.due ? ` · ${t.due} nu aan de beurt` : ''}</span>
+            </div>
+            <span className="row-grade num">{Math.round(t.pct * 100)}<small>%</small></span>
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+const Legend = () => (
+  <div className="topic-legend dim small"><span><i className="m" /> beheerst</span><span><i className="l" /> aan het leren</span><span><i /> nieuw</span></div>
+);
+
 /* ———————————— Overzicht ———————————— */
 
 function Overview({ nav }: { nav: Nav }) {
-  const { state, xp } = useStore();
-  const today = todayIso();
-  const usage = useMemo(() => {
-    const pos = state.xpLedger.filter((e) => e.category === 'academy' && e.xp > 0);
-    return {
-      day: pos.filter((e) => e.date === today).reduce((s, e) => s + e.xp, 0),
-      week: pos.filter((e) => weekStart(e.date) === weekStart(today)).reduce((s, e) => s + e.xp, 0),
-    };
-  }, [state.xpLedger, today]);
-  const summaries = BANKS.map((b) => ({ bank: b, s: academySubjectSummary(state.academy.events, state.xpLedger, b.id) }));
-  const decisions = [...state.academy.decisions].reverse().slice(0, 8);
-  const eventById = new Map(state.academy.events.map((e) => [e.eventId, e]));
-  const retries = state.academy.wrong.length;
+  const { practice, mode } = useStore();
+  const { data, error, reload } = useOverview();
+  if (error) return <div className="page"><div className="panel empty"><b>Academy niet beschikbaar</b><span>{error}</span><button className="btn small" onClick={reload}>Opnieuw</button></div></div>;
+  if (!data) return <div className="page"><div className="panel empty"><span>Academy wordt geladen…</span></div></div>;
+  const due = data.progress.reduce((s, t) => s + t.due, 0);
 
   return (
     <div className="page academy">
@@ -60,91 +101,84 @@ function Overview({ nav }: { nav: Nav }) {
         <div>
           <div className="eyebrow">RANK Academy</div>
           <h1 className="display">Trainingskamp</h1>
-          <p className="dim">Oefen voor je toetsen en verdien Academy XP. Je oefenscores worden nooit als schoolcijfer opgeslagen.</p>
+          <p className="dim">Oefen voor je toetsen. Fouten komen terug tot je ze beheerst. Oefenscores worden nooit als schoolcijfer opgeslagen.</p>
         </div>
-        <button className="btn" onClick={() => nav.go('academy-oefenen')}>Start oefening</button>
+        <button className="btn" onClick={() => nav.go('academy-oefenen')}>Oefenen</button>
       </div>
 
-      <div className="demo-note">
-        <IconInfo />
-        <span>Alleen de interne <b>RANK Oefenmodule</b> werkt in deze preview. De echte leeromgeving (leren.martijndenbesten.com) is niet gekoppeld: de koppeling is ontworpen, maar staat uit.</span>
-      </div>
+      {due > 0 && (
+        <button className="panel electric acad-due" onClick={() => nav.go('academy-oefenen')}>
+          <div className="row-main">
+            <span className="eyebrow">Nu aan de beurt</span>
+            <b className="acad-due-title">{due} {due === 1 ? 'vraag' : 'vragen'} om te herhalen</b>
+            <span className="row-sub">Herkansingen en herhalingen staan bovenaan in je volgende oefening.</span>
+          </div>
+          <span className="btn small">Start</span>
+        </button>
+      )}
 
       <div className="kpis">
         <div className="kpi">
           <span className="kpi-label">Academy XP</span>
-          <span className="kpi-value">{xp.byCategory.academy.toLocaleString('nl-NL')}</span>
+          <span className="kpi-value">{data.xp.total.toLocaleString('nl-NL')}</span>
           <span className="kpi-note">totaal verdiend</span>
         </div>
         <div className="kpi">
           <span className="kpi-label">Vandaag</span>
-          <span className="kpi-value">{usage.day}<small>/{CAPS.dailyCap}</small></span>
-          <div className="bar electric"><i style={{ width: `${Math.min(100, (usage.day / CAPS.dailyCap) * 100)}%` }} /></div>
+          <span className="kpi-value">{data.xp.today}<small>/{data.xp.dailyCap}</small></span>
+          <div className="bar electric"><i style={{ width: `${Math.min(100, (data.xp.today / data.xp.dailyCap) * 100)}%` }} /></div>
         </div>
         <div className="kpi">
           <span className="kpi-label">Deze week</span>
-          <span className="kpi-value">{usage.week}<small>/{CAPS.weeklyCap}</small></span>
-          <div className="bar electric"><i style={{ width: `${Math.min(100, (usage.week / CAPS.weeklyCap) * 100)}%` }} /></div>
-        </div>
-        <div className="kpi">
-          <span className="kpi-label">Herkansingen</span>
-          <span className="kpi-value">{retries}</span>
-          <span className="kpi-note">vragen die terugkomen</span>
+          <span className="kpi-value">{data.xp.week}<small>/{data.xp.weeklyCap}</small></span>
+          <div className="bar electric"><i style={{ width: `${Math.min(100, (data.xp.week / data.xp.weeklyCap) * 100)}%` }} /></div>
         </div>
       </div>
 
       <div className="page-cols">
         <div className="stack">
-          <section className="panel" aria-label="Per vak">
-            <div className="panel-head"><h2>Per vak</h2></div>
-            <ul className="rows">
-              {summaries.map(({ bank, s }) => {
-                const subj = subjectById(bank.id);
-                return (
-                  <li key={bank.id}>
-                    <button className="row" onClick={() => nav.go('academy-oefenen')}>
-                      <span className="subj-dot" style={{ background: subj.color }}>{subj.short}</span>
-                      <div className="row-main">
-                        <span className="row-title">{bank.name} · {bank.topicLabel}</span>
-                        <span className="row-sub">
-                          {s.count ? `${s.count} oefening${s.count === 1 ? '' : 'en'} · gemiddeld ${pct(s.averageScore)} goed · ${s.xp} XP` : 'Nog niet geoefend'}
-                        </span>
-                      </div>
-                      {s.count > 0 && <span className="row-grade">{pct(s.averageScore)}</span>}
-                    </button>
-                  </li>
-                );
-              })}
+          {data.subjects.map((s) => {
+            const subj = subjectById(s.id);
+            return (
+              <section key={s.id} className="panel flush" aria-label={s.name}>
+                <div className="panel-head"><h2 className="acad-subject-head"><span className="subj-dot" style={{ background: subj.color }}>{subj.short}</span> {s.name}</h2></div>
+                <TopicRows rows={data.progress.filter((t) => t.subjectId === s.id)} onPractice={() => nav.go('academy-oefenen')} />
+              </section>
+            );
+          })}
+          <Legend />
+        </div>
+
+        <div className="stack">
+          <section className="panel" aria-label="Zo werkt het">
+            <div className="panel-head"><h2>Zo werkt het</h2></div>
+            <ul className="insights">
+              <li>Een fout komt na een dag terug als herkansing. Goed in een latere oefening telt als verbeterde fout.</li>
+              <li>Goed bij herhaling: de vraag komt steeds later terug (1, 3, 7, 14 dagen). Drie keer gespreid goed = beheerst.</li>
+              <li>XP alleen voor echte vooruitgang: nieuwe stof, verbeterde fouten en betere scores. Dezelfde oefening herhalen levert niets op. Geen tijdsdruk: neem de tijd die je nodig hebt.</li>
             </ul>
           </section>
 
           <section className="panel" aria-label="Laatste oefeningen">
             <div className="panel-head"><h2>Laatste oefeningen</h2></div>
-            {decisions.length ? (
+            {data.recent.length ? (
               <ul className="rows">
-                {decisions.map((d) => {
-                  const e = eventById.get(d.eventId);
-                  return (
-                    <li key={d.eventId} className="row">
-                      <div className="row-main">
-                        <span className="row-title">{e ? `${subjectById(e.subjectId).name} · ${e.correctCount}/${e.questionCount} goed` : 'Oefening'}</span>
-                        <span className="row-sub">{e ? new Date(e.completedAt).toLocaleString('nl-NL', { weekday: 'short', hour: '2-digit', minute: '2-digit' }) : ''} · {d.reason}</span>
-                      </div>
-                      <div className="row-end">
-                        <span className={`tag ${d.status === 'rewarded' ? 'live' : ''}`}>{STATUS_LABEL[d.status]}</span>
-                        <b className="acad-xp num">{d.xp > 0 ? `+${d.xp}` : '0'}</b>
-                      </div>
-                    </li>
-                  );
-                })}
+                {data.recent.slice(0, 8).map((r) => (
+                  <li key={r.eventId} className="row">
+                    <div className="row-main">
+                      <span className="row-title">{r.subjectId ? `${subjectById(r.subjectId).name} · ` : ''}{r.correctCount}/{r.questionCount} goed{r.mistakesFixed ? ` · ${r.mistakesFixed} verbeterd` : ''}</span>
+                      <span className="row-sub">{r.topic}{r.at ? ` · ${new Date(r.at).toLocaleString('nl-NL', { weekday: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}</span>
+                    </div>
+                    <div className="row-end">
+                      <span className={`tag ${r.decision === 'rewarded' ? 'live' : ''}`}>{statusLabel(r.decision)}</span>
+                      <b className="acad-xp num">{r.xp > 0 ? `+${r.xp}` : '0'}</b>
+                    </div>
+                  </li>
+                ))}
               </ul>
-            ) : (
-              <div className="empty"><span>Nog geen oefeningen gedaan.</span></div>
-            )}
+            ) : <div className="empty"><span>Nog geen oefeningen gedaan.</span></div>}
           </section>
-        </div>
 
-        <div className="stack">
           <section className="panel electric" aria-label="Koppelingen">
             <div className="panel-head"><h2>Koppelingen</h2></div>
             <ul className="rows">
@@ -152,31 +186,20 @@ function Overview({ nav }: { nav: Nav }) {
                 <span className="acad-link on" aria-hidden="true"><IconCheck /></span>
                 <div className="row-main">
                   <span className="row-title">RANK Oefenmodule</span>
-                  <span className="row-sub">Gekoppeld · intern, demo</span>
+                  <span className="row-sub">{practice.kind === 'server' ? 'Actief · de server maakt en kijkt na' : 'Actief · demo, nagekeken op dit toestel'}</span>
                 </div>
-                <span className="tag live">Actief</span>
+                <span className="tag live">actief</span>
               </li>
               <li className="row">
                 <span className="acad-link" aria-hidden="true"><IconClose /></span>
                 <div className="row-main">
                   <span className="row-title">leren.martijndenbesten.com</span>
-                  <span className="row-sub">Nog niet gekoppeld · koppeling ontworpen, staat uit</span>
+                  <span className="row-sub">Koppeling voorbereid, niet gekoppeld · de site is niet gewijzigd</span>
                 </div>
-                <span className="tag demo">Uit</span>
+                <span className="tag demo">uit</span>
               </li>
             </ul>
-          </section>
-
-          <section className="panel" aria-label="Zo verdien je Academy XP">
-            <div className="panel-head"><h2>Zo werkt het</h2><IconAcademy width={20} height={20} className="dim" /></div>
-            <ul className="acad-rules">
-              <li><b>+{CAPS.completeXp}</b> eerste keer een oefening afgerond</li>
-              <li><b>+{CAPS.highScoreXp}</b> bij {Math.round(CAPS.highScoreMin * 100)}% of meer goed</li>
-              <li><b>+{CAPS.mistakeFixedXp}</b> per eerdere fout die je nu goed hebt (max {CAPS.mistakeFixedMaxPerActivity})</li>
-              <li><b>+{CAPS.improvedScoreXp}</b> bij een betere score na {CAPS.repeatCooldownHours} uur</li>
-              <li>Minimaal {CAPS.minSecondsPerQuestion} seconden per vraag; snel klikken levert niets op.</li>
-              <li>Maximaal {CAPS.dailyCap} XP per dag en {CAPS.weeklyCap} per week.</li>
-            </ul>
+            {mode === 'demo' && <p className="hint">In de demo worden Academy-mijlpalen (packs en vouchers) niet uitgereikt; dat doet alleen de server.</p>}
           </section>
         </div>
       </div>
@@ -186,240 +209,256 @@ function Overview({ nav }: { nav: Nav }) {
 
 /* ———————————— Oefenen ———————————— */
 
-interface Answer { id: string; correct: boolean; retry: boolean; given: string }
-
-function newSeed() {
-  const a = new Uint32Array(2);
-  crypto.getRandomValues(a);
-  return `${a[0]}-${a[1]}`;
-}
+type Phase =
+  | { k: 'kies' }
+  | { k: 'vraag'; session: PublicPracticeSession; index: number; answers: Record<string, string> }
+  | { k: 'klaar'; session: PublicPracticeSession; result: PracticeResult };
 
 function Practice({ nav }: { nav: Nav }) {
-  const { state, submitLearningEvent, recordWrongAnswers } = useStore();
-  const [session, setSession] = useState<Session | null>(null);
-  const [startedAt, setStartedAt] = useState('');
-  const [answers, setAnswers] = useState<Answer[]>([]);
-  const [result, setResult] = useState<{ decision: AcademyDecision; correct: number; total: number; fixed: number } | null>(null);
+  const { practice } = useStore();
+  const { data } = useOverview();
+  const [phase, setPhase] = useState<Phase>({ k: 'kies' });
+  const [subject, setSubject] = useState<PracticeSubjectId | null>(null);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [leaving, setLeaving] = useState(false);
 
-  const retriesFor = (id: AcademySubject) => state.academy.wrong.filter((w) => w.startsWith(id === 'wis' ? 'wi-' : `${id}-`)).length;
-
-  const start = (id: AcademySubject) => {
-    setSession(buildSession(id, state.academy.wrong, newSeed()));
-    setStartedAt(new Date().toISOString());
-    setAnswers([]);
-    setResult(null);
-    setError(null);
-  };
-
-  const finish = (s: Session, list: Answer[], status: 'completed' | 'abandoned') => {
-    const wrong = list.filter((a) => !a.correct).map((a) => a.id);
-    const fixed = list.filter((a) => a.correct && a.retry).map((a) => a.id);
-    const correct = list.filter((a) => a.correct).length;
+  const start = async (subjectId: PracticeSubjectId, topic: string | null) => {
+    setBusy(true); setError(null);
     try {
-      const event = buildEvent(s, { startedAt, completedAt: new Date().toISOString(), correct, answered: list.length, mistakesFixed: fixed.length, status });
-      const decision = submitLearningEvent(event);
-      recordWrongAnswers(wrong, fixed);
-      if (status === 'abandoned') {
-        setSession(null);
-        return;
-      }
-      setResult({ decision, correct, total: s.questions.length, fixed: fixed.length });
+      const session = await practice.start(subjectId, topic);
+      setPhase({ k: 'vraag', session, index: 0, answers: {} });
     } catch (e) {
-      setError((e as Error).message);
+      setError(e instanceof Error ? e.message : 'Kan geen oefening starten.');
+    } finally {
+      setBusy(false);
     }
   };
 
-  if (result && session) return <Result session={session} result={result} onAgain={() => start(session.bank.id)} onDone={() => { setSession(null); setResult(null); nav.go('academy'); }} />;
-  if (session) {
+  const submit = async (session: PublicPracticeSession, answers: Record<string, string>, abandoned = false) => {
+    setBusy(true); setError(null);
+    try {
+      const result = await practice.submit(session.id, answers, abandoned);
+      setLeaving(false);
+      setPhase(abandoned ? { k: 'kies' } : { k: 'klaar', session, result });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Inleveren lukte niet.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (phase.k === 'vraag') {
+    const { session, index, answers } = phase;
+    const item = session.items[index]!;
+    const last = index === session.items.length - 1;
+    const topicLabel = session.topic ? PRACTICE_SUBJECTS.find((s) => s.id === session.subjectId)?.topics.find((t) => t.id === session.topic)?.label : 'mix';
+    const setAnswer = (v: string) => setPhase({ ...phase, answers: { ...answers, [item.id]: v } });
+    const next = () => (last ? void submit(session, answers) : setPhase({ ...phase, index: index + 1 }));
     return (
-      <Quiz
-        key={startedAt}
-        session={session}
-        answers={answers}
-        onAnswer={(a) => setAnswers((list) => [...list, a])}
-        onFinish={(list) => finish(session, list, 'completed')}
-        onQuit={() => (answers.length ? finish(session, answers, 'abandoned') : setSession(null))}
-        error={error}
-      />
+      <div className="page academy quiz">
+        <div className="quiz-top">
+          <div className="eyebrow">{subjectById(session.subjectId).name} · {topicLabel}</div>
+          {leaving ? (
+            <span className="confirm-inline">
+              <span className="small dim">Stoppen? Beantwoorde vragen tellen mee voor herhaling, XP niet.</span>
+              <button className="btn ghost small" disabled={busy} onClick={() => void submit(session, answers, true)}>Stoppen</button>
+              <button className="link-btn" onClick={() => setLeaving(false)}>Doorgaan</button>
+            </span>
+          ) : <button className="link-btn" onClick={() => setLeaving(true)}>Stoppen</button>}
+        </div>
+        <div className="quiz-progress" aria-hidden="true">
+          {session.items.map((it, i) => <i key={it.id} data-state={i === index ? 'now' : answers[it.id] !== undefined ? 'done' : undefined} />)}
+        </div>
+        <QuestionCard key={item.id} item={item} index={index} count={session.items.length} value={answers[item.id] ?? ''} onChange={setAnswer}
+          onNext={next} last={last} busy={busy} onBack={index > 0 ? () => setPhase({ ...phase, index: index - 1 }) : undefined} />
+        {error && <p className="form-error" role="alert">{error}</p>}
+      </div>
     );
   }
+
+  if (phase.k === 'klaar') return <Result session={phase.session} result={phase.result} onAgain={() => setPhase({ k: 'kies' })} onOverview={() => nav.go('academy')} />;
+
+  const chosen = subject ? PRACTICE_SUBJECTS.find((s) => s.id === subject) : null;
+  const progressOf = (sid: string, topic?: string) => (data?.progress ?? []).filter((t) => t.subjectId === sid && (!topic || t.topic === topic));
+  const dueOf = (sid: string, topic?: string) => progressOf(sid, topic).reduce((s, t) => s + t.due, 0);
 
   return (
     <div className="page academy">
       <div className="page-head">
         <div>
-          <div className="eyebrow">RANK Oefenmodule</div>
-          <h1 className="display">Kies je training</h1>
-          <p className="dim">{QUESTIONS_PER_SESSION} vragen per oefening, direct nakijken. Telt mee als je minimaal {CAPS.minSecondsPerQuestion} seconden per vraag neemt; snel klikken levert niets op.</p>
+          <div className="eyebrow">RANK Academy · oefenen</div>
+          <h1 className="display">{chosen ? chosen.name : 'Kies je training'}</h1>
+          <p className="dim">{chosen ? 'Kies een onderwerp of oefen alles door elkaar.' : 'Zes vragen per oefening. Herkansingen en herhalingen eerst, daarna nieuwe stof.'}</p>
         </div>
+        {chosen && <button className="link-btn" onClick={() => setSubject(null)}>Ander vak</button>}
       </div>
-      <div className="acad-banks">
-        {BANKS.map((b) => {
-          const subj = subjectById(b.id);
-          const r = retriesFor(b.id);
-          return (
-            <button key={b.id} className="panel acad-bank" onClick={() => start(b.id)} style={{ ['--subj' as string]: subj.color }}>
-              <span className="subj-dot" style={{ background: subj.color }}>{subj.short}</span>
-              <span className="acad-bank-name">{b.name}</span>
-              <span className="acad-bank-topic">{b.topicLabel}</span>
-              <span className="row-sub">{b.description}</span>
-              {r > 0 && <span className="tag lime">{r} herkansing{r === 1 ? '' : 'en'}</span>}
-            </button>
-          );
-        })}
-      </div>
-      <p className="hint">Oefenscores zijn geen schoolcijfers en worden nooit in je cijferlijst gezet. Ze zijn alleen zichtbaar voor jou.</p>
-    </div>
-  );
-}
+      <p className="hint acad-rule"><IconInfo width={16} height={16} /> XP alleen voor echte vooruitgang: nieuwe stof, verbeterde fouten en betere scores; dezelfde oefening herhalen levert niets op. Geen tijdslimiet.</p>
+      {error && <p className="form-error" role="alert">{error}</p>}
 
-function Quiz({ session, answers, onAnswer, onFinish, onQuit, error }: {
-  session: Session; answers: Answer[]; onAnswer: (a: Answer) => void; onFinish: (list: Answer[]) => void; onQuit: () => void; error: string | null;
-}) {
-  const [feedback, setFeedback] = useState<Answer | null>(null);
-  const [value, setValue] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
-  // Tijdens feedback is het antwoord al toegevoegd: de getoonde vraag is dan de vorige.
-  const shownIdx = feedback ? answers.length - 1 : answers.length;
-  const current = session.questions[Math.min(shownIdx, session.questions.length - 1)]!;
-  const last = answers.length >= session.questions.length;
-
-  const answer = (given: string) => {
-    if (feedback || !given.trim()) return;
-    const a: Answer = { id: current.id, correct: checkAnswer(current, given), retry: current.retry, given };
-    setFeedback(a);
-    onAnswer(a);
-  };
-  const next = () => {
-    if (!feedback) return;
-    if (last) {
-      onFinish(answers);
-      return;
-    }
-    setFeedback(null);
-    setValue('');
-    setTimeout(() => inputRef.current?.focus(), 0);
-  };
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    if (feedback) next();
-    else answer(value);
-  };
-
-  return (
-    <div className="page academy quiz">
-      <div className="quiz-top">
-        <button className="link-btn" onClick={onQuit}>Stoppen</button>
-        <span className="eyebrow">{session.bank.name} · vraag {shownIdx + 1} van {session.questions.length}</span>
-      </div>
-      <div className="quiz-progress" aria-hidden="true">
-        {session.questions.map((qq, i) => (
-          <i key={qq.id} data-state={i < answers.length ? (answers[i]!.correct ? 'ok' : 'bad') : i === shownIdx ? 'now' : undefined} />
-        ))}
-      </div>
-
-      <section className="panel quiz-card" aria-live="polite">
-        <div className="quiz-meta">
-          <span className="dim">{current.instruction}</span>
-          {current.retry && <span className="tag lime">Herkansing</span>}
+      {!chosen ? (
+        <div className="acad-banks">
+          {PRACTICE_SUBJECTS.map((s) => {
+            const subj = subjectById(s.id);
+            const rows = progressOf(s.id);
+            const total = rows.reduce((a, t) => a + t.total, 0);
+            const mastered = rows.reduce((a, t) => a + t.mastered, 0);
+            const due = dueOf(s.id);
+            return (
+              <button key={s.id} className="panel acad-bank" style={{ ['--subj' as string]: subj.color }} disabled={busy}
+                onClick={() => (s.topics.length > 1 ? setSubject(s.id) : void start(s.id, s.topics[0]!.id))}>
+                <span className="subj-dot" style={{ background: subj.color }}>{subj.short}</span>
+                <span className="acad-bank-name">{s.name}</span>
+                <span className="acad-bank-topic">{s.topics.map((t) => t.label).join(' · ')}</span>
+                <span className="row-sub">{mastered}/{total} beheerst</span>
+                {due > 0 ? <span className="tag wait">{due} aan de beurt</span> : <span className="tag">start</span>}
+              </button>
+            );
+          })}
         </div>
-        <div className="quiz-prompt">{current.prompt}</div>
-
-        <form onSubmit={submit} className="quiz-form">
-          {current.kind === 'choice' ? (
-            <div className="quiz-options">
-              {current.options!.map((o) => {
-                const isAnswer = o === current.answer;
-                const chosen = feedback?.given === o;
-                const state = feedback ? (isAnswer ? 'ok' : chosen ? 'bad' : 'off') : undefined;
-                return (
-                  <button key={o} type="button" className="quiz-option" data-state={state} disabled={!!feedback} onClick={() => answer(o)}>
-                    {o}
+      ) : (
+        <section className="panel flush">
+          <ul className="rows topic-rows">
+            <li>
+              <button className="row topic-row" disabled={busy} onClick={() => void start(chosen.id, null)}>
+                <div className="row-main"><span className="row-title">Mix van alle onderwerpen</span><span className="row-sub">{dueOf(chosen.id) ? `${dueOf(chosen.id)} vragen aan de beurt` : 'Alles door elkaar'}</span></div>
+                <span className="btn small">Start</span>
+              </button>
+            </li>
+            {chosen.topics.map((t) => {
+              const row = progressOf(chosen.id, t.id)[0];
+              return (
+                <li key={t.id}>
+                  <button className="row topic-row" disabled={busy} onClick={() => void start(chosen.id, t.id)}>
+                    <div className="row-main">
+                      <span className="row-title">{t.label}</span>
+                      {row && <TopicBar t={row} />}
+                      <span className="row-sub">{t.description}{row?.due ? ` · ${row.due} aan de beurt` : ''}</span>
+                    </div>
+                    <span className="btn small">Start</span>
                   </button>
-                );
-              })}
-            </div>
-          ) : (
-            <label className="field">
-              <span>{current.kind === 'fraction' ? 'Antwoord (bijv. 3/4)' : 'Antwoord'}</span>
-              <input
-                ref={inputRef}
-                className="input grade-input"
-                inputMode={current.kind === 'fraction' ? 'text' : 'decimal'}
-                autoComplete="off"
-                autoFocus
-                value={feedback ? feedback.given : value}
-                readOnly={!!feedback}
-                aria-invalid={feedback ? !feedback.correct : undefined}
-                onChange={(e) => setValue(e.target.value)}
-              />
-            </label>
-          )}
-
-          {feedback && (
-            <div className={`quiz-feedback ${feedback.correct ? 'ok' : 'bad'}`} role="status">
-              {feedback.correct ? <IconCheck /> : <IconClose />}
-              <span>{feedback.correct ? (current.retry ? 'Goed! Deze fout heb je nu verbeterd.' : 'Goed!') : <>Helaas. Het juiste antwoord is <b>{formatAnswer(current)}</b>. Deze vraag komt terug als herkansing.</>}</span>
-            </div>
-          )}
-
-          {(feedback || current.kind !== 'choice') && (
-            <button className="btn" type="submit" disabled={!feedback && !value.trim()}>
-              {feedback ? (last ? 'Bekijk resultaat' : 'Volgende vraag') : 'Controleer'}
-            </button>
-          )}
-          {error && <p className="form-error">{error}</p>}
-        </form>
-      </section>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }
 
-function Result({ session, result, onAgain, onDone }: {
-  session: Session; result: { decision: AcademyDecision; correct: number; total: number; fixed: number }; onAgain: () => void; onDone: () => void;
+function QuestionCard({ item, index, count, value, onChange, onNext, onBack, last, busy }: {
+  item: PublicPracticeSession['items'][number]; index: number; count: number; value: string; onChange: (v: string) => void;
+  onNext: () => void; onBack?: () => void; last: boolean; busy: boolean;
 }) {
-  const { decision, correct, total, fixed } = result;
-  const xp = decision.entries.reduce((s, e) => s + e.xp, 0);
-  const capped = decision.entries.reduce((s, e) => s + (e.cappedBy ?? 0), 0);
-  const explain = STATUS_EXPLAIN[decision.status];
+  const input = useRef<HTMLInputElement>(null);
+  useEffect(() => { input.current?.focus(); }, []);
+  const reason = REASON[item.reason] ?? REASON.new!;
+  const submit = (e: FormEvent) => { e.preventDefault(); if (value.trim()) onNext(); };
+  return (
+    <form className="panel quiz-card" onSubmit={submit}>
+      <div className="quiz-meta">
+        <span className="dim small">Vraag {index + 1} van {count}</span>
+        <span className={`tag reason-${reason.cls}`}>{reason.label}</span>
+      </div>
+      <div className="dim">{item.instruction}</div>
+      <div className="quiz-prompt">{item.prompt}</div>
+      {item.kind === 'choice' && item.options ? (
+        <div className="quiz-options" role="radiogroup" aria-label="Antwoordopties">
+          {item.options.map((o) => (
+            <button key={o} type="button" role="radio" aria-checked={value === o} className="quiz-option" data-state={value === o ? 'picked' : undefined} onClick={() => onChange(o)}>{o}</button>
+          ))}
+        </div>
+      ) : (
+        <label className="field">
+          <span>{item.kind === 'fraction' ? 'Antwoord (bijv. 3/4)' : 'Antwoord'}</span>
+          <input ref={input} className="input grade-input" inputMode={item.kind === 'fraction' ? 'text' : 'decimal'} autoComplete="off" value={value} maxLength={20}
+            onChange={(e) => onChange(e.target.value)} />
+        </label>
+      )}
+      <div className="quiz-actions">
+        {onBack && <button type="button" className="btn ghost small" onClick={onBack}>Vorige</button>}
+        <button className="btn" type="submit" disabled={!value.trim() || busy}>{busy ? 'Bezig…' : last ? 'Inleveren' : 'Volgende'}</button>
+      </div>
+    </form>
+  );
+}
+
+function Result({ session, result, onAgain, onOverview }: { session: PublicPracticeSession; result: PracticeResult; onAgain: () => void; onOverview: () => void }) {
+  const { summary, decision } = result;
+  const explain = STATUS_EXPLAIN[decision.status as AcademyDecisionStatus];
+  const byId = new Map(session.items.map((i) => [i.id, i]));
   return (
     <div className="page academy">
-      <section className="panel electric acad-result">
-        <div className="eyebrow">{session.bank.name} · {session.bank.topicLabel}</div>
+      <section className="panel acad-result gold">
+        <div className="eyebrow">Oefening klaar · {subjectById(session.subjectId).name}</div>
         <div className="acad-score">
-          <span className="big-num">{correct}<small>/{total}</small></span>
+          <span className="big-num">{summary.correctCount}<small>/{summary.questionCount}</small></span>
           <div className="acad-score-meta">
-            <span className="dim">{Math.round(decision.score * 100)}% goed{fixed ? ` · ${fixed} eerdere fout${fixed === 1 ? '' : 'en'} verbeterd` : ''}</span>
-            <span className={`tag ${decision.status === 'rewarded' ? 'live' : ''}`}>{STATUS_LABEL[decision.status]}</span>
+            <span className={`tag ${decision.status === 'rewarded' ? 'live' : ''}`}>{statusLabel(decision.status)}</span>
+            {summary.mistakesFixed > 0 && <span className="tag lime">{summary.mistakesFixed} {summary.mistakesFixed === 1 ? 'fout' : 'fouten'} verbeterd</span>}
+            {summary.newlyMastered.length > 0 && <span className="tag gold">{summary.newlyMastered.length} nu beheerst</span>}
           </div>
         </div>
-
         {decision.entries.length > 0 && (
-          <ul className="rows">
+          <ul className="rows acad-entries">
             {decision.entries.map((e) => (
               <li key={e.key} className="row">
-                <div className="row-main">
-                  <span className="row-title">{e.label}</span>
-                  {e.cappedBy ? <span className="row-sub">{e.cappedBy} XP niet toegekend door het plafond</span> : null}
-                </div>
+                <span className="row-main row-title">{e.label}{e.cappedBy ? <span className="row-sub"> · {e.cappedBy} XP boven het plafond</span> : null}</span>
                 <b className="acad-xp num">+{e.xp}</b>
               </li>
             ))}
           </ul>
         )}
-        <div className="acad-total">
-          <span>Academy XP</span>
-          <b className="num">+{xp}</b>
-        </div>
-        {capped > 0 && decision.status === 'rewarded' && <p className="hint">{STATUS_EXPLAIN.capped}</p>}
+        <div className="acad-total"><span>Academy XP</span><b className="num">+{decision.xp}</b></div>
         {explain && <p className="hint">{explain}</p>}
-        <p className="hint">Je oefenscore is niet als schoolcijfer opgeslagen.</p>
+        {result.progress.length > 0 && (
+          <div className="acad-grants">
+            <div className="eyebrow">Mijlpaal bereikt</div>
+            {result.progress.map((g) => (
+              <div key={g.key} className="acad-grant">
+                <b>{g.label}</b>
+                <span>{[g.packId ? PACKS[g.packId]?.name ?? g.packId : null, g.vouchers ? `${g.vouchers} draft-voucher${g.vouchers === 1 ? '' : 's'}` : null, g.coins ? `${g.coins} coins` : null].filter(Boolean).join(' · ')}</span>
+              </div>
+            ))}
+          </div>
+        )}
         <div className="acad-actions">
-          <button className="btn" onClick={onAgain}>Nog een keer</button>
-          <button className="btn ghost" onClick={onDone}>Naar overzicht</button>
+          <button className="btn" onClick={onAgain}>Nog een oefening</button>
+          <button className="btn ghost small" onClick={onOverview}>Naar overzicht</button>
         </div>
       </section>
+
+      <div className="page-cols">
+        <section className="panel flush" aria-label="Nakijken">
+          <div className="panel-head"><h2>Nakijken</h2></div>
+          <ul className="rows review-rows">
+            {result.results.map((r) => {
+              const it = byId.get(r.id);
+              return (
+                <li key={r.id} className="row">
+                  <span className={`review-icon ${r.correct ? 'ok' : 'bad'}`} role="img" aria-label={r.correct ? 'Goed' : 'Fout'}>{r.correct ? <IconCheck /> : <IconClose />}</span>
+                  <div className="row-main">
+                    <span className="row-title">{it ? `${it.instruction}: ${it.prompt}` : r.id}</span>
+                    <span className="row-sub">{r.correct ? `Goed: ${r.answer}` : `Jouw antwoord: ${r.given || '—'} · juist: ${r.answer}`}</span>
+                    <span className="grade-tags">
+                      <span className={`tag reason-${REASON[r.reason]?.cls ?? 'new'}`}>{REASON[r.reason]?.label ?? r.reason}</span>
+                      {r.fixed && <span className="tag lime">fout verbeterd</span>}
+                      {r.masteredNow && <span className="tag gold">beheerst</span>}
+                      {!r.correct && <span className="tag wait">komt terug</span>}
+                    </span>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+        <section className="panel flush" aria-label="Voortgang">
+          <div className="panel-head"><h2>Voortgang</h2></div>
+          <TopicRows rows={result.topicProgress} />
+          <div style={{ padding: '0 16px 14px' }}><Legend /></div>
+        </section>
+      </div>
     </div>
   );
 }

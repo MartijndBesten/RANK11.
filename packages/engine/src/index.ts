@@ -20,3 +20,4 @@ export * from './simulate.ts';
 export * from './market.ts';
 export * from './competition/index.ts';
 export * from './periods.ts';
+export * from './sell.ts';

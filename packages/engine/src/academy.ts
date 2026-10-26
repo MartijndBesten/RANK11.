@@ -169,7 +169,8 @@ export function academyReward(config: MotivationConfig, e: LearningEvent, ctx: A
   const firstEver = prior.length === 0;
   const bestBefore = firstEver ? 0 : Math.max(...prior.map(scoreOf));
   // Afronding: met vragenset-sleutel één keer per activiteit per dag, zonder sleutel één keer in totaal.
-  const freshCompletion = e.contentKey ? !prior.some((h) => h.completedAt.slice(0, 10) === date) : firstEver;
+  // Alleen met minstens de helft goed (completeMinScore): wegklikken of gokken is geen leeractiviteit.
+  const freshCompletion = score >= a.completeMinScore && (e.contentKey ? !prior.some((h) => h.completedAt.slice(0, 10) === date) : firstEver);
   if (freshCompletion) entries.push({ ...base, key: `acad:${e.eventId}:af`, xp: a.completeXp, label: `Oefening ${e.topic} afgerond` });
   if (!firstEver) {
     // Herhaling: alleen XP voor aantoonbare leerwaarde (hoger dan ooit eerder), met cooldown.

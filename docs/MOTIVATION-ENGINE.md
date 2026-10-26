@@ -16,7 +16,7 @@ Elke soort wordt apart berekend en apart begrensd. Het totaal (som) bepaalt het 
 | **Vooruitgang-XP** (`progress`) | hoger vakgemiddelde, herstel na een onvoldoende, bereikt doel | `gradeXp` |
 | **Academy-XP** (`academy`) | afgeronde oefenactiviteit met leerwaarde | `academyReward` |
 
-## 3. Configuratie (exacte waarden, versie `2026.10-motivatie.2`)
+## 3. Configuratie (exacte waarden, versie `2026.10-motivatie.3`)
 
 **Prestatie**
 
@@ -41,7 +41,7 @@ Een 6,4 levert dus 50 XP, een 7,0 80 XP, een 8,6 110 XP en een 9,6 150 XP. Ook e
 
 | Instelling | Waarde |
 |---|---|
-| Eerste keer afgerond | 20 XP |
+| Afgerond (minstens 50% goed, `completeMinScore`; sinds `motivatie.3`) | 20 XP |
 | Score ≥ 80% | +30 XP |
 | Eerder foute vraag nu goed | 25 XP per vraag, max. 4 per activiteit |
 | Herhaling met ≥ 10 procentpunt beter dan ooit | 15 XP (na ≥ 20 uur sinds de vorige poging) |

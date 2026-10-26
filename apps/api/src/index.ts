@@ -7,7 +7,7 @@ import type { Env } from './env.ts';
 import { ApiError, errorResponse, finalize, preflight, Router, type Ctx } from './http.ts';
 import { idempotent } from './idempotency.ts';
 import { getClub, putClub } from './modules/clubs.ts';
-import { buyPack, claimStarter, getCollection, getLineup, getWallet, listPacks, openPackGrant, putLineup } from './modules/collection.ts';
+import { buyPack, claimStarter, getCollection, getLineup, getWallet, listPacks, openPackGrant, putLineup, sellCards } from './modules/collection.ts';
 import { createCompetition, getCompetition, listCompetitions, poolGradeLeague, poolStandings } from './modules/competitions.ts';
 import { correctGrade, createGrade, deleteGrade, gradeHistory, listGrades, listXp } from './modules/grades.ts';
 import { accept, challenge, decline, getMatch, getMatchEvents, listPoolMatches, matchSocket, move, resignMatch } from './modules/matches.ts';
@@ -87,6 +87,7 @@ export const router = new Router()
   // collectie, elftal, wallet, packs
   .add('GET', '/api/collection', getCollection)
   .add('POST', '/api/collection/starter', idempotent(claimStarter, opt))
+  .add('POST', '/api/collection/sell', idempotent(sellCards, req))
   .add('GET', '/api/lineup', getLineup)
   .add('PUT', '/api/lineup', idempotent(putLineup, opt))
   .add('GET', '/api/wallet', getWallet)

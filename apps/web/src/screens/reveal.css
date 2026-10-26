@@ -160,3 +160,5 @@
 .rv-pick-card.faded { opacity: 0.35; transform: scale(0.94); }
 .rv-pick .pc-wrap.size-md { --w: clamp(100px, 28vw, 170px); }
 @media (max-width: 420px) { .rv-pack { grid-template-columns: 96px 1fr; } }
+.rv-progress { display: grid; gap: 6px; justify-items: center; margin-top: 4px; }
+.bonus.progress { background: rgba(184, 255, 60, 0.12); color: var(--exam-lime); border-color: rgba(184, 255, 60, 0.35); }

@@ -6,17 +6,22 @@
  * Cijfers: eventlog (toevoegen, corrigeren, verwijderen) met volledige geschiedenis; zelf ingevoerd,
  * zonder goedkeuringsstap. XP: ledger met idempotente sleutels, drie categorieën en plafonds.
  */
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   academyReward, applyGradeEvents, autoBestLineup, categoryTotals, checkNewGrade, clubLevel, compareAverages, computeReward,
-  correctionXp, createDraft, createRng, DEFAULT_MOTIVATION_CONFIG, DEFAULT_REWARD_CONFIG, deletionXp, DRAFT_EVENTS, FORMATIONS,
+  correctionXp, createDraft, createRng, DEFAULT_MOTIVATION_CONFIG, DEFAULT_PROGRESS_CONFIG, FAIR_REWARD_CONFIG, deletionXp, progressRewards, quickSellValue, DRAFT_EVENTS, FORMATIONS,
   generateCatalog, gradeKey, gradeXp, openPack, PACKS, resolvePlayer, subjectAverages, validateEvent, weightedAverage,
   type AcademyDecision, type AccountLink, type BattleEvent, type DraftSession, type LeagueResult, type Goal, type Grade, type GradeEvent, type LearningEvent,
-  type PackResult, type Player, type PityState, type RewardResult, type Scenario, type UpcomingTest, type XpEntry,
+  type PackResult, type Player, type ProgressGrant, type PityState, type RewardResult, type Scenario, type UpcomingTest, type XpEntry,
 } from '@rank11/engine';
+import {
+  createPracticeSession, gradePracticeSession, practiceEvent, PRACTICE_SUBJECTS, publicSession, topicProgress, weekStart,
+  type ItemState, type PracticeSession,
+} from '@rank11/engine';
+import type { AcademyOverview, PracticeBackend } from '../academy/types';
 import type { CrestData } from '../components/Crest';
 import { PHOTOS_ONLY, PORTRAITS } from '../portraits/registry';
-import { DEMO_GRADES, DEMO_PENDING, demoGoals, demoUpcoming, subjectById, SUBJECTS, todayIso, type Subject } from './school';
+import { DEMO_GRADES, DEMO_PENDING, demoGoals, demoUpcoming, PERIODS, subjectById, SUBJECTS, todayIso, type Subject } from './school';
 
 export const CATALOG: Player[] = generateCatalog({ photos: PORTRAITS, photosOnly: PHOTOS_ONLY });
 export const CARD_BY_ID = new Map(CATALOG.map((p) => [p.id, p]));
@@ -32,6 +37,12 @@ export interface NotifySettings {
   /** Stille uren (HH:MM); in de app geen meldingen tussen deze tijden. */
   quietFrom: string;
   quietTo: string;
+}
+
+/** Logregel van een Academy-beslissing, met de kern van het event voor het overzicht. */
+export interface AcademyDecisionLog {
+  eventId: string; status: AcademyDecision['status']; xp: number; reason: string;
+  subjectId?: string; topic?: string; questionCount?: number; correctCount?: number; mistakesFixed?: number; at?: number;
 }
 
 export interface GameState {
@@ -53,7 +64,16 @@ export interface GameState {
   goals: Goal[];
   upcoming: UpcomingTest[];
   scenarios: Scenario[];
-  academy: { links: AccountLink[]; events: LearningEvent[]; decisions: { eventId: string; status: AcademyDecision['status']; xp: number; reason: string }[]; wrong: string[] };
+  academy: {
+    links: AccountLink[];
+    events: LearningEvent[];
+    decisions: AcademyDecisionLog[];
+    wrong: string[];
+    /** Leerstatus per oefenvraag (herhaling met groeiende tussenpozen). */
+    items: ItemState[];
+  };
+  /** Voortgangsbeloningen (V-011): doel, vooruitgang, herstel, topcijfer, Academy-mijlpaal. */
+  progressGrants: ProgressGrant[];
   /** Lokale demo-competitie: eigen uitslagen en lopende/afgeronde battles (eventlogs). */
   competition: { results: LeagueResult[]; battles: Record<string, BattleEvent[]> };
   /** Kluisbeloningen waarvoor de melding al getoond is (precies één keer per cijfer). */
@@ -134,7 +154,8 @@ function initialState(): GameState {
     goals,
     upcoming: demoUpcoming(today()),
     scenarios: [],
-    academy: { links: [{ providerId: DEMO_PROVIDER, externalUserId: 'leerling-1', playerId: ME, linkedAt: '2026-10-01T12:00:00Z' }], events: [], decisions: [], wrong: [] },
+    academy: { links: [{ providerId: DEMO_PROVIDER, externalUserId: 'leerling-1', playerId: ME, linkedAt: '2026-10-01T12:00:00Z' }], events: [], decisions: [], wrong: [], items: [] },
+    progressGrants: [],
     competition: { results: [], battles: {} },
     notified: [],
     settings: { sound: true, reducedMotion: false, academy: true, notify: { rewards: true, goals: true, competition: true, quietFrom: '21:30', quietTo: '07:30' } },
@@ -147,7 +168,7 @@ function load(): GameState {
     if (raw) {
       const parsed = JSON.parse(raw) as GameState;
       // Alleen bewaarde kaarten die nog in de catalogus bestaan (catalogus kan krimpen tot spelers met portret).
-      if (parsed.version === 3) return { ...parsed, competition: parsed.competition ?? { results: [], battles: {} }, collection: parsed.collection.filter((id) => CARD_BY_ID.has(id)) };
+      if (parsed.version === 3) return { ...parsed, academy: { ...parsed.academy, items: parsed.academy.items ?? [] }, competition: parsed.competition ?? { results: [], battles: {} }, progressGrants: parsed.progressGrants ?? [], collection: parsed.collection.filter((id) => CARD_BY_ID.has(id)) };
     }
   } catch {
     /* privémodus of geblokkeerde opslag: gewoon met demo-data starten */
@@ -183,6 +204,8 @@ export interface RevealOutcome {
   pickOptions?: Player[];
   /** Online: de toekenning op de server (voor de spelerskeuze). */
   grantId?: string;
+  /** Extra voortgangsbeloningen die met dit cijfer zijn verdiend. */
+  progress?: ProgressGrant[];
 }
 
 export interface GradeInput { subjectId: string; testName: string; value: number; weight: number; date: string }
@@ -221,6 +244,8 @@ export interface Store {
   saveScenario: (scenario: Omit<Scenario, 'id'>) => void;
   removeScenario: (id: string) => void;
   submitLearningEvent: (event: LearningEvent) => AcademyDecision;
+  /** Oefenmodule: lokaal (demo, in de browser nagekeken) of op de server. */
+  practice: PracticeBackend;
   recordWrongAnswers: (wrong: string[], fixed: string[]) => void;
   saveBattle: (matchId: string, events: BattleEvent[], result?: LeagueResult) => void;
   setLineup: (formationId: string, lineup: Record<string, string>) => MaybePromise<void>;
@@ -236,15 +261,49 @@ export interface Store {
 export const StoreCtx = createContext<Store | null>(null);
 const Ctx = StoreCtx;
 
-export function quickSellValue(p: Player): number {
-  const base = p.rating >= 85 ? 2500 : p.rating >= 80 ? 900 : p.rating >= 75 ? 400 : p.rating >= 65 ? 150 : 60;
-  return p.rarity === 'legend' ? base * 10 : ['special', 'exam', 'season'].includes(p.rarity) ? base * 3 : base;
+export { quickSellValue };
+
+/** Voortgangsbeloningen toepassen op de speltoestand (coins, vouchers, packs); idempotent per sleutel. */
+function withProgress(s: GameState, grades: Grade[], ledger: XpEntry[]): { next: GameState; grants: ProgressGrant[] } {
+  const grants = progressRewards(DEFAULT_PROGRESS_CONFIG, { grades, goals: s.goals, ledger, grants: s.progressGrants, periods: PERIODS, today: todayIso() });
+  if (!grants.length) return { next: s, grants };
+  const packs = { ...s.packs };
+  for (const g of grants) if (g.packId) packs[g.packId] = (packs[g.packId] ?? 0) + 1;
+  return {
+    next: { ...s, packs, coins: s.coins + grants.reduce((a, g) => a + g.coins, 0), vouchers: s.vouchers + grants.reduce((a, g) => a + g.vouchers, 0), progressGrants: [...s.progressGrants, ...grants] },
+    grants,
+  };
 }
 
 const overallOf = (list: Grade[]) => {
   const vals = [...subjectAverages(list).values()];
   return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
 };
+
+function decisionLog(event: LearningEvent, decision: AcademyDecision): AcademyDecisionLog {
+  return {
+    eventId: event.eventId, status: decision.status, xp: decision.entries.reduce((a, e) => a + e.xp, 0), reason: decision.reason,
+    subjectId: event.subjectId, topic: event.topic, questionCount: event.questionCount, correctCount: event.correctCount,
+    mistakesFixed: event.mistakesFixed, at: Date.parse(event.completedAt),
+  };
+}
+
+/** Overzicht van de oefenmodule uit de lokale stand (zelfde vorm als GET /api/academy). */
+function localOverview(s: GameState): AcademyOverview {
+  const now = new Date().toISOString();
+  const today = now.slice(0, 10);
+  const ledger = s.xpLedger.filter((e) => e.category === 'academy');
+  const sum = (pred: (d: string) => boolean) => ledger.filter((e) => e.xp > 0 && pred(e.date)).reduce((a, e) => a + e.xp, 0);
+  return {
+    subjects: PRACTICE_SUBJECTS.map((x) => ({ id: x.id, name: x.name, topics: x.topics.map((t) => ({ id: t.id, label: t.label, description: t.description })) })),
+    progress: topicProgress(s.academy.items, PRACTICE_SUBJECTS, now),
+    xp: { total: ledger.reduce((a, e) => a + e.xp, 0), today: sum((d) => d === today), week: sum((d) => weekStart(d) === weekStart(today)), dailyCap: MC.academy.dailyCap, weeklyCap: MC.academy.weeklyCap },
+    recent: [...s.academy.decisions].reverse().slice(0, 20).map((d) => ({
+      eventId: d.eventId, subjectId: d.subjectId ?? '', topic: d.topic ?? 'Oefening', questionCount: d.questionCount ?? 0, correctCount: d.correctCount ?? 0,
+      mistakesFixed: d.mistakesFixed ?? 0, decision: d.status, xp: d.xp, at: d.at ?? 0,
+    })),
+  };
+}
 
 export function StoreProvider({ children, onExit }: { children: ReactNode; onExit?: () => void }) {
   const [state, setState] = useState<GameState>(load);
@@ -344,7 +403,7 @@ export function StoreProvider({ children, onExit }: { children: ReactNode; onExi
     const day = today();
     const weekAgo = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10);
     const key = gradeKey(g);
-    const cards = computeReward(DEFAULT_REWARD_CONFIG, {
+    const cards = computeReward(FAIR_REWARD_CONFIG, {
       grade: g,
       subjectAvgBefore: subjectBefore,
       subjectAvgAfter: subjectAfter,
@@ -362,10 +421,11 @@ export function StoreProvider({ children, onExit }: { children: ReactNode; onExi
       pickOptions = rng.shuffle(CATALOG.filter((p) => p.rating >= reward.pick!.minRating && !p.temporary)).slice(0, reward.pick.options);
     }
     const counts = reward.status === 'rewarded' || reward.status === 'correction';
+    const progress = withProgress(state, [...revealed, g], [...state.xpLedger, ...xpEntries]).grants;
     update((s) => {
       const packs = { ...s.packs };
       for (const id of [...(reward.packId ? [reward.packId] : []), ...goalPacks]) packs[id] = (packs[id] ?? 0) + 1;
-      return {
+      const base: GameState = {
         ...s,
         pendingIds: s.pendingIds.filter((id) => id !== gradeId),
         xpLedger: [...s.xpLedger, ...xpEntries],
@@ -375,8 +435,9 @@ export function StoreProvider({ children, onExit }: { children: ReactNode; onExi
         rewards: reward.tier ? { ...s.rewards, [key]: reward } : s.rewards,
         rewardLog: counts ? [...s.rewardLog, { key, date: day }] : s.rewardLog,
       };
+      return withProgress(base, [...revealed, g], base.xpLedger).next;
     });
-    return { grade: g, subjectBefore, subjectAfter, overallBefore: overallOf(revealed), overallAfter: overallOf([...revealed, g]), reward, xpEntries, pickOptions };
+    return { grade: g, subjectBefore, subjectAfter, overallBefore: overallOf(revealed), overallAfter: overallOf([...revealed, g]), reward, xpEntries, pickOptions, progress };
   }, [book, state, update]);
 
   const claimPick = useCallback((cardId: string) => {
@@ -415,7 +476,7 @@ export function StoreProvider({ children, onExit }: { children: ReactNode; onExi
         ...s.academy,
         // Alleen echte, afgeronde pogingen tellen als eerdere poging (te snel, afgebroken of niet gekoppeld niet).
         events: ['rewarded', 'capped', 'no-learning-value'].includes(decision.status) ? [...s.academy.events, event] : s.academy.events,
-        decisions: [...s.academy.decisions, { eventId: event.eventId, status: decision.status, xp: decision.entries.reduce((a, e) => a + e.xp, 0), reason: decision.reason }].slice(-50),
+        decisions: [...s.academy.decisions, decisionLog(event, decision)].slice(-50),
       },
       xpLedger: [...s.xpLedger, ...decision.entries],
     }));
@@ -425,6 +486,54 @@ export function StoreProvider({ children, onExit }: { children: ReactNode; onExi
   const recordWrongAnswers = useCallback((wrong: string[], fixed: string[]) => {
     update((s) => ({ ...s, academy: { ...s.academy, wrong: [...new Set([...s.academy.wrong.filter((id) => !fixed.includes(id)), ...wrong])] } }));
   }, [update]);
+
+  // Oefenmodule (demo): de engine maakt en kijkt na in de browser; antwoorden blijven in het geheugen van deze pagina.
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  const sessionsRef = useRef(new Map<string, PracticeSession>());
+  const practice = useMemo<PracticeBackend>(() => ({
+    kind: 'lokaal',
+    overview: async () => localOverview(stateRef.current),
+    start: async (subjectId, topic) => {
+      const session = createPracticeSession({ subjectId, topic, seed: freshSeed(), itemStates: stateRef.current.academy.items, now: new Date().toISOString(), sessionId: uid('ps') });
+      sessionsRef.current.set(session.id, session);
+      return publicSession(session);
+    },
+    submit: async (sessionId, answers, abandoned = false) => {
+      const session = sessionsRef.current.get(sessionId);
+      if (!session) throw new Error('Deze oefening is niet meer beschikbaar. Start een nieuwe.');
+      sessionsRef.current.delete(sessionId);
+      const now = new Date().toISOString();
+      const graded = gradePracticeSession(session, answers, now);
+      const event = validateEvent(practiceEvent(session, graded, {
+        eventId: uid('ev'), providerId: DEMO_PROVIDER, externalUserId: 'leerling-1', completedAt: now, status: abandoned ? 'abandoned' : 'completed',
+      }));
+      const s0 = stateRef.current;
+      const decision = academyReward(MC, event, { enabled: s0.settings.academy, playerId: resolvePlayer(s0.academy.links, event), history: s0.academy.events, ledger: s0.xpLedger });
+      // Bij afbreken tellen alleen de beantwoorde vragen mee voor de herhaling.
+      const states = abandoned ? graded.states.filter((x) => answers[x.id] !== undefined) : graded.states;
+      const items = [...s0.academy.items.filter((x) => !states.some((n) => n.id === x.id)), ...states];
+      const revealedGrades = applyGradeEvents(s0.gradeEvents).grades.filter((x) => !s0.pendingIds.includes(x.id));
+      const progress = withProgress(s0, revealedGrades, [...s0.xpLedger, ...decision.entries]).grants;
+      update((s) => withProgress({
+        ...s,
+        academy: {
+          ...s.academy,
+          items: [...s.academy.items.filter((x) => !states.some((n) => n.id === x.id)), ...states],
+          events: ['rewarded', 'capped', 'no-learning-value'].includes(decision.status) ? [...s.academy.events, event] : s.academy.events,
+          decisions: [...s.academy.decisions, decisionLog(event, decision)].slice(-50),
+        },
+        xpLedger: [...s.xpLedger, ...decision.entries],
+      }, revealedGrades, [...s.xpLedger, ...decision.entries]).next);
+      return {
+        results: graded.results.map((r) => ({ id: r.id, correct: r.correct, given: r.given, answer: r.answer, reason: r.reason, fixed: r.fixed, masteredNow: r.masteredNow })),
+        summary: { questionCount: graded.questionCount, correctCount: graded.correctCount, mistakesFixed: graded.mistakesFixed, newlyMastered: graded.newlyMastered },
+        decision: { status: decision.status, reason: decision.reason, xp: decision.entries.reduce((a, e) => a + e.xp, 0), entries: decision.entries.map((e) => ({ key: e.key, xp: e.xp, label: e.label, cappedBy: e.cappedBy ?? 0 })) },
+        progress: progress.map((g) => ({ key: g.key, kind: g.kind, label: g.label, packId: g.packId ?? null, vouchers: g.vouchers, coins: g.coins, cappedVouchers: g.cappedVouchers ?? 0 })),
+        topicProgress: topicProgress(items, PRACTICE_SUBJECTS, now).filter((t) => t.subjectId === session.subjectId),
+      };
+    },
+  }), [update]);
 
   const saveBattle = useCallback((matchId: string, events: BattleEvent[], result?: LeagueResult) => {
     update((s) => ({
@@ -481,10 +590,10 @@ export function StoreProvider({ children, onExit }: { children: ReactNode; onExi
       mode: 'demo' as const, user: null, can: { quickSell: true, demoCompetition: true, academy: true, exit: !!onExit }, draftPick: () => undefined, logout: () => onExit?.(),
       state, owned, grades: book.grades, pending, history: book.history, xp, openPackFromInventory, buyPack, startDraft,
       addGrade, correctGrade, deleteGrade, revealGrade, claimPick, addGoal, removeGoal, addUpcoming, removeUpcoming,
-      saveScenario, removeScenario, submitLearningEvent, recordWrongAnswers, saveBattle, setLineup, quickSell, setSetting, setNotify, markNotified, reset,
+      saveScenario, removeScenario, submitLearningEvent, practice, recordWrongAnswers, saveBattle, setLineup, quickSell, setSetting, setNotify, markNotified, reset,
     }),
     [state, owned, book, pending, xp, openPackFromInventory, buyPack, startDraft, addGrade, correctGrade, deleteGrade, revealGrade, claimPick,
-      addGoal, removeGoal, addUpcoming, removeUpcoming, saveScenario, removeScenario, submitLearningEvent, recordWrongAnswers, saveBattle, setLineup,
+      addGoal, removeGoal, addUpcoming, removeUpcoming, saveScenario, removeScenario, submitLearningEvent, practice, recordWrongAnswers, saveBattle, setLineup,
       quickSell, setSetting, setNotify, markNotified, reset, onExit],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

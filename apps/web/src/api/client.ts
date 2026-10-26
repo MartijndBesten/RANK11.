@@ -61,5 +61,6 @@ export interface ApiVaultItem {
   grade: { id: string; subjectId: string; testName: string; value: number; weight: number; date: string } | null;
   xp: { key: string; category: 'performance' | 'progress' | 'academy'; xp: number; label: string; cappedBy: number; packId: string | null }[];
   pick: { minRating: number; options: { cardDefId: string }[]; claimedCardDefId: string | null } | null;
+  progress?: { key: string; kind: string; label: string; packId: string | null; vouchers: number; coins: number }[];
 }
 export interface ApiPool { id: string; name: string; role: string; memberCount?: number; maxMembers?: number }

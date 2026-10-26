@@ -92,7 +92,7 @@ De beslissing heeft altijd een status, een reden en de (eventueel afgekapte) XP-
 | `rewarded` | anders |
 
 XP-regels:
-- **Afronding:** 20 XP. Met een `contentKey` (de interne oefenmodule stuurt die altijd mee): één keer per `activityId` per dag. Zonder `contentKey` (een vaste oefentoets van een externe leeromgeving): één keer in totaal.
+- **Afronding:** 20 XP, alleen bij minstens 50% goed (`completeMinScore`, sinds `2026.10-motivatie.3`; wegklikken of gokken levert niets op, een verbeterde fout wel). Met een `contentKey` (de interne oefenmodule stuurt die altijd mee): één keer per `activityId` per dag. Zonder `contentKey` (een vaste oefentoets van een externe leeromgeving): één keer in totaal.
 - **Hoge score (≥ 80%):** 30 XP, alleen de eerste keer dat je die drempel voor deze activiteit haalt.
 - **Betere score bij herhaling:** alleen als er ≥ 20 uur zit tussen deze en de vorige poging **en** de score minstens 10 procentpunt hoger is dan de beste eerdere score: 15 XP.
 - **Herstelde fouten:** 25 XP per eerder foute vraag die nu goed is, maximaal 4 per activiteit. Bij de interne module telt alleen een echte herkansing in een latere sessie (de vraag komt pas na minstens 1 dag terug).

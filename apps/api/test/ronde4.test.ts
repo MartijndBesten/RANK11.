@@ -190,3 +190,27 @@ describe('Grade League in een pool (server)', () => {
     expect((await app.api('GET', `/api/pools/${poolId}/grade-league`, { token: outsider.token })).status).toBe(404);
   });
 });
+
+describe('snel verkopen', () => {
+  it('alleen eigen kaarten buiten elftal en bank; coins volgens de engine; minimaal 11 kaarten over', async () => {
+    const app = createApp();
+    const code = await platformCode(app, { maxUses: 5 });
+    const u = await register(app, 'Verkoper', code);
+    const other = await register(app, 'Koper', code);
+    const lineup = (await app.api('GET', '/api/lineup', { token: u.token })).body;
+    // Bank leegmaken zodat reserves vrij zijn.
+    await app.api('PUT', '/api/lineup', { token: u.token, body: { cardIds: lineup.cardIds, formationId: '4-3-3', bench: [] } });
+    const reserves = lineup.bench as string[];
+    expect((await app.api('POST', '/api/collection/sell', { token: u.token, idem: idem(), body: { cardIds: [lineup.cardIds[0]] } })).status).toBe(409);
+    expect((await app.api('POST', '/api/collection/sell', { token: other.token, idem: idem(), body: { cardIds: [reserves[0]] } })).status).toBe(404);
+    const sold = await app.api('POST', '/api/collection/sell', { token: u.token, idem: idem(), body: { cardIds: reserves.slice(0, 2) } });
+    expect(sold.status).toBe(200);
+    expect(sold.body.sold).toBe(2);
+    expect(sold.body.coins).toBeGreaterThan(0);
+    expect(sold.body.balances.coins).toBe(sold.body.coins);
+    expect((await app.api('GET', '/api/collection', { token: u.token })).body.cards).toHaveLength(16);
+    // Alle overige reserves + 1 zou onder de 11 komen? Nee: 16 - 5 = 11 mag, maar elftalkaarten blijven geblokkeerd.
+    const rest = reserves.slice(2);
+    expect((await app.api('POST', '/api/collection/sell', { token: u.token, idem: idem(), body: { cardIds: rest } })).status).toBe(200);
+  });
+});

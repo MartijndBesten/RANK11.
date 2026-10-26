@@ -25,11 +25,14 @@ async function grantView(db: D1Database, userId: string, g: GrantRow) {
   const claimed = await one<{ id: string; card_def_id: string }>(db,
     `SELECT id, card_def_id FROM card_instances WHERE user_id = ? AND acquired_via = 'reward' AND source_ref = ?`, userId, `pick:${g.id}`);
   const xp = await grantXp(db, userId, g.grade_id);
+  const progress = await many<{ key: string; kind: string; label: string; pack_id: string | null; vouchers: number; coins: number }>(db,
+    `SELECT key, kind, label, pack_id, vouchers, coins FROM progress_grants WHERE user_id = ? AND source_kind = 'grade' AND source_id = ? ORDER BY created_at, rowid`, userId, g.grade_id);
   return {
     grantId: g.id, kind: g.kind, status: g.status, tierId: g.tier_id, tier: result.tier ?? null, coins: g.coins, vouchers: g.vouchers, packId: g.pack_id,
     bonuses: result.bonuses ?? [], createdAt: g.created_at, seenAt: g.seen_at,
     grade: grade ? { id: grade.id, subjectId: grade.subject_id, testName: grade.test_name, value: grade.value, weight: grade.weight, date: grade.date } : null,
     xp: xp.map((e) => ({ key: e.key, category: e.category, xp: e.xp, label: e.label, cappedBy: e.capped_by ?? 0, packId: e.pack_id })),
+    progress: progress.map((p) => ({ key: p.key, kind: p.kind, label: p.label, packId: p.pack_id, vouchers: p.vouchers, coins: p.coins })),
     pick: result.pick && result.pickOptions
       ? {
         minRating: result.pick.minRating,

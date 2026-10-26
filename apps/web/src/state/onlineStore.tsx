@@ -7,13 +7,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   checkNewGrade, compareCardValue, FORMATIONS, PACKS, subjectAverages, weightedAverage,
-  type DraftSession, type Grade, type PackResult, type Player, type RewardResult, type XpEntry,
+  type DraftSession, type Grade, type PackResult, type ProgressGrant, type PublicPracticeSession, type Player, type RewardResult, type XpEntry,
 } from '@rank11/engine';
 import { api, ApiError, type ApiCard, type ApiGrade, type ApiHistory, type ApiVaultItem, type ApiXpEntry } from '../api/client';
 import { PORTRAITS } from '../portraits/registry';
 import type { CrestData } from '../components/Crest';
 import { CARD_BY_ID, StoreCtx, type ActionResult, type GameState, type GradeInput, type NotifySettings, type RevealOutcome, type Store } from './store';
 import { todayIso } from './school';
+import type { AcademyOverview, PracticeResult } from '../academy/types';
 
 interface Loaded {
   user: { id: string; username: string };
@@ -125,7 +126,8 @@ export function OnlineStoreProvider({ children, onLoggedOut }: { children: React
       formationId: formation.id, lineup, pity: data.draft.pity,
       gradeEvents: [], pendingIds: pending.map((p) => p.grade.id), xpLedger: [...data.xp.ledger].reverse().map(toXp),
       rewards: {}, rewardLog: [], goals: data.planning.goals, upcoming: data.planning.upcoming, scenarios: prefs.scenarios,
-      academy: { links: [], events: [], decisions: [], wrong: [] },
+      academy: { links: [], events: [], decisions: [], wrong: [], items: [] },
+      progressGrants: [],
       competition: { results: [], battles: {} },
       notified: prefs.notified, settings: prefs.settings,
     };
@@ -146,7 +148,7 @@ export function OnlineStoreProvider({ children, onLoggedOut }: { children: React
       state, owned, grades, pending,
       history: history as Store['history'],
       xp: { total: data.xp.summary.total, byCategory: data.xp.summary.byCategory, level: data.xp.summary.level },
-      can: { quickSell: false, demoCompetition: false, academy: false, exit: true },
+      can: { quickSell: true, demoCompetition: false, academy: true, exit: true },
 
       openPackFromInventory: (packId) => act(async () => {
         const grant = data.unopened.find((g) => g.packId === packId);
@@ -202,6 +204,7 @@ export function OnlineStoreProvider({ children, onLoggedOut }: { children: React
         const outcome: RevealOutcome = {
           grade: g, subjectBefore: weightedAverage(subj), subjectAfter: weightedAverage([...subj, g]),
           overallBefore: overall(others), overallAfter: overall([...others, g]), reward, xpEntries, grantId: item.grantId,
+          progress: (item.progress ?? []).map((p) => ({ key: p.key, kind: p.kind as ProgressGrant['kind'], label: p.label, vouchers: p.vouchers, coins: p.coins, date: todayIso(), configVersion: '', ...(p.packId ? { packId: p.packId } : {}) })),
           ...(item.pick && !item.pick.claimedCardDefId ? { pickOptions: item.pick.options.map((o) => CARD_BY_ID.get(o.cardDefId)).filter((p): p is Player => !!p) } : {}),
         };
         // De beloning staat al op de server; hier alleen markeren als geopend.
@@ -220,7 +223,18 @@ export function OnlineStoreProvider({ children, onLoggedOut }: { children: React
       removeUpcoming: (testId) => act(async () => { await api('DELETE', `/upcoming/${testId}`); }),
       saveScenario: (scenario) => updatePrefs((p) => ({ ...p, scenarios: [...p.scenarios, { ...scenario, id: `sc-${Date.now().toString(36)}` }].slice(-6) })),
       removeScenario: (id) => updatePrefs((p) => ({ ...p, scenarios: p.scenarios.filter((s) => s.id !== id) })),
-      submitLearningEvent: () => ({ status: 'disabled', entries: [], reason: 'Academy online volgt via de server.', score: 0 }),
+      submitLearningEvent: () => ({ status: 'disabled', entries: [], reason: 'Online loopt de Academy via de server (practice).', score: 0 }),
+      // Oefenmodule op de server: de server maakt de vragenset, bewaart de antwoorden en kijkt na.
+      practice: {
+        kind: 'server',
+        overview: () => api<AcademyOverview>('GET', '/academy'),
+        start: async (subjectId, topic) => (await api<{ session: PublicPracticeSession }>('POST', '/academy/sessions', { subjectId, topic })).session,
+        submit: async (sessionId, answers, abandoned = false) => {
+          const res = await api<PracticeResult>('POST', `/academy/sessions/${sessionId}/submit`, { answers, abandoned });
+          void refresh(); // XP, coins en packs in de topbalk bijwerken
+          return res;
+        },
+      },
       recordWrongAnswers: () => undefined,
       saveBattle: () => undefined,
       setLineup: (formationId, lineup) => act(async () => {
@@ -232,7 +246,14 @@ export function OnlineStoreProvider({ children, onLoggedOut }: { children: React
         const bench = Object.keys(lineup).filter((k) => k.startsWith('bench')).sort().map((k) => take(lineup[k])).filter((x): x is string => !!x);
         await api('PUT', '/lineup', { cardIds, formationId, bench }).catch(() => undefined);
       }),
-      quickSell: () => 0,
+      quickSell: (cardIds) => act(async () => {
+        // De app werkt met kaartdefinities; de server met instanties: kies vrije instanties (niet in elftal of op de bank).
+        const locked = new Set([...(data.lineup?.cardIds ?? []), ...(data.lineup?.bench ?? [])]);
+        const used = new Set<string>();
+        const ids = cardIds.map((def) => (instancesByDef.get(def) ?? []).find((i) => !locked.has(i) && !used.has(i) && (used.add(i), true))).filter((x): x is string => !!x);
+        if (!ids.length) return 0;
+        try { return (await api<{ coins: number }>('POST', '/collection/sell', { cardIds: ids })).coins; } catch { return 0; }
+      }),
       setSetting: (key, v) => updatePrefs((p) => ({ ...p, settings: { ...p.settings, [key]: v } })),
       setNotify: (changes: Partial<NotifySettings>) => updatePrefs((p) => ({ ...p, settings: { ...p.settings, notify: { ...p.settings.notify, ...changes } } })),
       markNotified: (ids) => updatePrefs((p) => ({ ...p, notified: [...new Set([...p.notified, ...ids])] })),

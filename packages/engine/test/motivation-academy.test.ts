@@ -147,6 +147,13 @@ describe('Academy', () => {
     expect(d.status).toBe('rewarded');
     expect(d.entries.map((x) => x.xp)).toEqual([20, 30, 4 * 25]); // fouten begrensd op 4 per activiteit
   });
+  it('wegklikken levert geen afrondings-XP op (minder dan de helft goed)', () => {
+    expect(academyReward(M, ev({ correctCount: 2 }), ctx()).status).toBe('no-learning-value');
+    const half = academyReward(M, ev({ correctCount: 5 }), ctx());
+    expect(half.entries.map((x) => x.xp)).toEqual([20]);
+    // Een verbeterde fout telt wel, ook als de rest van de oefening slecht ging.
+    expect(academyReward(M, ev({ correctCount: 2, mistakesFixed: 1 }), ctx()).entries.map((x) => x.xp)).toEqual([25]);
+  });
   it('dubbel event, uitgeschakeld, afgebroken en (optionele) tijdregel', () => {
     const e = ev();
     const first = academyReward(M, e, ctx());

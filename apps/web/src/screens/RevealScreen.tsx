@@ -20,7 +20,8 @@ export function RevealScreen({ nav }: { nav: Nav }) {
   const { grades, pending, revealGrade } = useStore();
   const [active, setActive] = useState<string | null>(null);
   const [direct, setDirect] = useState<RevealOutcome[]>([]);
-  const revealed = useMemo(() => grades.filter((g) => !pending.some((p) => p.grade.id === g.id)), [grades, pending]);
+  // Cijfers zijn zelf ingevoerd en dus bekend; de verrassing in de kluis is de beloning.
+  const revealed = grades;
   const averages = useMemo(() => subjectAverages(revealed), [revealed]);
 
   return (
@@ -390,6 +391,16 @@ function RewardPanel({ outcome, reduced, onClose, onOpenPack, onPick }: {
             <span key={e.key} className="bonus">{e.label} +{e.xp} {e.category === 'progress' ? 'Vooruitgang' : 'Prestatie'}-XP{e.cappedBy ? ` (plafond: −${e.cappedBy})` : ''}</span>
           ))}
           {r.bonuses.filter((b) => b.coins).map((b) => <span key={b.label} className="bonus">{b.label} +{b.coins} coins</span>)}
+        </div>
+      )}
+      {(outcome.progress?.length ?? 0) > 0 && (
+        <div className="rv-progress" aria-label="Extra voor je vooruitgang">
+          <div className="eyebrow">Extra verdiend</div>
+          {outcome.progress!.map((p) => (
+            <span key={p.key} className="bonus progress">
+              {p.label}{p.packId ? ` · ${PACKS[p.packId]?.name ?? 'pack'}` : ''}{p.vouchers ? ` · +${p.vouchers} voucher` : ''}{p.coins ? ` · +${p.coins} coins` : ''}
+            </span>
+          ))}
         </div>
       )}
 

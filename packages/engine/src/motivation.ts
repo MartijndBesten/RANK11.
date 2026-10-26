@@ -30,6 +30,8 @@ export interface MotivationConfig {
   };
   academy: {
     completeXp: number;
+    /** Minimale score (0-1) voor afrondings-XP; gokken of wegklikken levert dan niets op. */
+    completeMinScore: number;
     highScoreXp: number;
     highScoreMin: number;
     mistakeFixedXp: number;
@@ -46,11 +48,11 @@ export interface MotivationConfig {
 }
 
 export const DEFAULT_MOTIVATION_CONFIG: MotivationConfig = {
-  version: '2026.10-motivatie.2',
+  version: '2026.10-motivatie.3',
   performance: { perGrade: 50, bonuses: [{ minGrade: 7, xp: 30 }, { minGrade: 8, xp: 60 }, { minGrade: 9, xp: 100 }], dailyCap: 450, weeklyCap: 1500 },
   progress: { improvementXp: 40, improvementMinDelta: 0.2, recoveryXp: 80, recoveryMinJump: 1.5, goalXp: 100, goalPackId: 'gold', weeklyCap: 700 },
   academy: {
-    completeXp: 20, highScoreXp: 30, highScoreMin: 0.8, mistakeFixedXp: 25, mistakeFixedMaxPerActivity: 4,
+    completeXp: 20, completeMinScore: 0.5, highScoreXp: 30, highScoreMin: 0.8, mistakeFixedXp: 25, mistakeFixedMaxPerActivity: 4,
     improvedScoreXp: 15, improvedScoreMinDelta: 0.1, minSecondsPerQuestion: 0, repeatCooldownHours: 20, dailyCap: 150, weeklyCap: 600,
   },
   levels: { base: 250, growth: 1.18 },

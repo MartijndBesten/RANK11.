@@ -6,7 +6,7 @@
 import { requireUser } from '../auth.ts';
 import { newId, randomSeed } from '../crypto.ts';
 import { auditStmt, isConstraintError, many, one, stmt } from '../db.ts';
-import { createRng, FORMATIONS, oddsTable, openPack, PACKS } from '../engine.ts';
+import { createRng, FORMATIONS, oddsTable, openPack, PACKS, quickSellValue } from '../engine.ts';
 import { CATALOG_VERSION, cardDef, cardView, getCatalog, starterSquad } from '../game.ts';
 import { badRequest, conflict, json, notFound, readJson, str, type Ctx } from '../http.ts';
 
@@ -180,4 +180,36 @@ export async function openPackGrant(ctx: Ctx): Promise<Response> {
       revealOrder: result.revealOrder.map((p) => cards.find((c) => c.def === p)?.id),
     },
   }, 201);
+}
+
+/**
+ * Snel verkopen: kaarten inleveren voor coins. Niet voor kaarten in het elftal of op de bank, en niet als
+ * het daarna onmogelijk wordt een volledig elftal op te stellen. Alles of niets in één batch.
+ */
+export async function sellCards(ctx: Ctx): Promise<Response> {
+  const user = requireUser(ctx);
+  const db = ctx.env.DB;
+  const body = await readJson(ctx.req);
+  const ids = body.cardIds;
+  if (!Array.isArray(ids) || ids.length === 0 || ids.length > 50 || ids.some((i) => typeof i !== 'string')) throw badRequest('Kies 1 tot 50 kaarten.');
+  const unique = [...new Set(ids as string[])];
+  const owned = new Map((await userCards(db, user.id)).map((c) => [c.id, c]));
+  if (unique.some((id) => !owned.has(id))) throw notFound();
+  const lineup = await one<{ card_ids_json: string; bench_json: string }>(db, 'SELECT card_ids_json, bench_json FROM lineups WHERE user_id = ?', user.id);
+  const locked = new Set([...(JSON.parse(lineup?.card_ids_json ?? '[]') as string[]), ...(JSON.parse(lineup?.bench_json ?? '[]') as string[])]);
+  if (unique.some((id) => locked.has(id))) throw conflict('in_lineup', 'Haal de kaart eerst uit je elftal of van de bank.');
+  if (owned.size - unique.length < LINEUP_SIZE) throw conflict('too_few_cards', 'Je houdt minimaal 11 kaarten over voor een elftal.');
+  let total = 0;
+  const statements: D1PreparedStatement[] = [];
+  for (const id of unique) {
+    const def = cardDef(owned.get(id)!.card_def_id);
+    const value = def ? quickSellValue(def) : 0;
+    total += value;
+    statements.push(stmt(db, 'DELETE FROM card_instances WHERE id = ? AND user_id = ?', id, user.id));
+    if (value > 0) statements.push(stmt(db, `INSERT INTO wallet_ledger (id, user_id, currency, delta, reason, ref, created_at) VALUES (?, ?, 'coins', ?, 'card.sell', ?, ?)`,
+      newId('led'), user.id, value, `sell:${id}`, ctx.now));
+  }
+  statements.push(auditStmt(db, user.id, 'collection.sell', user.id, { cards: unique, total }, ctx.now));
+  await db.batch(statements);
+  return json({ sold: unique.length, coins: total, balances: await balances(db, user.id) });
 }

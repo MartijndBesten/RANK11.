@@ -39,16 +39,16 @@ export function GradesOverview({ nav }: { nav: Nav }) {
     <div className="page">
       <div className="page-head">
         <div>
-          <div className="eyebrow">Cijferdashboard · {d.period.name}</div>
+          <div className="eyebrow">Cijfers · {d.period.name}</div>
           <h1 className="display">Mijn cijfers</h1>
-          <p className="dim small">Zelf ingevoerd. Gemiddelden zijn gewogen; het algemene gemiddelde is het gemiddelde van je vakgemiddelden.</p>
+          <p className="dim small">Je gemiddelden en je volgende stap.</p>
         </div>
-        <button className="btn small" onClick={() => nav.go('cijfers-invoeren')}><IconPlus width={18} height={18} /> Cijfer</button>
+        <button className="btn small" onClick={() => nav.go('cijfers-invoeren')}><IconPlus width={18} height={18} /> Cijfer invoeren</button>
       </div>
 
-      <div className="kpis">
+      <div className="kpis grade-kpis">
         <div className="kpi">
-          <span className="kpi-label">Gemiddelde</span>
+          <span className="kpi-label">Alle periodes</span>
           <span className={`kpi-value ${gradeClass(d.overall)}`}>{fmt(d.overall)}</span>
           <Sparkline values={d.overallRunning.map((p) => p.average)} />
         </div>
@@ -65,11 +65,6 @@ export function GradesOverview({ nav }: { nav: Nav }) {
           <span className="kpi-label">Voldoendes</span>
           <span className="kpi-value">{pass === null ? '–' : Math.round(pass * 100)}<small>%</small></span>
           <span className="kpi-note">{grades.filter((g) => g.value >= 5.5).length} van {grades.length} cijfers</span>
-        </div>
-        <div className="kpi">
-          <span className="kpi-label">Zware toetsen</span>
-          <span className="kpi-value">{Math.round(heavy.share * 100)}<small>%</small></span>
-          <span className="kpi-note">van je totale weging ({heavy.count} toets{heavy.count === 1 ? '' : 'en'} met weging 3+)</span>
         </div>
       </div>
 
@@ -97,31 +92,42 @@ export function GradesOverview({ nav }: { nav: Nav }) {
           </section>
 
           <section className="panel electric" aria-label="Inzichten">
-            <div className="panel-head"><h2>Inzichten</h2><span className="tag">regels, geen gokwerk</span></div>
+            <div className="panel-head"><h2>Dit helpt je verder</h2></div>
             {d.insights.length ? (
-              <ul className="insights">{d.insights.slice(0, 6).map((i) => <li key={i.id} data-tone={i.tone}>{i.text}</li>)}</ul>
+              <>
+                <ul className="insights">{d.insights.slice(0, 1).map((i) => <li key={i.id} data-tone={i.tone}>{i.text}</li>)}</ul>
+                {d.insights.length > 1 && <details className="disclosure inline-details">
+                  <summary>Meer inzichten ({d.insights.length - 1})</summary>
+                  <ul className="insights">{d.insights.slice(1).map((i) => <li key={i.id} data-tone={i.tone}>{i.text}</li>)}</ul>
+                </details>}
+              </>
             ) : <p className="hint">Nog te weinig cijfers voor betrouwbare inzichten.</p>}
           </section>
         </div>
 
         <div className="stack">
-          <section className="panel" aria-label="Verdeling">
-            <div className="panel-head"><h2>Verdeling</h2><span className="dim small">{grades.length} cijfers</span></div>
-            <DistributionBars bins={distribution(grades)} />
-          </section>
+          <details className="panel disclosure" aria-label="Verdeling">
+            <summary>Verdeling en toetsweging</summary>
 
-          <section className="panel" aria-label="Persoonlijke records">
-            <div className="panel-head"><h2>Records</h2></div>
+            <p className="hint">{grades.length} cijfers · zware toetsen vormen {Math.round(heavy.share * 100)}% van je totale weging ({heavy.count} met weging 3 of hoger).</p>
+            <DistributionBars bins={distribution(grades)} />
+            <p className="hint">Gemiddelden per vak zijn gewogen. Het algemene gemiddelde is het gemiddelde van je vakgemiddelden.</p>
+          </details>
+
+          <details className="panel disclosure" aria-label="Persoonlijke records">
+            <summary>Persoonlijke records</summary>
+
             <div className="records">
               <div><span className="kpi-label">Hoogste cijfer</span><b className="grade-high">{fmt(records.bestGrade?.value)}</b><small>{records.bestGrade ? `${d.subjectById(records.bestGrade.subjectId).name} · ${shortDate(records.bestGrade.date)}` : ''}</small></div>
               <div><span className="kpi-label">Beste vak</span><b>{fmt(records.bestSubjectAverage?.average)}</b><small>{records.bestSubjectAverage ? d.subjectById(records.bestSubjectAverage.subjectId).name : ''}</small></div>
               <div><span className="kpi-label">Grootste sprong</span><b className="grade-ok">{records.biggestJump && records.biggestJump.delta > 0 ? `+${fmt(records.biggestJump.delta, 2)}` : '–'}</b><small>{records.biggestJump && records.biggestJump.delta > 0 ? d.subjectById(records.biggestJump.subjectId).name : 'nog geen'}</small></div>
               <div><span className="kpi-label">Voldoendes op rij</span><b>{records.longestPassRun}</b><small>langste reeks toetsen</small></div>
             </div>
-          </section>
+          </details>
 
-          <section className="panel" aria-label="XP">
-            <div className="panel-head"><h2>XP</h2><span className="dim small">niveau {xp.level.level}</span></div>
+          <details className="panel disclosure" aria-label="XP">
+            <summary>XP en beloningen</summary>
+
             <div className="xp-split">
               {(['performance', 'progress', 'academy'] as const).map((c) => (
                 <div key={c}><span className="kpi-label">{CAT_LABEL[c]}</span><b className="num">{xp.byCategory[c]}</b></div>
@@ -136,10 +142,11 @@ export function GradesOverview({ nav }: { nav: Nav }) {
               ))}
             </ul>
             <p className="hint">Plafonds per dag en week voorkomen farmen. Verwijder je een cijfer, dan gaat de XP ervan weer af.</p>
-          </section>
+          </details>
 
-          <section className="panel" aria-label="Prestaties">
-            <div className="panel-head"><h2>Prestaties</h2><span className="dim small">{ach.filter((a) => a.achieved).length}/{ach.length}</span></div>
+          <details className="panel disclosure" aria-label="Prestaties">
+            <summary>Prestaties</summary>
+
             <ul className="ach">
               {ach.filter((a) => a.group !== 'academy' || state.settings.academy).map((a) => (
                 <li key={a.id} data-done={a.achieved || undefined}>
@@ -148,7 +155,7 @@ export function GradesOverview({ nav }: { nav: Nav }) {
                 </li>
               ))}
             </ul>
-          </section>
+          </details>
         </div>
       </div>
     </div>

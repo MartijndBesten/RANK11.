@@ -236,3 +236,51 @@ button.row:hover .row-title { color: #fff; }
 
 /* Korte, onzichtbare plek terwijl een scherm (lazy chunk) laadt. */
 .route-loading { min-height: 50vh; }
+
+/* Bediening en uitleg lezen als tekst; de condensed sportletter blijft op kaarten en spelcijfers. */
+.page .display { font-family: var(--font-ui); font-weight: 750; text-transform: none; letter-spacing: -0.025em; line-height: 1.15; }
+.page-head h1 { font-size: clamp(28px, 6vw, 38px); }
+.panel-head h2, .panel-head h3, .sheet-head h2 {
+  font-family: var(--font-ui); font-weight: 700; text-transform: none;
+  font-size: 18px; letter-spacing: -0.01em; line-height: 1.35;
+}
+.shell .subnav-item, .shell .seg button, .field > span, .kpi-label {
+  font-family: var(--font-ui); font-weight: 600; text-transform: none;
+  letter-spacing: 0; font-size: 14px;
+}
+.shell .subnav-item { min-height: 48px; color: var(--text-dim); }
+.shell .subnav-item[aria-current='page'] { color: var(--gold-1); }
+.shell .nav button { font-size: 12px; letter-spacing: 0; }
+.shell .btn.small { height: auto; min-height: 44px; padding-block: 8px; font-size: 15px; }
+.small, .hint, .kpi-note, .row-sub, .toggle-row small { font-size: 14px; line-height: 1.5; }
+.row-sub { white-space: normal; overflow: visible; }
+.tag { font-size: 12px; text-transform: none; letter-spacing: 0; height: auto; min-height: 24px; }
+.link-btn { min-height: 36px; padding-block: 6px; }
+.icon-btn, .icon-action { min-width: 44px; min-height: 44px; }
+.topbar .club-name { font-family: var(--font-ui); font-size: 16px; text-transform: none; letter-spacing: 0; }
+.topbar .lvl { text-transform: none; letter-spacing: 0; font-size: 12px; }
+.page .row { padding-block: 14px; }
+
+/* Meer informatie is opvraagbaar met muis, toetsenbord en schermlezer. */
+.disclosure > summary { cursor: pointer; min-height: 44px; padding-block: 10px; font-weight: 650; line-height: 1.5; color: var(--text); }
+.disclosure > summary::marker { color: var(--gold-2); }
+.disclosure[open] > summary { margin-bottom: 12px; border-bottom: 1px solid var(--line); }
+.disclosure > summary:focus-visible { outline: 2px solid var(--electric-hot); outline-offset: 3px; border-radius: 6px; }
+.inline-details { margin-top: 10px; }
+.inline-details > summary { color: var(--text-dim); font-size: 14px; }
+.grade-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.grade-kpis .kpi-label { font-size: 13px; }
+.grade-kpis .kpi-value { font-family: var(--font-ui); font-size: 30px; font-weight: 750; line-height: 1.25; }
+.grade-kpis .delta { flex-wrap: wrap; font: 600 13px/1.5 var(--font-ui); }
+.home .hub-packs, .home .hub-squad { flex-wrap: wrap; gap: 12px; }
+.home-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.home-actions .btn { flex: 1 1 150px; }
+.home-details > .page-cols { margin-top: 8px; }
+.home-vault .home-vault-title { font: 700 18px/1.4 var(--font-ui); text-transform: none; letter-spacing: 0; }
+.next-test { margin: 0 0 6px; overflow-wrap: anywhere; }
+@media (max-width: 380px) {
+  .shell .nav button { font-size: 11px; }
+  .grade-kpis { gap: 6px; }
+  .grade-kpis .kpi { padding: 10px 8px; }
+  .grade-kpis .kpi-value { font-size: 26px; }
+}

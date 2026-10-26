@@ -104,7 +104,7 @@ function Overview({ nav }: { nav: Nav }) {
         <div>
           <div className="eyebrow">RANK Academy</div>
           <h1 className="display">Trainingskamp</h1>
-          <p className="dim">Oefen voor je toetsen. Fouten komen terug tot je ze beheerst. Oefenscores worden nooit als schoolcijfer opgeslagen.</p>
+          <p className="dim">Kies een vak en oefen zes vragen. Je oefenscore telt niet als schoolcijfer.</p>
         </div>
         <button className="btn" onClick={() => nav.go('academy-oefenen')}>Oefenen</button>
       </div>
@@ -154,17 +154,19 @@ function Overview({ nav }: { nav: Nav }) {
         </div>
 
         <div className="stack">
-          <section className="panel" aria-label="Zo werkt het">
-            <div className="panel-head"><h2>Zo werkt het</h2></div>
+          <details className="panel disclosure" aria-label="Zo werkt het">
+            <summary>Hoe werkt oefenen?</summary>
+
             <ul className="insights">
               <li>Een fout komt na een dag terug als herkansing. Goed in een latere oefening telt als verbeterde fout.</li>
               <li>Goed bij herhaling: de vraag komt steeds later terug (1, 3, 7, 14 dagen). Drie keer gespreid goed = beheerst.</li>
               <li>XP alleen voor echte vooruitgang: nieuwe stof, verbeterde fouten en betere scores. Dezelfde oefening herhalen levert niets op. Geen tijdsdruk: neem de tijd die je nodig hebt.</li>
             </ul>
-          </section>
+          </details>
 
-          <section className="panel" aria-label="Laatste oefeningen">
-            <div className="panel-head"><h2>Laatste oefeningen</h2></div>
+          <details className="panel disclosure" aria-label="Laatste oefeningen">
+            <summary>Laatste oefeningen</summary>
+
             {data.recent.length ? (
               <ul className="rows">
                 {data.recent.slice(0, 8).map((r) => (
@@ -181,10 +183,11 @@ function Overview({ nav }: { nav: Nav }) {
                 ))}
               </ul>
             ) : <div className="empty"><span>Nog geen oefeningen gedaan.</span></div>}
-          </section>
+          </details>
 
-          <section className="panel electric" aria-label="Koppelingen">
-            <div className="panel-head"><h2>Koppelingen</h2></div>
+          <details className="panel electric disclosure" aria-label="Koppelingen">
+            <summary>Oefenmodule en koppelingen</summary>
+
             <ul className="rows">
               <li className="row">
                 <span className="acad-link on" aria-hidden="true"><IconCheck /></span>
@@ -203,7 +206,7 @@ function Overview({ nav }: { nav: Nav }) {
                 <span className="tag demo">uit</span>
               </li>
             </ul>
-          </section>
+          </details>
         </div>
       </div>
     </div>

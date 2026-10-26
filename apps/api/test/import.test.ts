@@ -58,6 +58,33 @@ describe('cijferimport op de server', () => {
     expect(allGrades(app, u)).toHaveLength(2);
   });
 
+  it('historische bulkimport levert geen onbeperkte beloningen (P2): dag-/weekplafonds begrenzen packs, coins en vouchers', async () => {
+    const app = createApp();
+    const u = await register(app, 'Historie', await platformCode(app));
+    const subs = ['wiskunde', 'nederlands', 'engels', 'frans', 'biologie', 'geschiedenis', 'natuurkunde', 'aardrijkskunde'];
+    const rows = Array.from({ length: 48 }, (_, i) => ({
+      subjectId: subs[i % subs.length], testName: `Toets ${i}`, value: 5 + (i % 6), weight: (i % 3) + 1,
+      date: new Date(Date.UTC(2026, 0, 1) + i * 6 * 86_400_000).toISOString().slice(0, 10),
+    }));
+    const res = await importRows(app, u, rows);
+    expect(res.body.created).toBe(48); // alle 48 verschillende toetsen komen binnen...
+    const packs = packCount(app, u);
+    const coins = (app.db.db.prepare("SELECT COALESCE(SUM(delta),0) AS t FROM wallet_ledger WHERE user_id=? AND currency='coins'").get(u.id) as { t: number }).t;
+    const vouchers = (app.db.db.prepare("SELECT COALESCE(SUM(delta),0) AS t FROM wallet_ledger WHERE user_id=? AND currency='vouchers'").get(u.id) as { t: number }).t;
+    const rewardedFull = (app.db.db.prepare("SELECT COUNT(*) AS n FROM reward_grants WHERE user_id=? AND kind='initial' AND status='rewarded'").get(u.id) as { n: number }).n;
+    const cappedN = (app.db.db.prepare("SELECT COUNT(*) AS n FROM reward_grants WHERE user_id=? AND status='capped'").get(u.id) as { n: number }).n;
+    // ...maar de beloningen zijn begrensd: hooguit het dagplafond aan volledige cijferbeloningen, de rest 'capped'.
+    expect(rewardedFull).toBeLessThanOrEqual(4);   // maxRewardedPerDay
+    expect(cappedN).toBeGreaterThan(30);           // het leeuwendeel wordt begrensd
+    expect(packs).toBeLessThanOrEqual(10);
+    expect(vouchers).toBeLessThanOrEqual(1);       // weekplafond vouchers uit voortgang
+    expect(coins).toBeLessThanOrEqual(3000);
+    // Opnieuw importeren voegt niets toe.
+    const again = await importRows(app, u, rows);
+    expect(again.body).toMatchObject({ created: 0, duplicate: 48 });
+    expect(packCount(app, u)).toBe(packs);
+  });
+
   it('ongeldige rijen worden geweigerd zonder de geldige te blokkeren', async () => {
     const app = createApp();
     const u = await register(app, 'Deels', await platformCode(app));

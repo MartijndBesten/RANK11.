@@ -15,6 +15,7 @@ import { academyOverview, createSession, submitSession } from './modules/academy
 import { getConfig } from './modules/config.ts';
 import { getSettings, putSettings } from './modules/settings.ts';
 import { connectIntegration, disconnectIntegration, getIntegration, listIntegrations, syncIntegration } from './modules/integrations/routes.ts';
+import { deleteAccount, exportAccount } from './modules/account.ts';
 import { runScheduledSync } from './modules/integrations/sync.ts';
 import { draftStatus, pickInDraft, startDraft } from './modules/drafts.ts';
 import { createGoal, createUpcoming, deleteGoal, deleteUpcoming, getPlanning } from './modules/planning.ts';
@@ -42,6 +43,8 @@ export const router = new Router()
   .add('POST', '/api/auth/login', login)
   .add('POST', '/api/auth/logout', logout)
   .add('GET', '/api/me', me)
+  .add('GET', '/api/me/export', exportAccount)
+  .add('DELETE', '/api/me', deleteAccount)
   .add('POST', '/api/admin/platform-invites', adminCreatePlatformInvite)
   // club
   .add('GET', '/api/club', getClub)

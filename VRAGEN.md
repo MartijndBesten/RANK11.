@@ -408,3 +408,29 @@ Nog niet beantwoord.
 **Verwerkt in**
 
 Nog niet verwerkt.
+
+### V-018 — Kleine geluksfactor in kaartbattles?
+
+status: open
+gesteld_door: claude
+datum: 2026-10-26
+
+**Vraag**
+
+Uit de simulatie blijkt dat een battle bijna altijd wordt gewonnen door het team met een paar ratingpunten meer. Met 1-2 punten minder zakt de winkans duidelijk. Ook met een eerlijke economie zorgt packgeluk al voor zulke verschillen. Kies:
+
+- (A) zo laten. De economie houdt actieve leerlingen dicht bij elkaar; echte spelers maken ook fouten.
+- (B) een kleine, zichtbare "vorm van de dag": per duel 0-4 extra, achteraf getoond. In een proef ging de onderdog met 1-2 punten achterstand van ±10% naar ±20% winkans.
+- (C) blind verdedigen: de verdediger kiest zijn kaart zonder de aanvalskaart te zien. Dat vraagt meer tactiek, maar verandert het spelverloop en het battlescherm.
+
+**Waarom nodig**
+
+Dit is een spelontwerpkeuze (geluk tegenover vaardigheid) en raakt het battlescherm. Daarom bouw ik het niet zonder akkoord. Het blokkeert de rest niet.
+
+**Antwoord**
+
+Nog niet beantwoord.
+
+**Verwerkt in**
+
+Nog niet verwerkt.

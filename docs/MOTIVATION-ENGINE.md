@@ -16,17 +16,17 @@ Elke soort wordt apart berekend en apart begrensd. Het totaal (som) bepaalt het 
 | **Vooruitgang-XP** (`progress`) | hoger vakgemiddelde, herstel na een onvoldoende, bereikt doel | `gradeXp` |
 | **Academy-XP** (`academy`) | afgeronde oefenactiviteit met leerwaarde | `academyReward` |
 
-## 3. Configuratie (exacte waarden, versie `2026.10-motivatie.3`)
+## 3. Configuratie (exacte waarden, versie `2026.10-motivatie.4`)
 
 **Prestatie**
 
 | Instelling | Waarde |
 |---|---|
 | Per cijfer | 50 XP |
-| Bonus (alleen de hoogste die geldt) | ≥ 7: +30 · ≥ 8: +60 · ≥ 9: +100 |
+| Bonus (alleen de hoogste die geldt; sinds `motivatie.4`) | ≥ 7: +20 · ≥ 8: +40 · ≥ 9: +60 |
 | Plafond per dag / per week | 450 / 1500 XP |
 
-Een 6,4 levert dus 50 XP, een 7,0 80 XP, een 8,6 110 XP en een 9,6 150 XP. Ook een onvoldoende levert 50 XP: invoeren loont altijd, zodat er geen reden is om een slecht cijfer weg te laten.
+Een 6,4 levert dus 50 XP, een 7,0 70 XP, een 8,6 90 XP en een 9,6 110 XP. Ook een onvoldoende levert 50 XP: invoeren loont altijd, zodat er geen reden is om een slecht cijfer weg te laten.
 
 **Vooruitgang**
 

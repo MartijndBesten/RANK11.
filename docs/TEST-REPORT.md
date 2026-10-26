@@ -1,4 +1,4 @@
-# Testrapport — ronde 4 (26 oktober 2026)
+# Testrapport — ronde 5 (26 oktober 2026)
 
 Het oudere `TESTRAPPORT.md` beschrijft ronde 1 en 2. Dit bestand geeft de actuele stand.
 
@@ -6,18 +6,18 @@ Statusladder: GEBOUWD → OFFLINE GETEST → PRAKTIJKGETEST → LIVE GECONTROLEE
 
 ## Geautomatiseerde tests
 
-`npm test` in de root draait engine, API en de PII-controle. Laatste run: **211 engine-tests en 58 API-tests groen; PII-controle schoon.** Typecheck (engine, web, api): geen fouten.
+`npm test` in de root draait engine, API en de PII-controle. Laatste run: **215 engine-tests en 61 API-tests groen; PII-controle schoon.** Typecheck (engine, web, api): geen fouten.
 
 | Testbestand | Tests | Wat |
 |---|---:|---|
 | engine `grades`, `stats-goals` | 45 | gemiddelden, validatie, wat-als, statistieken, doelen, inzichten |
 | engine `motivation-academy` | 24 | XP-categorieën, plafonds, idempotentie, Academy-regels (o.a. geen afrond-XP onder 50% goed), Grade League |
-| engine `rewards`, `economy` | 30 | beloningstiers, eerlijke configuratie, voortgangsbeloningen, schooljaarsimulatie |
+| engine `rewards`, `economy` | 34 | beloningstiers, economie v2 en v3, clubniveau-beloning, schooljaarsimulatie met winkans tegen het veld (grenzen: ≤ 30 Goudpacks/jaar, elk actief profiel ≥ 35% winkans, teamverschil ≤ 3) |
 | engine `practice` | 9 | herhaling met intervallen 1/3/7/14 dagen, "verbeterd" pas in een latere sessie, beheerst na 3× gespreid goed |
 | engine `starter` | 3 | 11 basisspelers op 4-3-3 + 7 reserves, deterministisch per seed |
 | engine `catalog-packs`, `squad-draft`, `market`, `simulate` | 31 | catalogus, packs, draft, transfermarkt, simulaties |
 | engine `competition/*` | 69 | battle (26), ranglijst (11), schema's (24), toernooi (8) |
-| api (9 bestanden) | 58 | auth, pools, wedstrijden, competities, cijfers, collectie/packs, MatchDO, ronde 4 (config, doelen, kluis, draft, deadline, Academy, Grade League, verkopen), **isolatie** |
+| api (10 bestanden) | 61 | ronde 5 (clubniveau-Goudpack, economieversies, speluitleg per gebruiker met validatie en isolatie), auth, pools, wedstrijden, competities, cijfers, collectie/packs, MatchDO, ronde 4 (config, doelen, kluis, draft, deadline, Academy, Grade League, verkopen), **isolatie** |
 
 ### Isolatie tussen accounts (`apps/api/test/isolatie.test.ts`)
 
@@ -34,12 +34,18 @@ Scripts staan in `tools/e2e/`. Online-scripts draaien tegen `node tools/dev-onli
 |---|---|---|
 | `online.cjs` | Twee nieuwe testaccounts: registreren, startelftal (11 + 7), onvoldoende → doel → herstelcijfer → hoog cijfer, kluis met 3 beloningen, voortgangsbeloning zichtbaar, pack openen, herladen, uitloggen, inloggen (cijfers blijven), B ziet niets van A (ook niet via `/api/grades`), pool maken + code + lid worden, uitdagen + accepteren, asynchrone battle tot het einde, serverranglijst met beide spelers, Grade League | **20/20 geslaagd**, geen paginafouten |
 | `academy.cjs` | Oefening in demo en online; online: sessie bevat geen antwoorden, XP en voortgang per onderwerp op de server, blijft na herladen | **8/8 geslaagd** |
+| `uitleg.cjs` | Speluitleg: eerste keer vanzelf, 'Begrepen', 'Geen uitleg meer tonen', terugroepen via 'Hoe werkt dit?', schakelaar in Instellingen; online per gebruiker op de server (ander toestel, ander account) | **14/14 geslaagd** |
 | `demo.cjs` | Demo zonder account: cijfer, dubbele invoer geweigerd, ongeldig cijfer geweigerd, kluis, onthulling, battle tegen de computer, ranglijst | **9/9 geslaagd** |
 | `overflow.cjs demo` / `online` | 17 schermen × 8 maten (360×740 t/m 1180×820) | Geen horizontale overloop, geen paginafouten, in beide modi |
 
-Screenshots: `docs/review/v4/` (online-stack met twee testaccounts, Academy demo en online).
+Screenshots: `docs/review/v4/` (online-stack met twee testaccounts, Academy) en `docs/review/v5/` (speluitleg).
 
-## Bevindingen deze ronde (opgelost)
+## Bevindingen ronde 5 (opgelost)
+
+- Online zette 'Geen uitleg meer tonen' de uitleg niet echt uit: de tweede update (gezien markeren) overschreef de eerste. Nu functionele updates.
+- Teksten in de app noemden nog de oude beloningen (voucher bij 7,5; Goudpack bij herstelchallenge; Academy-mijlpalen niet in de demo). Bijgewerkt.
+
+## Bevindingen ronde 4 (opgelost)
 
 - Academy gaf 20 XP voor een afgeronde oefening met 0 van 6 goed (wegklikken). Nu pas vanaf 50% goed, met een eigen status en uitleg.
 - Het XP-label in het Academy-resultaat werd afgekapt; nu loopt het door op een volgende regel.

@@ -1,6 +1,6 @@
 # Projectstatus — wat echt werkt en wat demo is
 
-Stand: 26 oktober 2026 (ronde 4). De actuele projectstatus en de volgende actor staan altijd in `HANDOFF.md`.
+Stand: 26 oktober 2026 (ronde 5). De actuele projectstatus en de volgende actor staan altijd in `HANDOFF.md`.
 
 De app heeft twee modi:
 
@@ -20,8 +20,9 @@ Legenda: **Server** = berekend en opgeslagen door de server, getest met meerdere
 | Cijfers invoeren, corrigeren, verwijderen, geschiedenis | Server | Lokaal | Dubbele-invoercontrole; status "zelf ingevoerd" |
 | Cijferdashboard, vakpagina's, inzichten | In de app berekend uit servercijfers | Lokaal | Zelfde engine |
 | Doelen en geplande toetsen | Server | Lokaal | |
-| XP (prestatie, vooruitgang, Academy) met plafonds | Server | Lokaal | Motivatieconfig `2026.10-motivatie.3` |
-| Cijferkluis, beloningen, voortgangsbeloningen (V-011) | Server | Lokaal | `2026.10-eerlijk.1` + `2026.10-voortgang.1` |
+| XP (prestatie, vooruitgang, Academy) met plafonds | Server | Lokaal | Motivatieconfig `2026.10-motivatie.4` |
+| Cijferkluis, beloningen, voortgangsbeloningen (economie v3) | Server | Lokaal | `2026.10-haalbaar.1` + `2026.10-voortgang.2`; Goudpack per clubniveau (`docs/REWARD-ECONOMY.md` §10) |
+| Speluitleg (korte uitleg, uit te zetten, terug te lezen via 'Hoe werkt dit?') | Server (per gebruiker) | Lokaal | Start, kluis, packs, elftal, competitie, Academy |
 | Packs openen, kansentabel | Server | Lokaal | Fictieve spelers |
 | Draft met garantieteller | Server | Lokaal | Keuzes op de server gegenereerd |
 | Elftal, formatie, bank | Server | Lokaal | |
@@ -35,12 +36,13 @@ Legenda: **Server** = berekend en opgeslagen door de server, getest met meerdere
 | Live battle (30 s per zet, WebSocket) | API gebouwd en getest | — | De app gebruikt nu alleen asynchroon |
 | Transfermarkt (V-015) | Uit via feature flag | Uit | Engine en regels klaar |
 | Koppeling leren.martijndenbesten.com (V-012) | Voorbereid, staat uit | — | Site niet gewijzigd |
+| Magister-koppeling per speler | Niet gebouwd, bewust | — | Geen officiële route per leerling; alleen via school en partnerprogramma (`docs/onderzoek/MAGISTER.md`). Handmatig invoeren is de standaard |
 | Meldingen | Alleen in de app | Alleen in de app | Geen pushmeldingen |
 | Ouderaccount en toestemming | Niet gebouwd | — | Blokkeert een test met echte gebruikers (`docs/BESLOTEN-TEST.md`) |
 
 ## Getest
 
-Zie `docs/TEST-REPORT.md`. Kort: engine 211 tests, API 58 tests (waaronder isolatie tussen accounts), E2E met twee testaccounts tegen de lokale stack (20 controles), Academy-E2E (demo en online), demo-regressie, lay-out op 17 schermen × 8 maten in beide modi.
+Zie `docs/TEST-REPORT.md`. Kort: engine 215 tests, API 61 tests (waaronder isolatie tussen accounts), E2E met twee testaccounts tegen de lokale stack (20 controles), speluitleg-E2E (14), Academy-E2E (demo en online), demo-regressie, lay-out op 17 schermen × 8 maten in beide modi, schooljaarsimulatie met 12 leerlingprofielen.
 
 ## Niet gedaan, en bewust niet
 

@@ -1,10 +1,37 @@
 # HANDOFF — RANK11.
 
-**Status:** `wacht-op-review`. Ronde 4 is klaar: de app is gekoppeld aan de server, maar die draait alleen **lokaal**. Er staat niets online; dit is geen werkende online multiplayer voor gebruikers.
-**Bijgewerkt:** 26-10-2026, ochtend (Claude Code, cloudsessie).
+**Status:** `wacht-op-besluit`. Ronde 5 (economie v3, speluitleg, Magister-onderzoek) is klaar en gepusht. Voor de Magister-koppeling via de interne API ligt een plan klaar; ik bouw pas na akkoord van Martijn.
+**Bijgewerkt:** 26-10-2026 (Claude Code, cloudsessie).
 **Branch:** `main` (gepusht)
 **Volgende actor:** Martijn
-**Volgende stap:** screenshots in `docs/review/v4/` bekijken (lokale online-stack met twee testaccounts) en eventueel de demo in de preview (https://claude.ai/artifact/L5dsftxHszJFRNqb35xBa9, versie 6; privé reviewpagina, alleen demo, geen server). Daarna: V-017 beantwoorden en beslissen over de route naar een besloten test (`docs/BESLOTEN-TEST.md`; V-005, V-006, V-007).
+**Volgende stap:** akkoord op (of aanpassing van) het Magister-plan uit de chat, inclusief de risicopunten; daarna V-017 en V-018.
+
+## Ronde 5 (26 oktober 2026)
+
+| Opdracht | Status |
+|---|---|
+| Uiterlijk behouden | Geen redesign. Alleen een klein uitlegblok in dezelfde stijl erbij |
+| Beloningen positief en haalbaar | KLAAR: economie v3 (`docs/REWARD-ECONOMY.md` §10). Goudpacks komen vooral uit het clubniveau; iedere voldoende geeft een Starterspack; 8,5+ geeft een voucher, 9,5+ een Goudpack. In de simulatie (12 profielen, 16 jaren) zitten actieve profielen op 47-60% winkans tegen het veld (was 37-80%), met 13-24 Goudpacks per jaar (was 43-106) |
+| Magister per speler | Onderzocht: er is geen officiële route per leerling, alleen via school en partnerprogramma (`docs/onderzoek/MAGISTER.md`). Martijn vraagt nu een koppeling via de interne API; het plan wacht op akkoord |
+| Speluitleg | KLAAR: uitleg bij start, kluis, packs, elftal, competitie en Academy. Te sluiten of definitief uit te zetten, terug te lezen via 'Hoe werkt dit?', schakelaar in Instellingen, gezien-status per gebruiker (server) |
+
+**Tests:**
+- engine 215 en API 61 groen, typecheck schoon, PII schoon;
+- E2E: online 20/20, uitleg 14/14, Academy 8/8, demo 9/9;
+- lay-out 17 schermen × 8 maten zonder overloop (demo en online).
+
+**Commits:** `4e86c9f` (economie v3), `533e8f7` (speluitleg) en de documentatiecommit met deze HANDOFF.
+
+**Bestanden (belangrijkste):**
+- Engine: `packages/engine/src/{economy,motivation,simulate}.ts`
+- Server: `apps/api/migrations/0005_haalbaar_uitleg.sql`, `src/modules/settings.ts`
+- Web: `apps/web/src/components/Help.tsx`, `state/{store,onlineStore}.tsx`, `screens/SettingsSheet.tsx`
+- Tools: `tools/sim/balans.ts`, `tools/e2e/uitleg.cjs`
+- Docs: `docs/{REWARD-ECONOMY,SIMULATIES,MOTIVATION-ENGINE,PROJECT-STATUS,TEST-REPORT,OPEN-ISSUES}.md`, `docs/onderzoek/MAGISTER.md`, `docs/review/v5/`
+
+**Open vragen:** V-003, V-005, V-006, V-007, V-008, V-010, V-017, V-018 (geluksfactor in battles, nieuw).
+
+**Bouwstenenbibliotheek:** beoordeeld, geen PR. Nieuwe kandidaat: schooljaarsimulatie met winkans tegen het veld, als patroon om een spel-economie te toetsen.
 
 ## Ronde 4 (26 oktober 2026)
 

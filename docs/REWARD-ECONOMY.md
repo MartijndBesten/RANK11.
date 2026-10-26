@@ -2,7 +2,7 @@
 
 **Stand:** 26-10-2026 · **Code:** `packages/engine/src/rewards.ts`, `economy.ts`, `starter.ts`, `packs.ts`, `draft.ts`, `market.ts`, `simulate.ts`; snel verkopen in `apps/web/src/state/store.tsx` · **Simulaties:** `docs/SIMULATIES.md` (`node --experimental-transform-types tools/sim/balans.ts`)
 
-> **Economie v2 (V-011, 26-10-2026):** zie §9. App (demo) en server gebruiken sinds ronde 4 de nieuwe `FAIR_REWARD_CONFIG` (`2026.10-eerlijk.1`) met de voortgangslaag `DEFAULT_PROGRESS_CONFIG` (`2026.10-voortgang.1`). De oude `DEFAULT_REWARD_CONFIG` (`2026.10-proto.1`, §2) staat nog in de engine ter vergelijking in de simulaties; bestaande toekenningen behouden hun configuratieversie.
+> **Economie v3 "positief en haalbaar" (ronde 5, 26-10-2026):** zie §10. App en server gebruiken `CURRENT_REWARD_CONFIG` = `ACHIEVABLE_REWARD_CONFIG` (`2026.10-haalbaar.1`) en `CURRENT_PROGRESS_CONFIG` = `ACHIEVABLE_PROGRESS_CONFIG` (`2026.10-voortgang.2`), met motivatie `2026.10-motivatie.4`. Economie v2 (§9) en de oude configuratie (§2) staan nog in de engine ter vergelijking in de simulaties; bestaande toekenningen behouden hun configuratieversie.
 
 ## 1. Spelregels voor de economie
 
@@ -164,3 +164,67 @@ Iedere nieuwe speler krijgt 18 verschillende kaarten: 11 basisspelers die precie
 - De tests in `packages/engine/test/economy.test.ts` bewaken deze grenzen: sterk heeft het maximum, de verhouding blijft ≤ 2,5× en het teamverschil ≤ 5 punten.
 
 **Kanttekening:** in beide economieën komen er veel packs per jaar binnen (honderd of meer). Ieder actief profiel eindigt daardoor rond een teamrating van 95. Het onderscheid zit in het aantal 85+- en speciale kaarten. Of het totale aantal packs omlaag moet, is een aparte afweging.
+
+
+## 10. Economie v3: positief en haalbaar (ronde 5)
+
+**Opdracht (Martijn):** ook cijfers rond 5,5-7,5 moeten een leuke, zinvolle spelervaring geven. Beloon inzet, verbetering, herstel, doelen en oefenen. Hoge cijfers mogen bijzonder zijn, maar geen voorwaarde voor goede spelers of een competitief elftal. Geen eindeloze stroom gratis topkaarten.
+
+**Wat de simulatie van v2 liet zien:**
+- 35 tot 105 Goudpacks per jaar per actieve leerling, en een elftal van ±93 al na tien weken. Dat is een eindeloze stroom.
+- Battles zijn erg gevoelig voor kleine verschillen. Met 1-2 punten teamrating minder zakt je winkans duidelijk, dus kleine voorsprongen in de economie beslissen de competitie.
+
+### 10.1 Bronnen van topkaarten
+
+| Bron | Beloning | Waarom |
+|---|---|---|
+| **Clubniveau omhoog** (alle XP: cijfers invoeren, vooruitgang, doelen, oefenen) | Goudpack per niveau (`pr-niveau:<n>`) | Hoofdbron. Ieder niveau kost meer XP (×1,18), dus wie meer XP heeft, loopt maar weinig verder uit |
+| Persoonlijk doel bereikt | Goudpack (motivatie-engine) + 1 voucher + 300 coins | Doelen stel je zelf, op je eigen niveau |
+| Coins | Goudpack voor 5.000 coins in de winkel | Iedere toets levert coins op (150-500) |
+| 9,5 of hoger | Goudpack + 1 voucher | Extra bijzonder, en zeldzaam |
+
+### 10.2 Per cijfer (`2026.10-haalbaar.1`)
+
+| Cijfer | Beloning |
+|---|---|
+| < 5,5 | 150 coins + XP (invoeren loont altijd) |
+| 5,5 – 6,4 | Starterspack + 200 coins |
+| 6,5 – 7,4 | Starterspack + 250 coins |
+| 7,5 – 8,4 | Starterspack + 300 coins |
+| 8,5 – 9,4 | Starterspack + 350 coins + 1 voucher |
+| ≥ 9,5 | Goudpack + 500 coins + 1 voucher |
+
+Vouchers zijn voor drafts: tijdelijke teams voor een event. Ze maken hoge cijfers bijzonder zonder het vaste elftal sterker te maken.
+
+### 10.3 Voortgang (`2026.10-voortgang.2`)
+
+| Soort | Beloning |
+|---|---|
+| Vooruitgang (vakgemiddelde ≥ 0,6 boven je eigen basis) | Starterspack + 300 coins + 1 voucher |
+| Herstel na een onvoldoende (≥ 1,0 hoger, voldoende) | Starterspack + 300 coins (+ 80 Vooruitgangs-XP uit de motivatie-engine) |
+| Persoonlijk topcijfer (≥ 1,0 boven je eigen gemiddelde) | 150 coins + 1 voucher |
+| Academy-mijlpaal | 1 voucher per 400 Academy-XP (oefen-XP telt al voor het clubniveau) |
+| Weeklimiet vouchers uit voortgang | 1 |
+
+**XP voor hoge cijfers** (motivatie `2026.10-motivatie.4`): 50 per cijfer, bonus +20 (≥ 7), +40 (≥ 8), +60 (≥ 9). Was +30/+60/+100. Zo groeit het clubniveau minder hard alleen door hoge cijfers.
+
+**Clubniveau voor bestaande accounts:** zonder eerdere niveaubeloning telt alleen het huidige niveau (één Goudpack), daarna ieder volgend niveau. Er is geen inhaalslag.
+
+### 10.4 Resultaat (16 schooljaren per profiel, zie `SIMULATIES.md`)
+
+- **Goudpacks per jaar:** 13-24 voor actieve profielen (v2: 43-106). Dat is ongeveer één per twee à drie weken. Daarnaast is er een Starterspack per voldoende.
+- **Winkans tegen het veld** voor actieve profielen ligt tussen 47% en 60% (v2: 37%-80%). Leerlingen rond 5,5-6,5 die doelen stellen of oefenen, zitten rond 50%.
+- **Het elftal groeit het hele jaar door:** ±86 na tien weken, ±91 aan het eind (v2: ±93 na tien weken).
+- **Hoge cijfers** geven meer vouchers (sterk ±40 tegenover gemiddeld ±18) en af en toe een extra Goudpack (9,5+), maar geen grote voorsprong in teamsterkte.
+- **Wie alleen cijfers invoert** (geen doelen, geen Academy), haalt ±46-58%. Het verschil tussen hoge en lage cijfers is binnen die groep klein.
+- **Weinig cijfers invoeren** blijft achter (±17%). Dat is bedoeld: inzet telt.
+
+`packages/engine/test/economy.test.ts` bewaakt de grenzen:
+- hooguit 30 Goudpacks per jaar;
+- elk actief profiel minstens 35% winkans tegen het veld;
+- teamverschil tussen actieve profielen hooguit 3 punten;
+- minder dan de helft van de v2-stroom.
+
+**Meetkanttekeningen:**
+- De computerzet in de simulatie is eenvoudig, en echte spelers maken fouten. Echte winkansen liggen daardoor waarschijnlijk dichter bij 50%.
+- De meetruis per profiel is ongeveer ±5 procentpunt.

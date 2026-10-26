@@ -14,9 +14,9 @@ const g = (subjectId: string, value: number, weight: number, date: string, extra
 describe('Performance en Progress XP', () => {
   it('basis + hoogste bonus (niet gestapeld)', () => {
     expect(performanceXpFor(M, 6)).toBe(50);
-    expect(performanceXpFor(M, 7.2)).toBe(80);
-    expect(performanceXpFor(M, 8.4)).toBe(110);
-    expect(performanceXpFor(M, 9.5)).toBe(150);
+    expect(performanceXpFor(M, 7.2)).toBe(70);
+    expect(performanceXpFor(M, 8.4)).toBe(90);
+    expect(performanceXpFor(M, 9.5)).toBe(110);
   });
   it('verbetering, herstel en doel bereikt (met pack)', () => {
     const before = [g('nk', 4.8, 1, '2026-09-10')];
@@ -57,7 +57,7 @@ describe('Performance en Progress XP', () => {
     const grade = g('ak', 6.5, 1, '2026-10-01');
     let ledger = gradeXp(M, { grade, before: [], goals: [], ledger: [], enteredOn: '2026-10-01' });
     const corr = correctionXp(M, ledger, grade, { ...grade, value: 8.1 }, '2026-10-02');
-    expect(corr[0]!.xp).toBe(110 - 50);
+    expect(corr[0]!.xp).toBe(90 - 50);
     ledger = [...ledger, ...corr];
     expect(correctionXp(M, ledger, grade, { ...grade, value: 7 }, '2026-10-02')).toEqual([]);
     const del = deletionXp(M, ledger, grade, '2026-10-03');

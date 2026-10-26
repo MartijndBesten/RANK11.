@@ -17,8 +17,9 @@ import type { Goal } from './goals.ts';
 import type { Period } from './stats.ts';
 import { categoryTotals, DEFAULT_MOTIVATION_CONFIG, gradeXp, type MotivationConfig, type XpEntry } from './motivation.ts';
 import { academyReward, type LearningEvent } from './academy.ts';
-import { DEFAULT_PROGRESS_CONFIG, FAIR_REWARD_CONFIG, progressRewards, type ProgressGrant, type ProgressRewardConfig } from './economy.ts';
+import { ACHIEVABLE_PROGRESS_CONFIG, ACHIEVABLE_REWARD_CONFIG, progressRewards, type ProgressGrant, type ProgressRewardConfig } from './economy.ts';
 import { starterSquad } from './starter.ts';
+import { battleState, createBattle, duelValue, playCard, type BattleCard, type BattleEvent, type DuelMode, type Side } from './competition/battle.ts';
 
 const pct = (sorted: number[], p: number) => sorted[Math.min(sorted.length - 1, Math.floor(p * sorted.length))] ?? 0;
 
@@ -192,12 +193,19 @@ export interface StudentProfile {
 }
 
 export const STUDENT_PROFILES: StudentProfile[] = [
-  { id: 'sterk', label: 'Sterk en stabiel (≈8,1)', mean: 8.1, sd: 0.7, gradesPerWeek: 3, goals: true, academyPerWeek: 1, academySkill: 0.85, academyGrowth: 0.05, motivated: true },
-  { id: 'gemiddeld', label: 'Gemiddeld (≈6,8)', mean: 6.8, sd: 0.9, gradesPerWeek: 3, goals: true, academyPerWeek: 1, academySkill: 0.65, academyGrowth: 0.1, motivated: true },
-  { id: 'moeite', label: 'Moeite, wel gemotiveerd (≈5,4)', mean: 5.3, endMean: 5.8, sd: 1.0, gradesPerWeek: 3, goals: true, academyPerWeek: 3, academySkill: 0.5, academyGrowth: 0.25, motivated: true },
-  { id: 'stijger', label: 'Stijger (5,5 → 7,0)', mean: 5.5, endMean: 7.0, sd: 0.8, gradesPerWeek: 3, goals: true, academyPerWeek: 2, academySkill: 0.55, academyGrowth: 0.25, motivated: true },
-  { id: 'oefenaar', label: 'Oefenaar Academy (≈6,6)', mean: 6.5, endMean: 6.8, sd: 0.9, gradesPerWeek: 3, goals: true, academyPerWeek: 5, academySkill: 0.6, academyGrowth: 0.25, motivated: true },
-  { id: 'daler', label: 'Daler (7,2 → 6,0), geen doelen', mean: 7.2, endMean: 6.0, sd: 0.9, gradesPerWeek: 3, goals: false, academyPerWeek: 0, academySkill: 0.6, academyGrowth: 0, motivated: false },
+  // Doet mee: stelt doelen en/of oefent in de Academy.
+  { id: 'sterk', label: 'Sterk en stabiel (≈8,1)', mean: 8.1, sd: 0.7, gradesPerWeek: 2, goals: true, academyPerWeek: 1, academySkill: 0.85, academyGrowth: 0.05, motivated: true },
+  { id: 'goed', label: 'Ruim voldoende (≈7,3)', mean: 7.3, sd: 0.8, gradesPerWeek: 2, goals: true, academyPerWeek: 1, academySkill: 0.75, academyGrowth: 0.05, motivated: true },
+  { id: 'gemiddeld', label: 'Gemiddeld (≈6,6)', mean: 6.6, sd: 0.9, gradesPerWeek: 2, goals: true, academyPerWeek: 1, academySkill: 0.65, academyGrowth: 0.1, motivated: true },
+  { id: 'netvoldoende', label: 'Net voldoende (≈6,0)', mean: 6.0, sd: 1.0, gradesPerWeek: 2, goals: true, academyPerWeek: 1, academySkill: 0.6, academyGrowth: 0.1, motivated: true },
+  { id: 'wisselvallig', label: 'Wisselvallig (≈6,3, van 4 tot 8)', mean: 6.3, sd: 1.5, gradesPerWeek: 2, goals: true, academyPerWeek: 1, academySkill: 0.6, academyGrowth: 0.1, motivated: true },
+  { id: 'moeite', label: 'Moeite, wel gemotiveerd (≈5,5)', mean: 5.3, endMean: 5.8, sd: 1.0, gradesPerWeek: 2, goals: true, academyPerWeek: 2, academySkill: 0.5, academyGrowth: 0.25, motivated: true },
+  { id: 'stijger', label: 'Stijger (5,5 → 7,0)', mean: 5.5, endMean: 7.0, sd: 0.8, gradesPerWeek: 2, goals: true, academyPerWeek: 2, academySkill: 0.55, academyGrowth: 0.25, motivated: true },
+  { id: 'oefenaar', label: 'Oefenaar Academy (≈6,5)', mean: 6.4, endMean: 6.7, sd: 0.9, gradesPerWeek: 2, goals: true, academyPerWeek: 4, academySkill: 0.6, academyGrowth: 0.25, motivated: true },
+  // Voert alleen cijfers in: geen doelen, geen Academy.
+  { id: 'invoer-hoog', label: 'Alleen invoeren, hoog (≈8,0)', mean: 8.0, sd: 0.8, gradesPerWeek: 2, goals: false, academyPerWeek: 0, academySkill: 0.6, academyGrowth: 0, motivated: false },
+  { id: 'invoer-midden', label: 'Alleen invoeren, midden (≈6,5)', mean: 6.5, sd: 0.9, gradesPerWeek: 2, goals: false, academyPerWeek: 0, academySkill: 0.6, academyGrowth: 0, motivated: false },
+  { id: 'invoer-laag', label: 'Alleen invoeren, laag (≈5,8)', mean: 5.8, sd: 1.0, gradesPerWeek: 2, goals: false, academyPerWeek: 0, academySkill: 0.6, academyGrowth: 0, motivated: false },
   { id: 'weinig', label: 'Weinig cijfers ingevoerd (≈7,0)', mean: 7.0, sd: 0.9, gradesPerWeek: 1, goals: false, academyPerWeek: 0, academySkill: 0.6, academyGrowth: 0, motivated: false },
 ];
 
@@ -229,6 +237,14 @@ export interface SchoolYearRow {
   teamRating: number;
   /** Aantal verschillende spelers met rating 85+ in de collectie aan het eind van het jaar. */
   cards85: number;
+  /** Teamrating aan het eind van week 10, 20, 30 en 40 (elftal groeit mee met het jaar). */
+  ratingByWeek: Record<number, number>;
+  /** Goudpacks plus zwaardere packs (Toetsweek, Elite) per jaar, inclusief packs gekocht met coins. */
+  topPacks: number;
+  /** Herkomst van Goudpacks en zwaardere packs: cijfer, coins, level, goal, improvement, recovery, academy. */
+  topSources: Record<string, number>;
+  /** Eindelftallen per seed, voor battles tussen profielen (`matchupWinRate`). */
+  teams: BattleCard[][];
 }
 
 const SUBJECT_IDS = ['wi', 'ne', 'en', 'fa', 'bi', 'gs', 'na', 'ak'];
@@ -254,12 +270,27 @@ function runYear(profile: StudentProfile, seed: string, opts: Required<Omit<Scho
   const rewardLog: string[] = [];
   const packs: Record<string, number> = {};
   let coins = 0, vouchers = 0, picks = 0, n = 0, wrongPool = 0;
-  const addPack = (id?: string) => { if (id) packs[id] = (packs[id] ?? 0) + 1; };
+  // Kaarten komen binnen zodra de pack er is, zodat de teamsterkte per periode te volgen is.
+  const cardRng = createRng(`kaarten:${profile.id}:${seed}`);
+  const squad = starterSquad(opts.catalog, `${profile.id}:${seed}`);
+  const owned: Player[] = [...squad.starters.map((x) => x.player), ...squad.reserves];
+  const topSources: Record<string, number> = {};
+  const addPack = (id: string | undefined, source: string) => {
+    if (!id) return;
+    packs[id] = (packs[id] ?? 0) + 1;
+    if (id !== 'starter') topSources[source] = (topSources[source] ?? 0) + 1;
+    const def = PACKS[id];
+    if (def) owned.push(...openPack(def, opts.catalog, cardRng).pulls.map((x) => x.card));
+  };
+  const goldPrice = PACKS.gold?.coinPrice ?? Infinity;
+  const spend = () => { if (opts.spendCoins) while (coins >= goldPrice) { coins -= goldPrice; addPack('gold', 'coins'); } };
+  const formation = FORMATIONS['4-3-3']!;
+  const ratingByWeek: Record<number, number> = {};
   const progress = (today: string) => {
     if (!opts.progress) return;
     const fresh = progressRewards(opts.progress, { grades, goals, ledger, grants, periods, today });
     grants = [...grants, ...fresh];
-    for (const g of fresh) { addPack(g.packId); vouchers += g.vouchers; coins += g.coins; }
+    for (const g of fresh) { addPack(g.packId, g.kind); vouchers += g.vouchers; coins += g.coins; }
   };
 
   for (let w = 0; w < opts.weeks; w++) {
@@ -294,10 +325,13 @@ function runYear(profile: StudentProfile, seed: string, opts: Required<Omit<Scho
           rewardedThisWeek: rewardLog.filter((d) => d >= weekKey && d <= isoDay(YEAR_START + (w * 7 + 6) * 864e5)).length,
         });
         if (r.status === 'rewarded') rewardLog.push(today);
-        coins += r.coins; vouchers += r.vouchers; addPack(r.packId); if (r.pick) picks++;
-        ledger = [...ledger, ...gradeXp(opts.motivation, { grade, before: grades, goals, ledger, enteredOn: today })];
+        coins += r.coins; vouchers += r.vouchers; addPack(r.packId, 'cijfer'); if (r.pick) picks++;
+        const fresh = gradeXp(opts.motivation, { grade, before: grades, goals, ledger, enteredOn: today });
+        ledger = [...ledger, ...fresh];
+        for (const e of fresh) if (e.packId) addPack(e.packId, 'goal'); // doelpack uit de motivatie-engine
         grades.push(grade);
         progress(today);
+        spend();
       } else {
         const score = Math.max(0.1, Math.min(1, profile.academySkill + profile.academyGrowth * t + normal() * 0.12));
         const correct = Math.round(score * 6);
@@ -312,35 +346,25 @@ function runYear(profile: StudentProfile, seed: string, opts: Required<Omit<Scho
         ledger = [...ledger, ...d.entries];
         if (['rewarded', 'capped', 'no-learning-value'].includes(d.status)) history = [...history, event];
         progress(today);
+        spend();
       }
     }
-  }
-  // Doelpacks uit de motivatie-engine (gradeXp) tellen ook mee.
-  for (const e of ledger) if (e.packId) addPack(e.packId);
-  if (opts.spendCoins) {
-    const price = PACKS.gold?.coinPrice ?? Infinity;
-    while (coins >= price) { coins -= price; addPack('gold'); }
-  }
-  // Teamsterkte aan het eind van het jaar.
-  const cardRng = createRng(`kaarten:${profile.id}:${seed}`);
-  const owned: Player[] = starterSquad(opts.catalog, `${profile.id}:${seed}`).starters.map((s) => s.player);
-  owned.push(...starterSquad(opts.catalog, `${profile.id}:${seed}`).reserves);
-  for (const [id, count] of Object.entries(packs)) {
-    const def = PACKS[id];
-    if (!def) continue;
-    for (let i = 0; i < count; i++) owned.push(...openPack(def, opts.catalog, cardRng).pulls.map((p) => p.card));
+    if ((w + 1) % 10 === 0) ratingByWeek[w + 1] = teamRating(formation, autoBestLineup(formation, owned));
   }
   for (let i = 0; i < picks; i++) {
     const options = cardRng.shuffle(opts.catalog.filter((p) => p.rating >= 90 && !p.temporary)).slice(0, 3);
     const best = [...options].sort((a, b) => b.rating - a.rating)[0];
     if (best) owned.push(best);
   }
-  const formation = FORMATIONS['4-3-3']!;
+  const lineup = autoBestLineup(formation, owned);
+  const team = Object.values(lineup).filter((p): p is Player => !!p).map((p, i): BattleCard => ({ id: `${profile.id}:${seed}:${i}`, rating: p.rating, stats: p.stats, position: p.position }));
   return {
     gradeAverage: grades.reduce((s, g) => s + g.value, 0) / Math.max(1, grades.length),
     vouchers, progressVouchers: grants.reduce((s, g) => s + g.vouchers, 0), packs, picks, coins,
-    xp: categoryTotals(ledger), teamRating: teamRating(formation, autoBestLineup(formation, owned)),
+    xp: categoryTotals(ledger), teamRating: teamRating(formation, lineup),
     cards85: new Set(owned.filter((p) => p.rating >= 85).map((p) => p.baseId)).size,
+    ratingByWeek, team, topSources,
+    topPacks: (packs.gold ?? 0) + (packs.exam ?? 0) + (packs.elite ?? 0),
   };
 }
 
@@ -348,8 +372,8 @@ function runYear(profile: StudentProfile, seed: string, opts: Required<Omit<Scho
 export function simulateSchoolYear(profiles: readonly StudentProfile[] = STUDENT_PROFILES, options: SchoolYearOptions = {}): SchoolYearRow[] {
   const opts = {
     weeks: options.weeks ?? 40,
-    rewards: options.rewards ?? FAIR_REWARD_CONFIG,
-    progress: options.progress === undefined ? DEFAULT_PROGRESS_CONFIG : options.progress,
+    rewards: options.rewards ?? ACHIEVABLE_REWARD_CONFIG,
+    progress: options.progress === undefined ? ACHIEVABLE_PROGRESS_CONFIG : options.progress,
     motivation: options.motivation ?? DEFAULT_MOTIVATION_CONFIG,
     catalog: options.catalog ?? generateCatalog(),
     spendCoins: options.spendCoins ?? true,
@@ -366,6 +390,54 @@ export function simulateSchoolYear(profiles: readonly StudentProfile[] = STUDENT
       picks: avg((r) => r.picks), coins: avg((r) => r.coins),
       xp: { performance: avg((r) => r.xp.performance), progress: avg((r) => r.xp.progress), academy: avg((r) => r.xp.academy) },
       teamRating: avg((r) => r.teamRating), cards85: avg((r) => r.cards85),
+      ratingByWeek: Object.fromEntries(Object.keys(runs[0]?.ratingByWeek ?? {}).map((k) => [Number(k), avg((r) => r.ratingByWeek[Number(k)] ?? 0)])),
+      topPacks: avg((r) => r.topPacks),
+      topSources: Object.fromEntries([...new Set(runs.flatMap((r) => Object.keys(r.topSources)))].map((k) => [k, avg((r) => r.topSources[k] ?? 0)])),
+      teams: runs.map((r) => r.team),
     };
   });
+}
+
+/* ———————————— Battles tussen profielen ———————————— */
+
+const MATCH_MODES: DuelMode[] = ['rating', 'pace', 'technique', 'defending'];
+
+/** Eenvoudige computerzet met een beetje toeval (aanvallen met een van de sterkste kaarten, zuinig verdedigen). */
+function simMove(events: readonly BattleEvent[], side: Side, rng: ReturnType<typeof createRng>): string {
+  const st = battleState(events);
+  const created = events[0] as Extract<BattleEvent, { type: 'created' }>;
+  const mine = (side === 'home' ? created.home : created.away).cards.filter((c) => st.available[side].includes(c.id));
+  const mode = st.currentMode ?? 'rating';
+  const val = (c: BattleCard) => duelValue(c, mode, st.config);
+  const sorted = [...mine].sort((a, b) => val(a) - val(b));
+  if (st.phase === 'attack') return (sorted[Math.max(0, sorted.length - 1 - rng.int(0, 2))] ?? sorted[0]!).id;
+  const open = st.openCard ? (side === 'home' ? created.away : created.home).cards.find((c) => c.id === st.openCard!.cardId) : undefined;
+  const need = open ? val(open) : 0;
+  return (sorted.find((c) => val(c) > need) ?? sorted[0]!).id;
+}
+
+/** Winkans (winst = 1, gelijk = 0,5) van elftallen A tegen elftallen B over `games` wedstrijden met wisselende duelmodi. */
+export function matchupWinRate(teamsA: readonly BattleCard[][], teamsB: readonly BattleCard[][], games = 120, seed = 'matchup'): number {
+  const rng = createRng(seed);
+  let points = 0;
+  for (let g = 0; g < games; g++) {
+    const a = teamsA[g % teamsA.length]!, b = teamsB[(g + 1) % teamsB.length]!;
+    const offset = g % MATCH_MODES.length;
+    const homeIsA = g % 2 === 0;
+    const tag = (cards: readonly BattleCard[], p: string) => cards.map((c) => ({ ...c, id: `${p}:${c.id}` }));
+    let log: BattleEvent[] = [createBattle({
+      matchId: `m${g}`, seed: `${seed}:${g}`, at: 0,
+      home: { playerId: 'A', cards: tag(homeIsA ? a : b, 'h') }, away: { playerId: 'B', cards: tag(homeIsA ? b : a, 'a') },
+      config: { roundModes: Array.from({ length: 11 }, (_, i) => MATCH_MODES[(i + offset) % MATCH_MODES.length]!), maxConsecutiveTimeouts: null },
+    })];
+    for (let t = 1; t < 60; t++) {
+      const st = battleState(log);
+      if (st.status === 'finished' || !st.toMove) break;
+      log = [...log, playCard(log, { side: st.toMove, cardId: simMove(log, st.toMove, rng), at: t * 1000 })];
+    }
+    const sc = battleState(log).score;
+    const mineScore = homeIsA ? sc.home : sc.away, theirs = homeIsA ? sc.away : sc.home;
+    points += mineScore > theirs ? 1 : mineScore === theirs ? 0.5 : 0;
+  }
+  return points / games;
 }

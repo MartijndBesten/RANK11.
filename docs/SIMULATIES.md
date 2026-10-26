@@ -72,29 +72,40 @@ Gemiddelde rating per kaart 91,9 · walkout in 100,0% van de packs.
 | Toetsweek 7,0 · 8 cijfers/week | 916 | 2284 | 2,85 | 0,17 | Elitepack 0,76, Toetsweekpack 1,92, Goudpack 2,57, Starterspack 1,77 | 0,37% |
 
 _XP in deze tabel komt uit de oude beloningsconfiguratie; in de app komt XP uit de motivatie-engine (zie MOTIVATION-ENGINE.md). Coins, packs, vouchers en keuzes komen wel uit deze configuratie._
-## Volledig schooljaar per leerlingprofiel (V-011)
+## Volledig schooljaar per leerlingprofiel (economie v3, ronde 5)
 
-40 schoolweken, 4 periodes, 4 seeds gemiddeld. Cijferbeloning `2026.10-eerlijk.1` + voortgang `2026.10-voortgang.1`, vergeleken met de oude configuratie `2026.10-proto.1` zonder voortgangsbeloningen. Teamrating = beste 4-3-3 uit startelftal + alle packs (coins aan het eind omgezet in goudpacks).
+40 schoolweken, 4 periodes, 2 cijfers per week (1 bij "weinig"), 16 seeds gemiddeld. Huidige economie: cijferbeloning `2026.10-haalbaar.1` + voortgang `2026.10-voortgang.2` + motivatie `2026.10-motivatie.4`; ter vergelijking v2 (`2026.10-eerlijk.1` + `2026.10-voortgang.1`). Kaarten komen binnen zodra een pack verdiend is; coins gaan direct naar een Goudpack zodra er genoeg zijn. Teamrating = beste 4-3-3.
 
-| Profiel | Gem. cijfer | Vouchers oud → nieuw | waarvan voortgang | Teamrating oud → nieuw | Spelers 85+ oud → nieuw | Packs nieuw |
-|---|---:|---:|---:|---:|---:|---|
-| Sterk en stabiel (≈8,1) | 8,14 | 96,5 → **54,0** | 13,5 | 98,0 → 96,8 | 43 → 37 | Goudpack 100, Toetsweekpack 34, Elitepack 7, Starterspack 2 |
-| Gemiddeld (≈6,8) | 6,79 | 30,3 → **28,5** | 24,3 | 96,3 → 95,3 | 34 → 30 | Goudpack 103, Starterspack 36, Toetsweekpack 4, Elitepack 0 |
-| Moeite, wel gemotiveerd (≈5,4) | 5,57 | 3,8 → **38,5** | 38,3 | 92,5 → 94,8 | 16 → 27 | Goudpack 96, Starterspack 38, Toetsweekpack 0 |
-| Stijger (5,5 → 7,0) | 6,17 | 11,0 → **41,5** | 40,3 | 95,3 → 95,3 | 27 → 29 | Goudpack 103, Starterspack 41, Toetsweekpack 1 |
-| Oefenaar Academy (≈6,6) | 6,69 | 27,8 → **47,0** | 42,0 | 96,3 → 95,8 | 31 → 30 | Goudpack 149, Starterspack 35, Toetsweekpack 4, Elitepack 1 |
-| Daler (7,2 → 6,0), geen doelen ¹ | 6,54 | 22,8 → **14,3** | 10,0 | 96,3 → 95,5 | 30 → 27 | Goudpack 77, Starterspack 35, Toetsweekpack 4, Elitepack 0 |
-| Weinig cijfers ingevoerd (≈7,0) ¹ | 7,02 | 11,5 → **7,3** | 4,3 | 95,5 → 93,5 | 21 → 17 | Goudpack 30, Starterspack 9, Toetsweekpack 3, Elitepack 0 |
+**Winkans tegen het veld** = gemiddelde uitslag (winst 1, gelijk ½) van het eindelftal van dit profiel tegen de eindelftallen van álle profielen, met de battle-engine en een eenvoudige computerzet, 240 wedstrijden. 50% = gemiddeld. Meetruis ongeveer ±5 procentpunt.
 
-¹ Niet actief meedoend (geen doelen, geen oefening); valt buiten de eerlijkheidsgrens.
+| Profiel | Gem. cijfer | Teamrating week 10 / 20 / 30 / 40 | Goudpacks+ per jaar (v2) | waarvan uit | Spelers 85+ (v2) | Vouchers | Winkans tegen het veld (v2) |
+|---|---:|---|---:|---|---:|---:|---:|
+| Sterk en stabiel (≈8,1) | 8,16 | 86,9 / 89,6 / 90,4 / 91,1 | **24** (100) | clubniveau 12, coins 5, 9,5+ 4, doel 3 | 12 (33) | 39,8 | **51,0%** (80,4%) |
+| Ruim voldoende (≈7,3) | 7,28 | 86,8 / 88,8 / 90,5 / 91,3 | **19** (89) | clubniveau 11, coins 5, doel 3, 9,5+ 1 | 11 (28) | 21,8 | **59,6%** (63,7%) |
+| Gemiddeld (≈6,6) | 6,64 | 85,6 / 89,1 / 90,5 / 90,9 | **18** (74) | clubniveau 11, coins 5, doel 3 | 12 (25) | 18,1 | **46,7%** (41,7%) |
+| Net voldoende (≈6,0) | 5,98 | 84,9 / 87,8 / 89,8 / 90,5 | **18** (59) | clubniveau 11, coins 4, doel 3 | 11 (21) | 16,6 | **48,1%** (40,0%) |
+| Wisselvallig (≈6,3, van 4 tot 8) | 6,30 | 86,2 / 88,9 / 90,3 / 91,0 | **22** (72) | clubniveau 11, coins 5, doel 4, 9,5+ 1 | 12 (26) | 26,7 | **51,9%** (51,0%) |
+| Moeite, wel gemotiveerd (≈5,5) | 5,49 | 86,2 / 88,7 / 90,3 / 90,9 | **21** (61) | clubniveau 12, coins 4, doel 4 | 11 (22) | 21,6 | **52,1%** (36,9%) |
+| Stijger (5,5 → 7,0) | 6,34 | 87,8 / 90,5 / 91,6 / 91,9 | **22** (85) | clubniveau 12, doel 5, coins 5 | 12 (27) | 25,6 | **56,0%** (41,9%) |
+| Oefenaar Academy (≈6,5) | 6,54 | 87,5 / 89,8 / 90,8 / 91,6 | **22** (106) | clubniveau 14, coins 5, doel 3 | 13 (28) | 30,1 | **53,3%** (56,0%) |
+| Alleen invoeren, hoog (≈8,0) ¹ | 7,97 | 86,0 / 89,3 / 90,4 / 91,4 | **19** (84) | clubniveau 10, coins 5, 9,5+ 4 | 11 (32) | 32,4 | **57,9%** (77,1%) |
+| Alleen invoeren, midden (≈6,5) ¹ | 6,44 | 85,4 / 88,0 / 89,6 / 90,6 | **13** (53) | clubniveau 9, coins 4 | 10 (21) | 10,9 | **45,8%** (32,1%) |
+| Alleen invoeren, laag (≈5,8) ¹ | 5,88 | 85,1 / 88,6 / 89,7 / 90,5 | **13** (43) | clubniveau 9, coins 4 | 9 (18) | 12,3 | **48,5%** (30,2%) |
+| Weinig cijfers ingevoerd (≈7,0) ¹ | 7,00 | 80,9 / 85,1 / 87,1 / 88,2 | **9** (32) | clubniveau 6, coins 2 | 6 (16) | 7,3 | **16,7%** (20,4%) |
 
-Verhouding vouchers tussen het hoogste en laagste gemotiveerde profiel: oud **25,7×**, nieuw **1,9×** (doel ≤ 2,5×).
+¹ Voert alleen cijfers in (geen doelen, geen Academy), of weinig cijfers.
+
+Winkans van actief meedoende profielen tegen het veld: v3 **46,7% – 59,6%**, v2 36,9% – 80,4%. Starterspacks (brons/zilver) komen er per voldoende bij: 40–81 per jaar.
+
+Oude configuratie `2026.10-proto.1` (zonder voortgang), ter vergelijking: Goudpacks+ per jaar 20–85, teamrating eind 91,3–97,5.
 
 
 ## Conclusies
 
-1. **Draftkansen per kaart wijken af van de ingestelde kansen** zodra een groep op een positie weinig spelers heeft (vooral Groep D, 80-84). De engine loot daarom alleen tussen groepen met kandidaten, en de app toont naast de ingestelde kans ook de gemeten kans. Structurele oplossing: grotere catalogus of groepen per positie herijken.
+1. **Draftkansen per kaart wijken af van de ingestelde kansen** zodra een groep op een positie weinig spelers heeft (vooral Groep D, 80-84). De engine loot daarom alleen tussen groepen met kandidaten, en de app toont naast de ingestelde kans ook de gemeten kans.
 2. **Garanties werken**: de langste reeks zonder Groep B of beter blijft onder de garantiegrens.
 3. **Packkansen kloppen** met de getoonde kansentabel (verschillen binnen de meetruis).
-4. **Oude economie was scheef** (zie de weektabel en het schooljaar): wie moeite had, kreeg nauwelijks vouchers. De nieuwe economie (V-011) houdt goede cijfers voorop, maar geeft vooruitgang, doelen, topcijfers ten opzichte van je eigen niveau en Academy-oefening een eigen route naar packs en vouchers.
-5. **Veel packs per jaar**: in beide economieën bouwt iedere actieve leerling binnen een jaar een elftal van rond de 94-97. Het verschil zit vooral in het aantal 85+-spelers en speciale kaarten. Het totale aantal packs verlagen is een aparte afweging.
+4. **Battles zijn gevoelig voor kleine verschillen**: 1-2 punten teamrating geeft al een duidelijk lagere winkans. Daarom moet de economie actieve leerlingen dicht bij elkaar houden; packgeluk alleen zorgt al voor zo'n verschil.
+5. **Economie v3**: Goudpacks komen vooral uit het clubniveau (alle XP: inzet, vooruitgang, oefenen). Omdat ieder niveau duurder wordt, lopen leerlingen niet ver uit elkaar. Een voldoende geeft een Starterspack, een 8,5+ een voucher, een 9,5+ een Goudpack: bijzonder, maar geen voorwaarde.
+6. **Geen eindeloze stroom**: ongeveer een Goudpack per twee à drie weken in plaats van twee à drie per week (v2). Het elftal groeit het hele jaar door.
+7. **Wie alleen cijfers invoert**, krijgt minder dan wie doelen stelt of oefent; dat is bedoeld (inzet telt), maar het verschil tussen hoge en lage cijfers blijft binnen die groep klein.

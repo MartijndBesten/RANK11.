@@ -9,7 +9,7 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   academyReward, applyGradeEvents, autoBestLineup, categoryTotals, checkNewGrade, clubLevel, compareAverages, computeReward,
-  correctionXp, createDraft, createRng, DEFAULT_MOTIVATION_CONFIG, DEFAULT_PROGRESS_CONFIG, FAIR_REWARD_CONFIG, deletionXp, progressRewards, quickSellValue, DRAFT_EVENTS, FORMATIONS,
+  correctionXp, createDraft, createRng, DEFAULT_MOTIVATION_CONFIG, CURRENT_PROGRESS_CONFIG, CURRENT_REWARD_CONFIG, deletionXp, progressRewards, quickSellValue, DRAFT_EVENTS, FORMATIONS,
   generateCatalog, gradeKey, gradeXp, openPack, PACKS, resolvePlayer, subjectAverages, validateEvent, weightedAverage,
   type AcademyDecision, type AccountLink, type BattleEvent, type DraftSession, type LeagueResult, type Goal, type Grade, type GradeEvent, type LearningEvent,
   type PackResult, type Player, type ProgressGrant, type PityState, type RewardResult, type Scenario, type UpcomingTest, type XpEntry,
@@ -265,7 +265,7 @@ export { quickSellValue };
 
 /** Voortgangsbeloningen toepassen op de speltoestand (coins, vouchers, packs); idempotent per sleutel. */
 function withProgress(s: GameState, grades: Grade[], ledger: XpEntry[]): { next: GameState; grants: ProgressGrant[] } {
-  const grants = progressRewards(DEFAULT_PROGRESS_CONFIG, { grades, goals: s.goals, ledger, grants: s.progressGrants, periods: PERIODS, today: todayIso() });
+  const grants = progressRewards(CURRENT_PROGRESS_CONFIG, { grades, goals: s.goals, ledger, grants: s.progressGrants, periods: PERIODS, today: todayIso() });
   if (!grants.length) return { next: s, grants };
   const packs = { ...s.packs };
   for (const g of grants) if (g.packId) packs[g.packId] = (packs[g.packId] ?? 0) + 1;
@@ -403,7 +403,7 @@ export function StoreProvider({ children, onExit }: { children: ReactNode; onExi
     const day = today();
     const weekAgo = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10);
     const key = gradeKey(g);
-    const cards = computeReward(FAIR_REWARD_CONFIG, {
+    const cards = computeReward(CURRENT_REWARD_CONFIG, {
       grade: g,
       subjectAvgBefore: subjectBefore,
       subjectAvgAfter: subjectAfter,

@@ -48,8 +48,8 @@ export interface MotivationConfig {
 }
 
 export const DEFAULT_MOTIVATION_CONFIG: MotivationConfig = {
-  version: '2026.10-motivatie.3',
-  performance: { perGrade: 50, bonuses: [{ minGrade: 7, xp: 30 }, { minGrade: 8, xp: 60 }, { minGrade: 9, xp: 100 }], dailyCap: 450, weeklyCap: 1500 },
+  version: '2026.10-motivatie.4',
+  performance: { perGrade: 50, bonuses: [{ minGrade: 7, xp: 20 }, { minGrade: 8, xp: 40 }, { minGrade: 9, xp: 60 }], dailyCap: 450, weeklyCap: 1500 },
   progress: { improvementXp: 40, improvementMinDelta: 0.2, recoveryXp: 80, recoveryMinJump: 1.5, goalXp: 100, goalPackId: 'gold', weeklyCap: 700 },
   academy: {
     completeXp: 20, completeMinScore: 0.5, highScoreXp: 30, highScoreMin: 0.8, mistakeFixedXp: 25, mistakeFixedMaxPerActivity: 4,

@@ -26,18 +26,18 @@ describe('cijfers en beloningen', () => {
     const res = await app.api('POST', '/api/grades', { token: user.token, idem: idem(), body: grade() });
     expect(res.status).toBe(201);
     expect(res.body.grade).toMatchObject({ status: 'self', value: 7, subjectId: 'wiskunde' });
-    // XP uit de motivatie-engine: 50 per cijfer + 30 bonus voor een 7; coins/pack uit de beloningsconfig.
-    expect(res.body.reward).toMatchObject({ status: 'rewarded', tierId: 'good', xp: 80, coins: 250, packId: 'gold', configVersion: '2026.10-eerlijk.1' });
-    expect(res.body.xp).toMatchObject({ total: 80, entries: [{ key: 'perf:toets:wiskunde:hoofdstuk 3:2026-10-20', category: 'performance', xp: 80 }] });
+    // XP uit de motivatie-engine: 50 per cijfer + 20 bonus voor een 7; coins/pack uit de beloningsconfig.
+    expect(res.body.reward).toMatchObject({ status: 'rewarded', tierId: 'good', xp: 70, coins: 250, packId: 'starter', configVersion: '2026.10-haalbaar.1' });
+    expect(res.body.xp).toMatchObject({ total: 70, entries: [{ key: 'perf:toets:wiskunde:hoofdstuk 3:2026-10-20', category: 'performance', xp: 70 }] });
     expect(ledger(app, user)).toEqual({ coins: 250 });
-    expect(xpRows(app, user)).toEqual([{ key: 'perf:toets:wiskunde:hoofdstuk 3:2026-10-20', category: 'performance', xp: 80, capped_by: null }]);
-    expect(packs(app, user)).toEqual(['gold']);
+    expect(xpRows(app, user)).toEqual([{ key: 'perf:toets:wiskunde:hoofdstuk 3:2026-10-20', category: 'performance', xp: 70, capped_by: null }]);
+    expect(packs(app, user)).toEqual(['starter']);
     const grant = app.db.db.prepare('SELECT config_version, kind, dedupe_key FROM reward_grants').get() as Record<string, string>;
-    expect(grant).toEqual({ config_version: '2026.10-eerlijk.1', kind: 'initial', dedupe_key: 'toets:wiskunde:hoofdstuk 3:2026-10-20' });
+    expect(grant).toEqual({ config_version: '2026.10-haalbaar.1', kind: 'initial', dedupe_key: 'toets:wiskunde:hoofdstuk 3:2026-10-20' });
     const wallet = await app.api('GET', '/api/wallet', { token: user.token });
     expect(wallet.body.balances).toEqual({ coins: 250, xp: 0, vouchers: 0 });
     const list = await app.api('GET', '/api/grades', { token: user.token });
-    expect(list.body.xp).toMatchObject({ total: 80, byCategory: { performance: 80, progress: 0, academy: 0 }, level: { level: 1, into: 80 } });
+    expect(list.body.xp).toMatchObject({ total: 70, byCategory: { performance: 70, progress: 0, academy: 0 }, level: { level: 1, into: 70 } });
   });
 
   it('dubbele invoer van dezelfde toets: 409 en geen dubbele beloning', async () => {
@@ -50,7 +50,7 @@ describe('cijfers en beloningen', () => {
     expect(dup.body.error.code).toBe('duplicate_grade');
     expect(ledgerRows(app, user)).toBe(before);
     expect(xpRows(app, user)).toHaveLength(xpBefore);
-    expect(packs(app, user)).toEqual(['gold']);
+    expect(packs(app, user)).toEqual(['starter']);
   });
 
   it('idempotentiesleutel: zelfde sleutel = zelfde antwoord, ander verzoek = 422, sleutel verplicht', async () => {
@@ -62,7 +62,7 @@ describe('cijfers en beloningen', () => {
     expect(again.headers.get('Idempotent-Replay')).toBe('true');
     expect(again.body).toEqual(first.body);
     expect(ledger(app, user)).toEqual({ coins: 250 });
-    expect(xpTotal(app, user)).toBe(80);
+    expect(xpTotal(app, user)).toBe(70);
     expect((await app.api('POST', '/api/grades', { token: user.token, idem: key, body: grade({ value: 8 }) })).status).toBe(422);
     expect((await app.api('POST', '/api/grades', { token: user.token, body: grade({ testName: 'Ander' }) })).status).toBe(400);
   });
@@ -74,28 +74,28 @@ describe('cijfers en beloningen', () => {
 
     const up = await app.api('PUT', `/api/grades/${id}`, { token: user.token, idem: idem(), body: { value: 8 } });
     expect(up.status).toBe(200);
-    // XP: een 8 is 110 Prestatie-XP, er was 80 → alleen het verschil van 30.
-    // V-011: Sterk (7,5+) geeft nu een Goudpack zonder voucher; de correctie levert alleen het coinverschil op.
-    expect(up.body.reward).toMatchObject({ status: 'correction', tierId: 'great', xp: 30, coins: 50, vouchers: 0, packId: 'gold' });
-    expect(up.body.xp.total).toBe(30);
+    // XP: een 8 is 90 Prestatie-XP, er was 70 → alleen het verschil van 20.
+    // Economie v3: Sterk (7,5+) geeft een Starterspack; de correctie levert alleen het coinverschil op.
+    expect(up.body.reward).toMatchObject({ status: 'correction', tierId: 'great', xp: 20, coins: 50, vouchers: 0, packId: 'starter' });
+    expect(up.body.xp.total).toBe(20);
     expect(ledger(app, user)).toEqual({ coins: 300 });
-    expect(xpTotal(app, user)).toBe(110);
-    expect(packs(app, user)).toEqual(['gold']);
+    expect(xpTotal(app, user)).toBe(90);
+    expect(packs(app, user)).toEqual(['starter']);
 
     const down = await app.api('PUT', `/api/grades/${id}`, { token: user.token, idem: idem(), body: { value: 6 } });
     expect(down.body.reward).toMatchObject({ status: 'duplicate', xp: 0, coins: 0 });
     expect(ledger(app, user)).toEqual({ coins: 300 });
-    expect(xpTotal(app, user)).toBe(110);
+    expect(xpTotal(app, user)).toBe(90);
 
     const back = await app.api('PUT', `/api/grades/${id}`, { token: user.token, idem: idem(), body: { value: 8 } });
     expect(back.body.reward.status).toBe('duplicate'); // tier 'great' was al toegekend
-    expect(back.body.xp.total).toBe(0); // 110 XP voor een 8 was al toegekend
+    expect(back.body.xp.total).toBe(0); // 90 XP voor een 8 was al toegekend
     expect(ledger(app, user)).toEqual({ coins: 300 });
 
     const del = await app.api('DELETE', `/api/grades/${id}`, { token: user.token, idem: idem() });
     expect(del.status).toBe(200);
     // Verwijderen draait alle XP van dit cijfer terug; coins, vouchers en packs blijven.
-    expect(del.body.xp).toMatchObject({ total: -110, entries: [{ key: 'del:toets:wiskunde:hoofdstuk 3:2026-10-20', category: 'performance', xp: -110 }] });
+    expect(del.body.xp).toMatchObject({ total: -90, entries: [{ key: 'del:toets:wiskunde:hoofdstuk 3:2026-10-20', category: 'performance', xp: -90 }] });
     expect(xpTotal(app, user)).toBe(0);
     expect((await app.api('GET', '/api/grades', { token: user.token })).body.grades).toHaveLength(0);
     const history = await app.api('GET', `/api/grades/${id}/history`, { token: user.token });
@@ -115,7 +115,7 @@ describe('cijfers en beloningen', () => {
     const { app, user } = await setup();
     // Verschillende toetsdatums: bij gelijke datum is de volgorde (en dus "herstel na onvoldoende") niet gedefinieerd.
     const low = await app.api('POST', '/api/grades', { token: user.token, idem: idem(), body: grade({ value: 4.2, testName: 'SO 1', date: '2026-10-14' }) });
-    expect(low.body.reward).toMatchObject({ status: 'support', xp: 50, coins: 100, packId: null });
+    expect(low.body.reward).toMatchObject({ status: 'support', xp: 50, coins: 150, packId: null });
     for (let i = 2; i <= 4; i++) {
       const r = await app.api('POST', '/api/grades', { token: user.token, idem: idem(), body: grade({ testName: `SO ${i}`, date: `2026-10-1${4 + i}` }) });
       expect(r.body.reward.status).toBe('rewarded');
@@ -123,7 +123,7 @@ describe('cijfers en beloningen', () => {
     const capped = await app.api('POST', '/api/grades', { token: user.token, idem: idem(), body: grade({ testName: 'SO 5', date: '2026-10-19' }) });
     // Kaartbeloning begrensd (4 per dag); XP heeft eigen plafonds (450 Prestatie-XP per dag) en telt hier nog mee.
     expect(capped.body.reward).toMatchObject({ status: 'capped', coins: 0 });
-    expect(capped.body.xp.total).toBe(80);
+    expect(capped.body.xp.total).toBe(70);
     app.advance(24 * 3600_000);
     const nextDay = await app.api('POST', '/api/grades', { token: user.token, idem: idem(), body: grade({ testName: 'SO 6' }) });
     expect(nextDay.body.reward.status).toBe('rewarded');
@@ -155,16 +155,17 @@ describe('cijfers en beloningen', () => {
   it('XP-plafond per dag: boven 450 Prestatie-XP op één dag wordt begrensd, de volgende dag weer ruimte', async () => {
     const { app, user } = await setup();
     const totals: number[] = [];
-    for (let i = 1; i <= 4; i++) {
+    for (let i = 1; i <= 5; i++) {
       const r = await app.api('POST', '/api/grades', { token: user.token, idem: idem(), body: grade({ testName: `Toets ${i}`, value: 9, subjectId: `vak${i}` }) });
       totals.push(r.body.xp.total);
     }
-    expect(totals).toEqual([150, 150, 150, 0]);
-    expect(xpRows(app, user).at(-1)).toMatchObject({ xp: 0, capped_by: 150 });
+    // Een 9 is 110 Prestatie-XP (50 + 60); de vijfde komt boven 450 uit en wordt begrensd.
+    expect(totals).toEqual([110, 110, 110, 110, 10]);
+    expect(xpRows(app, user).at(-1)).toMatchObject({ xp: 10, capped_by: 100 });
     app.advance(24 * 3600_000);
-    const next = await app.api('POST', '/api/grades', { token: user.token, idem: idem(), body: grade({ testName: 'Toets 5', value: 9, subjectId: 'vak5' }) });
-    expect(next.body.xp.total).toBe(150);
-    expect((await app.api('GET', '/api/grades', { token: user.token })).body.xp.byCategory.performance).toBe(600);
+    const next = await app.api('POST', '/api/grades', { token: user.token, idem: idem(), body: grade({ testName: 'Toets 6', value: 9, subjectId: 'vak6' }) });
+    expect(next.body.xp.total).toBe(110);
+    expect((await app.api('GET', '/api/grades', { token: user.token })).body.xp.byCategory.performance).toBe(560);
   });
 
   it('Vooruitgangs-XP: gemiddelde omhoog en herstel na een onvoldoende', async () => {
@@ -172,6 +173,6 @@ describe('cijfers en beloningen', () => {
     await app.api('POST', '/api/grades', { token: user.token, idem: idem(), body: grade({ testName: 'SO 1', value: 4.5, date: '2026-10-10' }) });
     const r = await app.api('POST', '/api/grades', { token: user.token, idem: idem(), body: grade({ testName: 'SO 2', value: 7, date: '2026-10-15' }) });
     const cats = r.body.xp.entries.map((e: { key: string; category: string; xp: number }) => [e.key.split(':')[0], e.category, e.xp]);
-    expect(cats).toEqual([['perf', 'performance', 80], ['prog-impr', 'progress', 40], ['prog-herstel', 'progress', 80]]);
+    expect(cats).toEqual([['perf', 'performance', 70], ['prog-impr', 'progress', 40], ['prog-herstel', 'progress', 80]]);
   });
 });

@@ -60,12 +60,12 @@ describe('cijferkluis op de server', () => {
     expect((await app.api('GET', '/api/vault', { token: u.token })).body.items).toEqual([]);
   });
 
-  it('9,5+ (Legendarisch): Elitepack en voucher; geen spelerskeuze in de eerlijke configuratie', async () => {
+  it('9,5+ (Legendarisch): Goudpack en voucher; geen spelerskeuze', async () => {
     const app = createApp();
     const u = await register(app, 'Legende', await platformCode(app));
     await app.api('POST', '/api/grades', { token: u.token, idem: idem(), body: grade({ value: 9.8 }) });
     const item = (await app.api('GET', '/api/vault', { token: u.token })).body.items[0];
-    expect(item).toMatchObject({ tierId: 'legendary', packId: 'elite', vouchers: 1, pick: null });
+    expect(item).toMatchObject({ tierId: 'legendary', packId: 'gold', vouchers: 1, pick: null });
   });
 });
 

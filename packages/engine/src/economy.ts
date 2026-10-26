@@ -14,7 +14,7 @@
  */
 import { DUTCH_SCALE, weightedAverage, type Grade } from './grades.ts';
 import { goalReachedBy, type Goal } from './goals.ts';
-import { weekStart, type XpEntry } from './motivation.ts';
+import { clubLevel, weekStart, type XpEntry } from './motivation.ts';
 import { DEFAULT_REWARD_CONFIG, type RewardConfig } from './rewards.ts';
 import { chronological, type Period } from './stats.ts';
 
@@ -46,6 +46,11 @@ export interface ProgressRewardConfig {
   academy: { packEveryXp: number; packId: string; voucherEveryXp: number; maxPacksPerWeek: number };
   /** Bovengrens voor vouchers uit voortgang per week (alle soorten samen). */
   maxVouchersPerWeek: number;
+  /**
+   * Clubniveau omhoog (alle XP samen: inzet, vooruitgang en oefenen). Optioneel; sinds `voortgang.2`.
+   * Niveaus worden steeds duurder, dus verschillen tussen leerlingen worden hier vanzelf kleiner.
+   */
+  level?: { packId: string; coins: number };
 }
 
 export const DEFAULT_PROGRESS_CONFIG: ProgressRewardConfig = {
@@ -58,7 +63,7 @@ export const DEFAULT_PROGRESS_CONFIG: ProgressRewardConfig = {
   maxVouchersPerWeek: 2,
 };
 
-export type ProgressKind = 'goal' | 'improvement' | 'recovery' | 'personalBest' | 'academy';
+export type ProgressKind = 'goal' | 'improvement' | 'recovery' | 'personalBest' | 'academy' | 'level';
 
 export interface ProgressGrant {
   /** Idempotente sleutel: een sleutel wordt nooit twee keer toegekend. */
@@ -152,7 +157,7 @@ export function progressRewards(config: ProgressRewardConfig, input: ProgressInp
   const week = weekStart(today);
   const thisWeek = (kind: ProgressKind, pred: (g: ProgressGrant) => boolean) =>
     [...grants, ...out].filter((g) => g.kind === kind && weekStart(g.date) === week && pred(g)).length;
-  for (let n = 1; n * config.academy.packEveryXp <= academyXp; n++) {
+  for (let n = 1; config.academy.packEveryXp > 0 && n * config.academy.packEveryXp <= academyXp; n++) {
     const key = `pr-acad-pack:${n}`;
     if (have.has(key)) continue;
     if (thisWeek('academy', (g) => !!g.packId) >= config.academy.maxPacksPerWeek) break;
@@ -160,10 +165,21 @@ export function progressRewards(config: ProgressRewardConfig, input: ProgressInp
   }
   // Voucher-mijlpalen schuiven door naar een volgende week als de weeklimiet al vol is (gaan niet verloren).
   const vouchersThisWeek = () => [...grants, ...out].filter((g) => weekStart(g.date) === week).reduce((sum, g) => sum + g.vouchers, 0);
-  for (let n = 1; n * config.academy.voucherEveryXp <= academyXp; n++) {
+  for (let n = 1; config.academy.voucherEveryXp > 0 && n * config.academy.voucherEveryXp <= academyXp; n++) {
     if (have.has(`pr-acad-voucher:${n}`)) continue;
     if (vouchersThisWeek() >= config.maxVouchersPerWeek) break;
     add({ ...base, key: `pr-acad-voucher:${n}`, kind: 'academy', label: `Academy-mijlpaal: ${n * config.academy.voucherEveryXp} XP`, vouchers: 1, coins: 0 });
+  }
+
+  // 6. Clubniveau omhoog. Zonder eerdere niveaubeloning telt alleen het huidige niveau (geen inhaalslag voor
+  //    bestaande accounts); daarna ieder volgend niveau.
+  if (config.level) {
+    const { level } = clubLevel(ledger.reduce((sum, e) => sum + e.xp, 0));
+    const granted = grants.filter((g) => g.kind === 'level').map((g) => Number(g.key.split(':')[1]) || 0);
+    const from = granted.length ? Math.max(...granted) + 1 : Math.max(2, level);
+    for (let n = from; n <= level; n++) {
+      add({ ...base, key: `pr-niveau:${n}`, kind: 'level', label: `Clubniveau ${n} bereikt`, packId: config.level.packId, vouchers: 0, coins: config.level.coins });
+    }
   }
 
   // Weeklimiet voor vouchers uit voortgang: de rest van de beloning (pack, coins) blijft staan.
@@ -176,3 +192,40 @@ export function progressRewards(config: ProgressRewardConfig, input: ProgressInp
     return vouchers < g.vouchers ? { ...g, vouchers, cappedVouchers: g.vouchers - vouchers } : g;
   });
 }
+
+/* ———————————— Economie v3: positief en haalbaar (ronde 5) ———————————— */
+
+/**
+ * Cijferbeloning v3: ieder ingevoerd cijfer levert iets op (ook een onvoldoende), een voldoende geeft een
+ * Starterspack en coins. Goudpacks komen vooral uit inzet en groei (clubniveau, doelen, verbetering, herstel,
+ * oefenen); een 8,5+ en 9,5+ blijven extra bijzonder. Zo is een sterk elftal haalbaar zonder achten en negens,
+ * en komt er geen eindeloze stroom topkaarten.
+ */
+export const ACHIEVABLE_REWARD_CONFIG: RewardConfig = {
+  ...DEFAULT_REWARD_CONFIG,
+  version: '2026.10-haalbaar.1',
+  tiers: [
+    { id: 'support', label: 'Herstelkans', minGrade: 1, tone: 'support', xp: 15, coins: 150 },
+    { id: 'pass', label: 'Voldoende', minGrade: 5.5, tone: 'pass', xp: 50, coins: 200, packId: 'starter' },
+    { id: 'good', label: 'Goed', minGrade: 6.5, tone: 'good', xp: 90, coins: 250, packId: 'starter' },
+    { id: 'great', label: 'Sterk', minGrade: 7.5, tone: 'great', xp: 140, coins: 300, packId: 'starter' },
+    { id: 'elite', label: 'Uitstekend', minGrade: 8.5, tone: 'elite', xp: 200, coins: 350, packId: 'starter', vouchers: 1 },
+    { id: 'legendary', label: 'Legendarisch', minGrade: 9.5, tone: 'legendary', xp: 300, coins: 500, packId: 'gold', vouchers: 1 },
+  ],
+};
+
+export const ACHIEVABLE_PROGRESS_CONFIG: ProgressRewardConfig = {
+  version: '2026.10-voortgang.2',
+  goal: { vouchers: 1, coins: 300 },
+  improvement: { minDelta: 0.6, minGradesInPeriod: 3, packId: 'starter', vouchers: 1, coins: 300 },
+  recovery: { minJump: 1.0, packId: 'starter', vouchers: 0, coins: 300 },
+  personalBest: { minAboveAverage: 1.0, minPriorGrades: 2, vouchers: 1, coins: 150 },
+  // Oefenen telt al mee voor je clubniveau (Academy-XP); de mijlpalen geven daarom vouchers, geen extra packs.
+  academy: { packEveryXp: 0, packId: 'gold', voucherEveryXp: 400, maxPacksPerWeek: 0 },
+  maxVouchersPerWeek: 1,
+  level: { packId: 'gold', coins: 0 },
+};
+
+/** De economie die app en server nu gebruiken. Wisselen gebeurt alleen hier; oude toekenningen houden hun versie. */
+export const CURRENT_REWARD_CONFIG = ACHIEVABLE_REWARD_CONFIG;
+export const CURRENT_PROGRESS_CONFIG = ACHIEVABLE_PROGRESS_CONFIG;

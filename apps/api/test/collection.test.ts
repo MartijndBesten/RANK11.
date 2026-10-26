@@ -10,10 +10,10 @@ const rawCount = (app: TestApp, user: TestUser) => (app.db.db.prepare('SELECT CO
 const cardCount = (app: TestApp, user: TestUser) => rawCount(app, user) - (app.db.db.prepare(`SELECT COUNT(*) AS n FROM card_instances WHERE user_id = ? AND acquired_via = 'starter'`).get(user.id) as { n: number }).n;
 const coins = (app: TestApp, user: TestUser) => (app.db.db.prepare(`SELECT COALESCE(SUM(delta), 0) AS s FROM wallet_ledger WHERE user_id = ? AND currency = 'coins'`).get(user.id) as { s: number }).s;
 
-async function earnCoins(app: TestApp, user: TestUser, grades: number) {
+async function earnCoins(app: TestApp, user: TestUser, grades: number, value = 7) {
   for (let i = 0; i < grades; i++) {
-    const r = await app.api('POST', '/api/grades', { token: user.token, idem: idem(), body: { subjectId: 'ak', testName: `Toets ${i}`, value: 7, weight: 1, date: '2026-10-20' } });
-    expect(r.body.reward.coins).toBe(250);
+    const r = await app.api('POST', '/api/grades', { token: user.token, idem: idem(), body: { subjectId: 'ak', testName: `Toets ${i}`, value, weight: 1, date: '2026-10-20' } });
+    expect(r.body.reward.coins).toBe(value >= 9.5 ? 500 : 250);
   }
 }
 
@@ -90,14 +90,14 @@ describe('wallet en packs', () => {
     expect(wallet.body.balances.coins).toBe(0);
     expect(wallet.body.ledger.some((l: { reason: string; delta: number }) => l.reason === 'pack.buy' && l.delta === -750)).toBe(true);
     const list = await app.api('GET', '/api/packs', { token: u.token });
-    expect(list.body.unopened.map((p: { packId: string }) => p.packId).sort()).toEqual(['gold', 'gold', 'gold', 'starter']);
+    expect(list.body.unopened.map((p: { packId: string }) => p.packId).sort()).toEqual(['starter', 'starter', 'starter', 'starter']);
     expect(list.body.shop.find((p: { id: string }) => p.id === 'gold').odds.length).toBeGreaterThan(0);
   });
 
   it('pack openen is idempotent: zelfde sleutel = zelfde resultaat, geen dubbele kaarten; seed reproduceert de opening', async () => {
     const app = createApp();
     const u = await register(app, 'Opener', await platformCode(app));
-    await earnCoins(app, u, 1); // levert een goudpack op
+    await earnCoins(app, u, 1, 9.6); // een 9,5+ levert een Goudpack op
     const grantId = (await app.api('GET', '/api/packs', { token: u.token })).body.unopened[0].grantId;
     const key = idem('open');
     const first = await app.api('POST', `/api/packs/${grantId}/open`, { token: u.token, idem: key });
@@ -127,7 +127,7 @@ describe('wallet en packs', () => {
     const app = createApp();
     const u = await register(app, 'Snel', await platformCode(app));
     const other = await register(app, 'Dief', await platformCode(app));
-    await earnCoins(app, u, 1);
+    await earnCoins(app, u, 1, 9.6);
     const grantId = (await app.api('GET', '/api/packs', { token: u.token })).body.unopened[0].grantId;
     expect((await app.api('POST', `/api/packs/${grantId}/open`, { token: other.token, idem: idem() })).status).toBe(404);
     const results = await Promise.all([1, 2, 3].map(() => app.api('POST', `/api/packs/${grantId}/open`, { token: u.token, idem: idem() })));

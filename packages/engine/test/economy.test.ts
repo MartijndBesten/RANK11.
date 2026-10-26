@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DEFAULT_PROGRESS_CONFIG as P, DEFAULT_REWARD_CONFIG, FAIR_REWARD_CONFIG, computeReward, progressRewards, simulateSchoolYear, STUDENT_PROFILES,
+  ACHIEVABLE_PROGRESS_CONFIG, ACHIEVABLE_REWARD_CONFIG, DEFAULT_PROGRESS_CONFIG as P, DEFAULT_REWARD_CONFIG, FAIR_REWARD_CONFIG, computeReward, matchupWinRate,
+  progressRewards, simulateSchoolYear, STUDENT_PROFILES,
   type Goal, type Grade, type Period, type ProgressGrant, type XpEntry,
 } from '../src/index.ts';
 
@@ -71,23 +72,70 @@ describe('voortgangsbeloningen', () => {
   });
 });
 
-describe('schooljaar-simulatie (V-011)', () => {
-  const rows = simulateSchoolYear(STUDENT_PROFILES, { seeds: ['t1'] });
+describe('economie v3: positief en haalbaar', () => {
+  const C = ACHIEVABLE_PROGRESS_CONFIG;
+  const xp = (n: number, date = '2026-09-07'): XpEntry => ({ key: `x${n}`, category: 'performance', xp: n, label: 'x', date, source: { kind: 'grade', id: `g${n}` }, configVersion: 'v' });
+  const runC = (ledger: XpEntry[], grants: ProgressGrant[] = []) => progressRewards(C, { grades: [], goals: [], ledger, grants, periods, today: '2026-09-07' });
+
+  it('ieder cijfer levert iets op; een voldoende geeft een pack; Goudpack uit cijfers pas bij 9,5+', () => {
+    const r = (value: number) => computeReward(ACHIEVABLE_REWARD_CONFIG, { grade: g('wi', value, '2026-10-01'), subjectAvgBefore: null, subjectAvgAfter: null, rewardedToday: 0, rewardedThisWeek: 0 });
+    expect(r(4.1)).toMatchObject({ status: 'support', coins: 150 });
+    for (const v of [5.6, 6.8, 7.9, 8.8]) expect(r(v).packId).toBe('starter');
+    expect(r(9.6)).toMatchObject({ packId: 'gold', vouchers: 1 });
+    expect(r(8.8).vouchers).toBe(1);
+    // Coins lopen maar weinig op met het cijfer: hoge cijfers zijn bijzonder, geen voorwaarde.
+    expect(r(8.8).coins / r(5.6).coins).toBeLessThanOrEqual(2);
+  });
+
+  it('clubniveau omhoog geeft een Goudpack, één keer per niveau, zonder inhaalslag voor bestaande accounts', () => {
+    expect(runC([xp(200)])).toEqual([]);
+    const lvl2 = runC([xp(260)]);
+    expect(lvl2).toMatchObject([{ key: 'pr-niveau:2', kind: 'level', packId: 'gold' }]);
+    expect(runC([xp(260)], lvl2)).toEqual([]);
+    // Twee niveaus tegelijk (niveau 4 vanaf 893 XP): beide.
+    const jump = runC([xp(260), xp(700)], lvl2);
+    expect(jump.map((x) => x.key)).toEqual(['pr-niveau:3', 'pr-niveau:4']);
+    // Bestaand account op niveau 6 zonder niveaubeloningen: alleen het huidige niveau, daarna gewoon verder.
+    const existing = runC([xp(2000)]);
+    expect(existing.map((x) => x.key)).toEqual(['pr-niveau:6']);
+    expect(runC([xp(2400)], existing).map((x) => x.key)).toEqual(['pr-niveau:7']);
+  });
+
+  it('Academy-mijlpalen geven in v3 vouchers, geen extra packs (oefen-XP telt al voor het clubniveau)', () => {
+    const r = progressRewards(C, { grades: [], goals: [], ledger: [acad(900, '2026-09-07', 1)], grants: [], periods, today: '2026-09-07' });
+    expect(r.filter((x) => x.kind === 'academy' && x.packId)).toEqual([]);
+    expect(r.filter((x) => x.kind === 'academy').reduce((s, x) => s + x.vouchers, 0)).toBe(C.maxVouchersPerWeek);
+  });
+});
+
+describe('schooljaar-simulatie (economie v3)', () => {
+  const rows = simulateSchoolYear(STUDENT_PROFILES, { seeds: ['t1', 't2', 't3', 't4'] });
   const motivated = rows.filter((r) => r.motivated);
-  it('goede cijfers blijven voordeel geven', () => {
-    const strong = rows.find((r) => r.profileId === 'sterk')!;
-    expect(strong.vouchers).toBe(Math.max(...rows.map((r) => r.vouchers)));
-    expect(strong.teamRating).toBeGreaterThanOrEqual(Math.max(...rows.map((r) => r.teamRating)) - 0.01);
+  const field = rows.flatMap((r) => r.teams);
+  const byId = (id: string) => rows.find((r) => r.profileId === id)!;
+
+  it('geen eindeloze stroom topkaarten: hooguit ±30 Goudpacks per jaar en een elftal dat het hele jaar groeit', () => {
+    for (const r of rows) expect(r.topPacks).toBeLessThanOrEqual(30);
+    for (const r of motivated) expect(r.ratingByWeek[40]!).toBeGreaterThan(r.ratingByWeek[10]!);
+    const old = simulateSchoolYear(STUDENT_PROFILES.filter((p) => p.id === 'gemiddeld'), { seeds: ['t1'], rewards: FAIR_REWARD_CONFIG, progress: P });
+    expect(byId('gemiddeld').topPacks).toBeLessThan(old[0]!.topPacks / 2);
   });
-  it('geen extreme verschillen tussen gemotiveerde profielen', () => {
-    const v = motivated.map((r) => r.vouchers);
-    expect(Math.max(...v) / Math.min(...v)).toBeLessThanOrEqual(2.5);
+
+  it('cijfers tussen 5,5 en 7,5 geven een competitief elftal: elk actief profiel ≥ 35% winkans tegen het veld', () => {
+    for (const r of motivated) expect(matchupWinRate(r.teams, field, 120, `t:${r.profileId}`)).toBeGreaterThanOrEqual(0.35);
     const t = motivated.map((r) => r.teamRating);
-    expect(Math.max(...t) - Math.min(...t)).toBeLessThanOrEqual(5);
+    expect(Math.max(...t) - Math.min(...t)).toBeLessThanOrEqual(3);
   });
-  it('vooruitgang, doelen en Academy vormen een serieuze route', () => {
-    for (const id of ['moeite', 'stijger', 'oefenaar']) expect(rows.find((r) => r.profileId === id)!.progressVouchers).toBeGreaterThanOrEqual(15);
+
+  it('hoge cijfers blijven extra bijzonder (meer vouchers), maar zonder grote voorsprong in teamsterkte', () => {
+    expect(byId('sterk').vouchers).toBeGreaterThan(byId('gemiddeld').vouchers);
+    expect(byId('sterk').teamRating - byId('netvoldoende').teamRating).toBeLessThanOrEqual(3);
   });
+
+  it('inzet telt: wie doelen stelt en oefent, staat er beter voor dan wie alleen invoert', () => {
+    expect(byId('gemiddeld').topPacks).toBeGreaterThan(byId('invoer-midden').topPacks);
+  });
+
   it('de oude economie was wel extreem (ter vergelijking)', () => {
     const old = simulateSchoolYear(STUDENT_PROFILES.filter((p) => p.id === 'sterk' || p.id === 'moeite'), { seeds: ['t1'], rewards: DEFAULT_REWARD_CONFIG, progress: null });
     expect(old[0]!.vouchers / Math.max(1, old[1]!.vouchers)).toBeGreaterThan(5);

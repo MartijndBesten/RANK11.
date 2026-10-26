@@ -201,7 +201,6 @@ function Overview({ nav }: { nav: Nav }) {
                 <span className="tag demo">uit</span>
               </li>
             </ul>
-            {mode === 'demo' && <p className="hint">In de demo worden Academy-mijlpalen (packs en vouchers) niet uitgereikt; dat doet alleen de server.</p>}
           </section>
         </div>
       </div>

@@ -2,7 +2,7 @@
  * Publieke spelconfiguratie en feature flags. Flags komen uit de omgeving (wrangler.toml), zodat een
  * functie per omgeving aan of uit kan zonder codewijziging. Standaard staat de transfermarkt UIT (V-015).
  */
-import { DEFAULT_MOTIVATION_CONFIG, DEFAULT_PROGRESS_CONFIG, FAIR_REWARD_CONFIG } from '../engine.ts';
+import { CURRENT_PROGRESS_CONFIG, CURRENT_REWARD_CONFIG, DEFAULT_MOTIVATION_CONFIG } from '../engine.ts';
 import { intVar, type Env } from '../env.ts';
 import { ApiError, json, type Ctx } from '../http.ts';
 
@@ -25,6 +25,6 @@ export async function getConfig(ctx: Ctx): Promise<Response> {
   return json({
     flags: flags(ctx.env),
     asyncDeadlineHours: asyncDeadlineHours(ctx.env),
-    versions: { rewards: FAIR_REWARD_CONFIG.version, progress: DEFAULT_PROGRESS_CONFIG.version, motivation: DEFAULT_MOTIVATION_CONFIG.version },
+    versions: { rewards: CURRENT_REWARD_CONFIG.version, progress: CURRENT_PROGRESS_CONFIG.version, motivation: DEFAULT_MOTIVATION_CONFIG.version },
   });
 }

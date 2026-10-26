@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { compareAverages, formatGrade, PACKS, subjectAverages, type Player } from '@rank11/engine';
+import { compareAverages, CURRENT_PROGRESS_CONFIG, formatGrade, PACKS, subjectAverages, type Player } from '@rank11/engine';
 import type { Nav } from '../App';
 import { subjectById, useStore, type RevealOutcome } from '../state/store';
 import { PackArt } from '../components/PackArt';
@@ -407,7 +407,7 @@ function RewardPanel({ outcome, reduced, onClose, onOpenPack, onPick }: {
       {r.status === 'support' && (
         <div className="panel rv-challenge">
           <div className="eyebrow">Herstelchallenge</div>
-          <p>Haal bij je volgende toets {subject.name} een <b>6,0 of hoger</b> en verdien een <b>Goudpack</b>.</p>
+          <p>Haal bij je volgende toets {subject.name} een <b>{formatGrade(Math.max(5.5, g.value + CURRENT_PROGRESS_CONFIG.recovery.minJump))} of hoger</b> en verdien een <b>herstelbonus</b>: extra pack, coins en XP.</p>
         </div>
       )}
 

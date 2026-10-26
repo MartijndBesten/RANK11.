@@ -91,7 +91,7 @@ export function DraftScreen({ nav }: { nav: Nav }) {
             Start draft <span className="cost"><IconVoucher /> {event.voucherCost}</span>
           </button>
           <p className="dim small draft-note">
-            {state.vouchers < event.voucherCost ? 'Geen vouchers meer. Verdien ze met een 7,5 of hoger.' : `Je hebt ${state.vouchers} voucher${state.vouchers === 1 ? '' : 's'}. `}
+            {state.vouchers < event.voucherCost ? 'Geen vouchers meer. Je verdient ze met een behaald doel, vooruitgang, oefenen in de Academy of een 8,5+.' : `Je hebt ${state.vouchers} voucher${state.vouchers === 1 ? '' : 's'}. `}
             Draftkaarten zijn tijdelijk en komen niet in je collectie.
           </p>
         </div>

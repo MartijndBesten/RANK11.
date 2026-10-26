@@ -11,14 +11,14 @@ import { activeGoals } from './planning.ts';
 import { progressStatements, progressView } from '../progress.ts';
 import { auditStmt, isConstraintError, many, one, stmt } from '../db.ts';
 import {
-  categoryTotals, clubLevel, computeReward, createRng, correctionXp, DEFAULT_MOTIVATION_CONFIG, deletionXp, FAIR_REWARD_CONFIG, gradeKey,
+  categoryTotals, clubLevel, computeReward, createRng, correctionXp, DEFAULT_MOTIVATION_CONFIG, deletionXp, CURRENT_REWARD_CONFIG, gradeKey,
   GradeValidationError, gradeXp, overallAverage, sortedTiers, subjectAverages, validateGrade, weightedAverage,
   type Grade, type MotivationConfig, type RewardConfig, type RewardResult, type XpEntry,
 } from '../engine.ts';
 import { badRequest, conflict, json, notFound, readJson, type Ctx } from '../http.ts';
 
 /** V-011: eerlijkere beloningsconfiguratie (voucher vanaf 8,5; vooruitgang via progressRewards). */
-export const REWARD_CONFIG: RewardConfig = FAIR_REWARD_CONFIG;
+export const REWARD_CONFIG: RewardConfig = CURRENT_REWARD_CONFIG;
 export const MOTIVATION_CONFIG: MotivationConfig = DEFAULT_MOTIVATION_CONFIG;
 
 interface XpRow {

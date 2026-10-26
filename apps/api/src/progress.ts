@@ -5,9 +5,9 @@
  */
 import { newId } from './crypto.ts';
 import { many, stmt } from './db.ts';
-import { DEFAULT_PERIODS, DEFAULT_PROGRESS_CONFIG, progressRewards, type Goal, type Grade, type ProgressGrant, type XpEntry } from './engine.ts';
+import { CURRENT_PROGRESS_CONFIG, DEFAULT_PERIODS, progressRewards, type Goal, type Grade, type ProgressGrant, type XpEntry } from './engine.ts';
 
-export const PROGRESS_CONFIG = DEFAULT_PROGRESS_CONFIG;
+export const PROGRESS_CONFIG = CURRENT_PROGRESS_CONFIG;
 
 export async function loadProgressGrants(db: D1Database, userId: string): Promise<ProgressGrant[]> {
   const rows = await many<{ key: string; kind: ProgressGrant['kind']; label: string; pack_id: string | null; vouchers: number; coins: number; capped_vouchers: number; date: string; subject_id: string | null; config_version: string }>(db,

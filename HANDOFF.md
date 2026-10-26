@@ -4,7 +4,7 @@
 **Bijgewerkt:** 26-10-2026, nacht (Claude Code, cloudsessie).
 **Branch:** `main` (gepusht)
 **Volgende actor:** Martijn
-**Volgende stap:** preview v4 bekijken (https://claude.ai/artifact/L5dsftxHszJFRNqb35xBa9) en `docs/review/v3/`. Daarna V-011 t/m V-016 beantwoorden. V-005 en V-006 blijven nodig vóór iets online kan.
+**Volgende stap:** de preview bekijken (https://claude.ai/artifact/L5dsftxHszJFRNqb35xBa9, versie 5, alle fotoportretten; privé reviewpagina, geen productie) en `docs/review/v3/`. Daarna V-011 t/m V-016 beantwoorden. V-005 en V-006 blijven nodig vóór iets online kan.
 
 ## Ronde 3 (nacht 25 op 26 oktober 2026)
 

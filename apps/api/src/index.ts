@@ -17,6 +17,7 @@ import { getSettings, putSettings } from './modules/settings.ts';
 import { connectIntegration, disconnectIntegration, getIntegration, listIntegrations, syncIntegration } from './modules/integrations/routes.ts';
 import { deleteAccount, exportAccount } from './modules/account.ts';
 import { runScheduledSync } from './modules/integrations/sync.ts';
+import { serveStatic } from './static.ts';
 import { draftStatus, pickInDraft, startDraft } from './modules/drafts.ts';
 import { createGoal, createUpcoming, deleteGoal, deleteUpcoming, getPlanning } from './modules/planning.ts';
 import { claimPick, listVault, markSeen } from './modules/vault.ts';
@@ -147,6 +148,12 @@ export async function scheduled(_event: ScheduledController, env: Env, ctx: Exec
 }
 
 export default {
-  fetch: (request: Request, env: Env): Promise<Response> => handle(request, env),
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url);
+    // API en WebSocket onder /api; al het andere is de same-origin frontend uit R2 (indien gebonden).
+    if (url.pathname === '/api' || url.pathname.startsWith('/api/')) return handle(request, env);
+    if (request.method !== 'GET' && request.method !== 'HEAD') return new Response('Methode niet toegestaan.', { status: 405 });
+    return serveStatic(request, env);
+  },
   scheduled,
 };

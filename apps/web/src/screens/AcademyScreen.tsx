@@ -16,6 +16,7 @@ export const STATUS_LABEL: Record<AcademyDecisionStatus, string> = {
   abandoned: 'Afgebroken',
   'too-fast': 'Niet beloond',
   'no-learning-value': 'Geen nieuwe leerwinst',
+  'low-score': 'Nog niet beloond',
   capped: 'Plafond bereikt',
   disabled: 'Academy staat uit',
 };
@@ -24,6 +25,7 @@ const statusLabel = (s: string) => STATUS_LABEL[s as AcademyDecisionStatus] ?? s
 const STATUS_EXPLAIN: Partial<Record<AcademyDecisionStatus, string>> = {
   abandoned: 'Een afgebroken oefening levert geen XP op. De vragen die je wel beantwoordde, tellen mee voor je herhaling.',
   'no-learning-value': 'XP is er alleen voor echte vooruitgang: nieuwe stof, verbeterde fouten en een betere score dan eerder. Dezelfde oefening herhalen levert niets op.',
+  'low-score': 'XP voor afronden krijg je vanaf de helft goed. Je fouten komen morgen terug als herkansing; goed bij een latere oefening levert wel XP op.',
   capped: 'Je hebt het maximum aan Academy XP voor vandaag of deze week bereikt. Oefenen mag altijd; je voortgang per onderwerp telt gewoon door.',
   disabled: 'De Academy staat uit in de instellingen.',
 };

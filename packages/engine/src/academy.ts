@@ -125,7 +125,7 @@ export function resolvePlayer(links: readonly AccountLink[], e: Pick<LearningEve
 
 /* ———————————— Beloning ———————————— */
 
-export type AcademyDecisionStatus = 'rewarded' | 'duplicate' | 'not-linked' | 'abandoned' | 'too-fast' | 'no-learning-value' | 'capped' | 'disabled';
+export type AcademyDecisionStatus = 'rewarded' | 'duplicate' | 'not-linked' | 'abandoned' | 'too-fast' | 'no-learning-value' | 'low-score' | 'capped' | 'disabled';
 
 export interface AcademyDecision {
   status: AcademyDecisionStatus;
@@ -187,6 +187,7 @@ export function academyReward(config: MotivationConfig, e: LearningEvent, ctx: A
   const fixed = Math.min(e.mistakesFixed, a.mistakeFixedMaxPerActivity);
   if (fixed > 0) entries.push({ ...base, key: `acad:${e.eventId}:fouten`, xp: fixed * a.mistakeFixedXp, label: `${fixed} eerdere fout${fixed === 1 ? '' : 'en'} verbeterd` });
 
+  if (!entries.length && score < a.completeMinScore) return none('low-score', 'Minder dan de helft goed: de fouten komen terug, dan telt het wel.');
   if (!entries.length) return none('no-learning-value', 'Herhaling zonder verbetering levert geen XP op.');
   const capped = applyCaps(config, ctx.ledger, entries);
   const total = capped.reduce((s, x) => s + x.xp, 0);

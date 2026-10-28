@@ -1,5 +1,10 @@
 /** Bindings en instellingen van de Worker (zie wrangler.toml). Geen secrets in deze repository. */
 export interface Env {
+  /** Alleen de besloten synthetische pilot: website en API achter HTTP Basic Auth. */
+  PILOT_MODE?: string;
+  PILOT_ACCESS_USER?: string;
+  PILOT_ACCESS_PASSWORD?: string;
+  REGISTRATION_ENABLED?: string;
   DB: D1Database;
   MATCH: DurableObjectNamespace;
   /** Komma-gescheiden lijst van toegestane origins voor CORS. */

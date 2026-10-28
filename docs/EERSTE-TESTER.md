@@ -1,3 +1,5 @@
+> **Actualisatie 28-10-2026:** onderstaande historische status kan achterhaald zijn. De actuele synthetische pilotprocedure en resterende uitrolblokkades staan in [PILOT-UITROL.md](PILOT-UITROL.md). Accountexport/verwijderen en importfixes staan in de code; gehoste beveiliging en Cloudflare-resourceconfiguratie zijn nog niet geverifieerd. Geen vrijgave voor echte leerlinggegevens.
+
 # Eerste tester — startinstructie en actuele blokkades
 
 Stand: 26 oktober 2026. Alleen verzonnen accounts en cijfers. De pilotvoorwaarden in issue #1 blijven gelden.

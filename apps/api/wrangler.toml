@@ -53,9 +53,12 @@ class_name = "MatchDO"
 # ---------------------------------------------------------------------------------------------
 [env.test]
 name = "rank11-api-test"
+workers_dev = false
 
-# INTEGRATION_KEY staat hier NIET: die is een Worker-secret (`wrangler secret put INTEGRATION_KEY --env test`).
 [env.test.vars]
+PILOT_MODE = "true"
+REGISTRATION_ENABLED = "false"
+# INTEGRATION_KEY, PILOT_ACCESS_USER en PILOT_ACCESS_PASSWORD via wrangler secret put.
 ENVIRONMENT = "test"
 FEATURE_MARKET = "false" # V-015: transfermarkt uit
 FEATURE_ACADEMY = "true"

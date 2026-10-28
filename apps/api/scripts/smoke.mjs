@@ -8,7 +8,11 @@
  * Alleen gebruiken tegen lokale of testomgevingen met synthetische gegevens.
  */
 const [base, inviteCode] = process.argv.slice(2);
-if (!base || !inviteCode) {
+const existing = process.env.SMOKE_USER_A && process.env.SMOKE_USER_B;
+const pilotUser = process.env.PILOT_ACCESS_USER;
+const pilotPassword = process.env.PILOT_ACCESS_PASSWORD;
+const basic = pilotUser && pilotPassword ? `Basic ${Buffer.from(`${pilotUser}:${pilotPassword}`).toString('base64')}` : null;
+if (!base || (!inviteCode && !existing)) {
   console.error('Gebruik: node scripts/smoke.mjs <basis-url> <platformuitnodigingscode>');
   process.exit(2);
 }
@@ -18,7 +22,11 @@ const log = (msg) => console.log(`${String(++step).padStart(2, '0')}. ${msg}`);
 
 async function api(method, path, { token, body, idem } = {}) {
   const headers = {};
-  if (token) headers.Authorization = `Bearer ${token}`;
+  if (basic) {
+    headers.Authorization = basic;
+    if (token) headers.Cookie = `rank11_session=${token}`;
+    headers.Origin = new URL(base).origin;
+  } else if (token) headers.Authorization = `Bearer ${token}`;
   if (idem) headers['Idempotency-Key'] = idem;
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   const res = await fetch(`${base}${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
@@ -28,14 +36,15 @@ async function api(method, path, { token, body, idem } = {}) {
   return data;
 }
 
-const a = await api('POST', '/api/auth/register', { body: { username: `smoke_a_${suffix}`, password: 'smoke-wachtwoord-1', inviteCode } });
-log(`account A geregistreerd (${a.user.username})`);
+const a = existing ? await api('POST', '/api/auth/login', { body: { username: process.env.SMOKE_USER_A, password: process.env.SMOKE_PASSWORD_A, cookie: true } }) : await api('POST', '/api/auth/register', { body: { username: `smoke_a_${suffix}`, password: 'smoke-wachtwoord-1', inviteCode } });
+log(`account A beschikbaar (${a.user.username})`);
 const pool = await api('POST', '/api/pools', { token: a.token, body: { name: `Smoke ${suffix}` } });
 const invite = await api('POST', `/api/pools/${pool.pool.id}/invites`, { token: a.token, body: { maxUses: 1 } });
 log('pool + uitnodiging aangemaakt');
-const b = await api('POST', '/api/auth/register', { body: { username: `smoke_b_${suffix}`, password: 'smoke-wachtwoord-2', inviteCode: invite.invite.code } });
-log(`account B geregistreerd met poolcode (${b.user.username})`);
-const loginB = await api('POST', '/api/auth/login', { body: { username: b.user.username, password: 'smoke-wachtwoord-2' } });
+const b = existing ? await api('POST', '/api/auth/login', { body: { username: process.env.SMOKE_USER_B, password: process.env.SMOKE_PASSWORD_B, cookie: true } }) : await api('POST', '/api/auth/register', { body: { username: `smoke_b_${suffix}`, password: 'smoke-wachtwoord-2', inviteCode: invite.invite.code } });
+if (existing) await api('POST', '/api/pools/join', { token: b.token, body: { code: invite.invite.code } });
+log(`account B beschikbaar (${b.user.username})`);
+const loginB = await api('POST', '/api/auth/login', { body: { username: b.user.username, password: existing ? process.env.SMOKE_PASSWORD_B : 'smoke-wachtwoord-2', cookie: true } });
 log('account B ingelogd (nieuwe sessie)');
 
 await api('POST', '/api/collection/starter', { token: a.token });
@@ -49,10 +58,11 @@ log(`uitdaging geaccepteerd; toss: ${acc.battle.state.tossWinner} begint`);
 const tokens = { [a.user.id]: a.token, [b.user.id]: loginB.token };
 let state = acc.battle.state;
 
-// Eén zet via WebSocket (live), de rest via REST (asynchroon).
+// Pilot gebruikt de asynchrone REST-route van de app. De legacy WebSocket-proef is alleen lokaal.
+if (!basic) {
 const wsUrl = `${base.replace(/^http/, 'ws')}/api/matches/${ch.match.id}/ws`;
 const mover = state.players[state.toMove];
-const ws = new WebSocket(wsUrl, { headers: { Authorization: `Bearer ${tokens[mover]}` } });
+const ws = new WebSocket(wsUrl, { headers: basic ? { Authorization: basic, Cookie: `rank11_session=${tokens[mover]}`, Origin: new URL(base).origin } : { Authorization: `Bearer ${tokens[mover]}` } });
 const wsResult = await new Promise((resolve, reject) => {
   const timer = setTimeout(() => reject(new Error('WebSocket: geen antwoord binnen 10 s')), 10_000);
   let synced = false;
@@ -73,6 +83,9 @@ const wsResult = await new Promise((resolve, reject) => {
 });
 ws.close();
 log(`zet via WebSocket verwerkt en gebroadcast (fase nu: ${wsResult.view.state.phase})`);
+} else {
+  log('pilot: volledige battle via REST; WebSocket niet getest');
+}
 
 for (let i = 0; i < 30; i++) {
   const view = await api('GET', `/api/matches/${ch.match.id}`, { token: a.token });

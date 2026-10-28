@@ -29,6 +29,8 @@ export const SECURITY_HEADERS: Record<string, string> = {
   'Referrer-Policy': 'no-referrer',
   'Cache-Control': 'no-store',
   'Cross-Origin-Resource-Policy': 'same-site',
+  // Besloten test: nergens door zoekmachines laten indexeren.
+  'X-Robots-Tag': 'noindex, nofollow',
 };
 
 export function json(data: unknown, status = 200, headers: Record<string, string> = {}): Response {

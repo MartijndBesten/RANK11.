@@ -50,7 +50,6 @@ export async function syncProvider(ctx: Ctx, userId: string, providerId: string)
         source: providerId === 'magister' ? 'magister' : 'import',
         status: g.verified ? 'confirmed' : 'self',
         externalRef: `${providerId}:${g.externalRef}`,
-        dedupeBySubjectValueDate: true,
       });
       if (res.outcome === 'created') result.created++; else result.duplicate++;
     }

@@ -1,3 +1,5 @@
+> **Actualisatie 28-10-2026:** onderstaande historische status kan achterhaald zijn. De actuele synthetische pilotprocedure en resterende uitrolblokkades staan in [PILOT-UITROL.md](PILOT-UITROL.md). Accountexport/verwijderen en importfixes staan in de code; gehoste beveiliging en Cloudflare-resourceconfiguratie zijn nog niet geverifieerd. Geen vrijgave voor echte leerlinggegevens.
+
 # Besloten online test met echte gebruikers: wat is nodig?
 
 **Stand:** 26-10-2026. **Doel:** in één overzicht wat juridisch, technisch en organisatorisch geregeld moet zijn vóór een kleine, besloten online test met echte kinderen van 10 tot 16 jaar.

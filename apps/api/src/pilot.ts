@@ -1,6 +1,7 @@
 /** Afzonderlijke ingang voor de besloten pilot; geen vervanging voor accountauthenticatie. */
 import { safeEqual, sha256Hex } from './crypto.ts';
 import type { Env } from './env.ts';
+import { serveStatic } from './static.ts';
 
 function privateResponse(res: Response): Response {
   if (res.status === 101) return res;
@@ -15,7 +16,7 @@ function privateResponse(res: Response): Response {
 export async function servePilot(
   request: Request, env: Env, api: (request: Request, env: Env) => Promise<Response>,
 ): Promise<Response> {
-  if (env.PILOT_MODE !== 'true') return api(request, env);
+  if (env.PILOT_MODE !== 'true' && env.ENVIRONMENT !== 'test') return api(request, env);
   // Ontbrekende configuratie mag de website nooit openbaar maken.
   if (!env.PILOT_ACCESS_USER || !env.PILOT_ACCESS_PASSWORD || env.PILOT_ACCESS_PASSWORD.length < 32 || !env.ASSETS) {
     return privateResponse(new Response('Testomgeving nog niet beschikbaar.', { status: 503 }));
@@ -37,5 +38,7 @@ export async function servePilot(
   // Zelfde origin voor de app en API: Secure/SameSite=Strict-sessiecookies blijven werken.
   return privateResponse(await (path === '/api' || path.startsWith('/api/')
     ? api(request, env)
-    : env.ASSETS.fetch(request)));
+    : (request.method === 'GET' || request.method === 'HEAD'
+      ? serveStatic(request, env)
+      : Promise.resolve(new Response('Methode niet toegestaan.', { status: 405 })))));
 }

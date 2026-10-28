@@ -394,9 +394,10 @@ export function StoreProvider({ children, onExit }: { children: ReactNode; onExi
     const toAdd: Grade[] = [];
     for (const input of rows) {
       const grade: Grade = { id: uid('c'), subjectId: input.subjectId, testName: input.testName.trim(), value: Math.round(input.value * 100) / 100, weight: input.weight, date: input.date, status: 'registered', source: 'import' };
+      // Dedup op toets-identiteit (vak + toetsnaam + datum, via checkNewGrade). Twee verschillende toetsen met
+      // toevallig hetzelfde cijfer op dezelfde datum blijven allebei behouden.
       const check = checkNewGrade({ ...book, grades: running }, grade, undefined, today());
       if (!check.ok) { if (check.duplicateOf) duplicate++; else invalid++; continue; }
-      if (running.some((g) => g.subjectId === grade.subjectId && g.value === grade.value && g.date === grade.date)) { duplicate++; continue; }
       running.push(grade); toAdd.push(grade);
     }
     if (toAdd.length) update((s) => ({

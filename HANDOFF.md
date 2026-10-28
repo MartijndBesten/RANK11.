@@ -1,3 +1,5 @@
+> **Actualisatie 28-10-2026:** onderstaande historische status kan achterhaald zijn. De actuele synthetische pilotprocedure en resterende uitrolblokkades staan in [docs/PILOT-UITROL.md](docs/PILOT-UITROL.md). Accountexport/verwijderen en importfixes staan in de code; gehoste beveiliging en Cloudflare-resourceconfiguratie zijn nog niet geverifieerd. Geen vrijgave voor echte leerlinggegevens.
+
 # HANDOFF — RANK11.
 
 **Status:** `wacht-op-review`. Ronde 6 is klaar en gepusht: cijferimport + snellere invoer, de koppelarchitectuur (voorbeeldbron werkt; Magister geregistreerd maar niet geactiveerd), en V-018 (vorm van de dag in battles).

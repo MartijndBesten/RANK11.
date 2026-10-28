@@ -65,7 +65,8 @@ async function findUsableInvite(env: Env, code: string, now: number): Promise<In
 }
 
 export async function register(ctx: Ctx): Promise<Response> {
-  if (ctx.env.REGISTRATION_ENABLED === 'false') {
+  if (ctx.env.REGISTRATION_ENABLED === 'false' ||
+      ((ctx.env.PILOT_MODE === 'true' || ctx.env.ENVIRONMENT === 'test') && ctx.env.REGISTRATION_ENABLED !== 'true')) {
     throw new ApiError(403, 'registration_closed', 'Registratie is gesloten.');
   }
   const body = await readJson(ctx.req);

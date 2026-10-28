@@ -53,13 +53,7 @@ class_name = "MatchDO"
 # ---------------------------------------------------------------------------------------------
 [env.test]
 name = "rank11-api-test"
-workers_dev = true
-
-[env.test.assets]
-directory = "../web/dist"
-binding = "ASSETS"
-run_worker_first = true
-not_found_handling = "single-page-application"
+workers_dev = false
 
 [env.test.vars]
 PILOT_MODE = "true"
@@ -69,18 +63,28 @@ ENVIRONMENT = "test"
 FEATURE_MARKET = "false" # V-015: transfermarkt uit
 FEATURE_ACADEMY = "true"
 ASYNC_DEADLINE_HOURS = "48" # V-014
-ALLOWED_ORIGINS = "" # invullen met de origin van de testfrontend bij uitrol
+ALLOWED_ORIGINS = "https://rank11-test.martijndenbesten.com" # same-origin testfrontend
 PBKDF2_ITERATIONS = "100000"
 SESSION_TTL_DAYS = "30"
 POOL_MAX_MEMBERS_DEFAULT = "20"
 LOGIN_MAX_FAILURES = "5"
 LOGIN_MAX_FAILURES_IP = "30"
 
+# Eigen URL voor de besloten test; de worker serveert hier zowel /api als de frontend (uit R2).
+[[env.test.routes]]
+pattern = "rank11-test.martijndenbesten.com"
+custom_domain = true
+
 [[env.test.d1_databases]]
 binding = "DB"
 database_name = "rank11-test"
-database_id = "00000000-0000-0000-0000-000000000000" # PLACEHOLDER: vervangen door het echte id na `wrangler d1 create rank11-test --jurisdiction eu`
+database_id = "c4fd7b8f-59b6-4fd6-a53d-36185e0300de" # rank11-test, regio WEUR (EU)
 migrations_dir = "migrations"
+
+# Statische frontend-build (online-modus) voor same-origin serveren.
+[[env.test.r2_buckets]]
+binding = "ASSETS"
+bucket_name = "rank11-test-web"
 
 [[env.test.durable_objects.bindings]]
 name = "MATCH"

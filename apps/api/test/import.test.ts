@@ -33,15 +33,56 @@ describe('cijferimport op de server', () => {
     expect(xpTotal(app, u)).toBe(xp1);
   });
 
-  it('een al handmatig ingevoerd cijfer (zelfde vak, waarde, datum) geldt bij import als dubbel', async () => {
+  it('dedup op toets-identiteit: zelfde toets = dubbel, een andere toets met hetzelfde cijfer/datum blijft behouden (P1)', async () => {
     const app = createApp();
     const u = await register(app, 'Mix', await platformCode(app));
+    // Handmatig 'Proefwerk' 6,8 op 13-10.
     await app.api('POST', '/api/grades', { token: u.token, idem: idem(), body: { subjectId: 'wiskunde', testName: 'Proefwerk', value: 6.8, weight: 1, date: '2026-10-13' } });
-    const rewards1 = rewardCount(app, u);
-    const res = await importRows(app, u, [row()]); // andere toetsnaam, zelfde vak/waarde/datum
-    expect(res.body).toMatchObject({ created: 0, duplicate: 1 });
-    expect(allGrades(app, u)).toHaveLength(1);
-    expect(rewardCount(app, u)).toBe(rewards1);
+    // Dezelfde toets opnieuw importeren (zelfde naam+datum) = dubbel.
+    const same = await importRows(app, u, [{ subjectId: 'wiskunde', testName: 'Proefwerk', value: 6.8, weight: 1, date: '2026-10-13' }]);
+    expect(same.body).toMatchObject({ created: 0, duplicate: 1 });
+    // Een ÁNDERE toets met toevallig hetzelfde cijfer op dezelfde datum blijft behouden (mag niet verdwijnen).
+    const other = await importRows(app, u, [{ subjectId: 'wiskunde', testName: 'SO deel 2', value: 6.8, weight: 1, date: '2026-10-13' }]);
+    expect(other.body).toMatchObject({ created: 1, duplicate: 0 });
+    expect(allGrades(app, u)).toHaveLength(2);
+  });
+
+  it('twee verschillende toetsen met hetzelfde cijfer op dezelfde datum in één import blijven allebei behouden (P1)', async () => {
+    const app = createApp();
+    const u = await register(app, 'Twee', await platformCode(app));
+    const res = await importRows(app, u, [
+      { subjectId: 'wiskunde', testName: 'SO deel 1', value: 7.0, weight: 1, date: '2026-10-13' },
+      { subjectId: 'wiskunde', testName: 'SO deel 2', value: 7.0, weight: 1, date: '2026-10-13' },
+    ]);
+    expect(res.body).toMatchObject({ created: 2, duplicate: 0, invalid: 0 });
+    expect(allGrades(app, u)).toHaveLength(2);
+  });
+
+  it('historische bulkimport levert geen onbeperkte beloningen (P2): dag-/weekplafonds begrenzen packs, coins en vouchers', async () => {
+    const app = createApp();
+    const u = await register(app, 'Historie', await platformCode(app));
+    const subs = ['wiskunde', 'nederlands', 'engels', 'frans', 'biologie', 'geschiedenis', 'natuurkunde', 'aardrijkskunde'];
+    const rows = Array.from({ length: 48 }, (_, i) => ({
+      subjectId: subs[i % subs.length], testName: `Toets ${i}`, value: 5 + (i % 6), weight: (i % 3) + 1,
+      date: new Date(Date.UTC(2026, 0, 1) + i * 6 * 86_400_000).toISOString().slice(0, 10),
+    }));
+    const res = await importRows(app, u, rows);
+    expect(res.body.created).toBe(48); // alle 48 verschillende toetsen komen binnen...
+    const packs = packCount(app, u);
+    const coins = (app.db.db.prepare("SELECT COALESCE(SUM(delta),0) AS t FROM wallet_ledger WHERE user_id=? AND currency='coins'").get(u.id) as { t: number }).t;
+    const vouchers = (app.db.db.prepare("SELECT COALESCE(SUM(delta),0) AS t FROM wallet_ledger WHERE user_id=? AND currency='vouchers'").get(u.id) as { t: number }).t;
+    const rewardedFull = (app.db.db.prepare("SELECT COUNT(*) AS n FROM reward_grants WHERE user_id=? AND kind='initial' AND status='rewarded'").get(u.id) as { n: number }).n;
+    const cappedN = (app.db.db.prepare("SELECT COUNT(*) AS n FROM reward_grants WHERE user_id=? AND status='capped'").get(u.id) as { n: number }).n;
+    // ...maar de beloningen zijn begrensd: hooguit het dagplafond aan volledige cijferbeloningen, de rest 'capped'.
+    expect(rewardedFull).toBeLessThanOrEqual(4);   // maxRewardedPerDay
+    expect(cappedN).toBeGreaterThan(30);           // het leeuwendeel wordt begrensd
+    expect(packs).toBeLessThanOrEqual(10);
+    expect(vouchers).toBeLessThanOrEqual(1);       // weekplafond vouchers uit voortgang
+    expect(coins).toBeLessThanOrEqual(3000);
+    // Opnieuw importeren voegt niets toe.
+    const again = await importRows(app, u, rows);
+    expect(again.body).toMatchObject({ created: 0, duplicate: 48 });
+    expect(packCount(app, u)).toBe(packs);
   });
 
   it('ongeldige rijen worden geweigerd zonder de geldige te blokkeren', async () => {

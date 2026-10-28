@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { handle } from '../src/index.ts';
+import worker, { handle } from '../src/index.ts';
 import { servePilot } from '../src/pilot.ts';
 import { createApp, platformCode } from './helpers.ts';
 
@@ -9,9 +9,9 @@ const password = 'synthetic-pilot-password-at-least-32-characters';
 const basic = `Basic ${btoa(`tester:${password}`)}`;
 
 function pilot() {
-  const app = createApp({ PILOT_MODE: 'true', PILOT_ACCESS_USER: 'tester', PILOT_ACCESS_PASSWORD: password });
-  const assets = vi.fn(async () => new Response('<html>pilot</html>', { headers: { 'Content-Type': 'text/html' } }));
-  app.env.ASSETS = { fetch: assets } as unknown as Fetcher;
+  const app = createApp({ PILOT_MODE: 'true', REGISTRATION_ENABLED: 'true', PILOT_ACCESS_USER: 'tester', PILOT_ACCESS_PASSWORD: password });
+  const assets = vi.fn(async () => ({ body: '<html>pilot</html>', httpEtag: 'test', writeHttpMetadata: (h: Headers) => h.set('Content-Type', 'text/html') }));
+  app.env.ASSETS = { get: assets } as unknown as R2Bucket;
   const request = (path: string, opts: RequestInit = {}) => servePilot(new Request(`https://app.rank11.test${path}`, opts), app.env, handle);
   return { app, assets, request };
 }
@@ -69,5 +69,19 @@ describe('besloten pilot', () => {
     });
     expect((await mutation('https://evil.test')).status).toBe(401);
     expect((await mutation('https://app.rank11.test')).status).toBe(201);
+  });
+});
+
+// De echte Worker-ingang moet ook zonder PILOT_MODE gesloten blijven in env.test.
+describe('testomgeving fail-closed', () => {
+  it('kan de toegangspoort niet overslaan door een ontbrekende vlag', async () => {
+    const { app } = pilot();
+    app.env.ENVIRONMENT = 'test';
+    delete app.env.PILOT_MODE;
+    delete app.env.REGISTRATION_ENABLED;
+    expect((await handle(new Request('https://app.rank11.test/api/auth/register', { method: 'POST' }), app.env)).status).toBe(403);
+    expect((await worker.fetch(new Request('https://app.rank11.test/'), app.env)).status).toBe(401);
+    delete app.env.ASSETS;
+    expect((await worker.fetch(new Request('https://app.rank11.test/api/health'), app.env)).status).toBe(503);
   });
 });

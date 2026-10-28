@@ -23,10 +23,10 @@ export function useLineup() {
 
 export const DRAFT_END = new Date('2026-11-01T18:00:00+01:00');
 
-const press = (fn: () => void) => ({ role: 'button' as const, tabIndex: 0, onClick: fn, onKeyDown: (e: { key: string }) => e.key === 'Enter' && fn() });
+const press = (fn: () => void) => ({ role: 'button' as const, tabIndex: 0, onClick: fn, onKeyDown: (e: { key: string; preventDefault: () => void }) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); } } });
 
 export function Hub({ nav }: { nav: Nav }) {
-  const { state, pending, xp } = useStore();
+  const { state, pending, xp, mode } = useStore();
   const d = useGradeData();
   const { rating, chem } = useLineup();
   const event = DRAFT_EVENTS.toetsweek1!;
@@ -35,8 +35,6 @@ export function Hub({ nav }: { nav: Nav }) {
   const packEntries = Object.entries(state.packs).filter(([, n]) => n > 0);
   const delta = d.overall !== null && d.overallBeforeLatest !== null ? d.overall - d.overallBeforeLatest : null;
   const movers = [...d.rising.slice(0, 2).map((r) => ({ r, up: true })), ...d.falling.slice(0, 2).map((r) => ({ r, up: false }))];
-  const cat = xp.byCategory;
-  const catMax = Math.max(1, cat.performance, cat.progress, cat.academy);
 
   return (
     <div className="page home">
@@ -62,11 +60,7 @@ export function Hub({ nav }: { nav: Nav }) {
           <div className="eyebrow">Clubniveau {xp.level.level}</div>
           <div className="bar"><i style={{ width: `${(xp.level.into / xp.level.span) * 100}%` }} /></div>
           <div className="dim small">{xp.level.span - xp.level.into} XP tot niveau {xp.level.level + 1}</div>
-          <ul className="xp-cats">
-            <li><span>Prestatie</span><div className="bar"><i style={{ width: `${(cat.performance / catMax) * 100}%` }} /></div><b className="num">{cat.performance}</b></li>
-            <li><span>Vooruitgang</span><div className="bar up"><i style={{ width: `${(cat.progress / catMax) * 100}%` }} /></div><b className="num">{cat.progress}</b></li>
-            {state.settings.academy && <li><span>Academy</span><div className="bar electric"><i style={{ width: `${(cat.academy / catMax) * 100}%` }} /></div><b className="num">{cat.academy}</b></li>}
-          </ul>
+
         </div>
       </section>
 
@@ -81,7 +75,38 @@ export function Hub({ nav }: { nav: Nav }) {
         </section>
       )}
 
-      <div className="page-cols">
+      <div className="home-actions">
+        <button className="btn" onClick={() => nav.go('cijfers-invoeren')}>Cijfer invoeren</button>
+        {state.settings.academy && <button className="btn ghost" onClick={() => nav.go('academy-oefenen')}>Even oefenen</button>}
+      </div>
+          <div className="hub-tiles">
+            <section className="hub-tile" {...press(() => nav.go('club-packs'))}>
+              <div className="eyebrow">Mijn packs</div>
+              <div className="hub-packs">
+                {packEntries.length ? packEntries.slice(0, 3).map(([id, n]) => (
+                  <div key={id} className="hub-pack">
+                    <PackArt theme={PACKS[id]!.theme} name={PACKS[id]!.name} className="pack-mini" />
+                    {n > 1 && <span className="hub-pack-n">×{n}</span>}
+                  </div>
+                )) : <p className="dim small">Geen ongeopende packs. Verdien ze met je cijfers.</p>}
+              </div>
+            </section>
+            <section className="hub-tile" {...press(() => nav.go('club-elftal'))}>
+              <div className="eyebrow">Mijn elftal</div>
+              <div className="hub-squad">
+                <div><div className="hub-big num">{rating}</div><div className="dim small">Teamrating</div></div>
+                <div><div className="hub-big num">{chem.total}<small>/{chem.max}</small></div><div className="dim small">Chemie</div></div>
+              </div>
+            </section>
+          </div>
+      {d.upcoming.length > 0 && <section className="panel" aria-label="Eerstvolgende toets">
+        <div className="panel-head"><h2>Eerstvolgende toets</h2><button className="link-btn" onClick={() => nav.go('cijfers-doelen')}>Planning</button></div>
+        <p className="next-test"><b>{d.subjectById(d.upcoming[0]!.subjectId).name}</b> · {d.upcoming[0]!.name}</p>
+        <span className="dim small">{dayLabel(d.upcoming[0]!.date, d.today)}</span>
+      </section>}
+      <details className="panel disclosure home-details">
+        <summary>Meer over je voortgang en beloningen</summary>
+        <div className="page-cols">
         <div className="stack">
           <section className="panel gold" aria-label="Volgende voetbalbeloning">
             <div className="panel-head"><h2>Volgende beloning</h2><IconPack width={20} height={20} className="dim" /></div>
@@ -130,7 +155,7 @@ export function Hub({ nav }: { nav: Nav }) {
             <section className="panel electric" aria-label="Inzichten">
               <div className="panel-head"><h2>Inzicht</h2><span className="tag">uit jouw cijfers</span></div>
               <ul className="insights">
-                {d.insights.slice(0, 3).map((i) => <li key={i.id} data-tone={i.tone}>{i.text}</li>)}
+                {d.insights.slice(0, 1).map((i) => <li key={i.id} data-tone={i.tone}>{i.text}</li>)}
               </ul>
             </section>
           )}
@@ -199,31 +224,14 @@ export function Hub({ nav }: { nav: Nav }) {
             </div>
           </section>
 
-          <div className="hub-tiles">
-            <section className="hub-tile" {...press(() => nav.go('club-packs'))}>
-              <div className="eyebrow">Mijn packs</div>
-              <div className="hub-packs">
-                {packEntries.length ? packEntries.slice(0, 3).map(([id, n]) => (
-                  <div key={id} className="hub-pack">
-                    <PackArt theme={PACKS[id]!.theme} name={PACKS[id]!.name} className="pack-mini" />
-                    {n > 1 && <span className="hub-pack-n">×{n}</span>}
-                  </div>
-                )) : <p className="dim small">Geen ongeopende packs. Verdien ze met je cijfers.</p>}
-              </div>
-            </section>
-            <section className="hub-tile" {...press(() => nav.go('club-elftal'))}>
-              <div className="eyebrow">Mijn elftal</div>
-              <div className="hub-squad">
-                <div><div className="hub-big num">{rating}</div><div className="dim small">Teamrating</div></div>
-                <div><div className="hub-big num">{chem.total}<small>/{chem.max}</small></div><div className="dim small">Chemie</div></div>
-              </div>
-            </section>
-          </div>
+
         </div>
       </div>
 
+      </details>
+
       <footer className="hub-foot">
-        <span className="proto-tag">Prototype · cijfers en voortgang alleen op dit toestel</span>
+        <span className="hint">{mode === 'online' ? 'Ingelogd · je voortgang wordt in je account opgeslagen' : 'Demomodus · voortgang alleen op dit toestel'}</span>
       </footer>
     </div>
   );

@@ -7,6 +7,9 @@ import iconUrl from './assets/icon.svg';
 
 type Mode = 'checking' | 'choose' | 'online' | 'demo';
 const MODE_KEY = 'rank11-mode';
+// Publieke demo-build (VITE_PUBLIC_DEMO=1): geen server, geen inlog- of accountscherm. Start meteen de
+// lokale demo, zodat de publieke omgeving nooit om een account vraagt en niet eerst 1,5s op een server wacht.
+const PUBLIC_DEMO = import.meta.env.VITE_PUBLIC_DEMO === '1';
 const readMode = () => { try { return localStorage.getItem(MODE_KEY); } catch { return null; } };
 const writeMode = (m: string | null) => { try { if (m) localStorage.setItem(MODE_KEY, m); else localStorage.removeItem(MODE_KEY); } catch { /* geen opslag */ } };
 
@@ -15,10 +18,11 @@ const writeMode = (m: string | null) => { try { if (m) localStorage.setItem(MODE
  * is er geen server en start de demo direct.
  */
 export function Root() {
-  const [mode, setMode] = useState<Mode>('checking');
+  const [mode, setMode] = useState<Mode>(PUBLIC_DEMO ? 'demo' : 'checking');
   const [hasServer, setHasServer] = useState(false);
 
   useEffect(() => {
+    if (PUBLIC_DEMO) return; // publieke demo: geen serverdetectie
     let alive = true;
     (async () => {
       const server = await serverAvailable();

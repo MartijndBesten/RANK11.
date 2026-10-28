@@ -5,7 +5,6 @@ export interface Env {
   PILOT_ACCESS_USER?: string;
   PILOT_ACCESS_PASSWORD?: string;
   REGISTRATION_ENABLED?: string;
-  ASSETS?: Fetcher;
   DB: D1Database;
   MATCH: DurableObjectNamespace;
   /** Komma-gescheiden lijst van toegestane origins voor CORS. */
@@ -27,6 +26,8 @@ export interface Env {
   ASYNC_DEADLINE_HOURS?: string;
   /** Secret voor het versleutelen van koppelingstokens (AES-GCM). Dev gebruikt een niet-geheime placeholder. */
   INTEGRATION_KEY?: string;
+  /** Statische frontend-build (same-origin). Alleen gebonden in omgevingen die de frontend meeserveren. */
+  ASSETS?: R2Bucket;
 }
 
 export function intVar(value: string | undefined, fallback: number): number {

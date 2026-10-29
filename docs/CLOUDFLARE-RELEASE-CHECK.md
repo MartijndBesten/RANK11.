@@ -25,6 +25,22 @@ Er worden **geen** resources aangemaakt, secrets gewijzigd, migraties toegepast 
 
 **Belangrijk:** de GitHub-repository is publiek; de gegevens van de daadwerkelijke tester of geheimen mogen nergens in bestanden of issue-comments terechtkomen. De Read-only-controle mag geen toegangstoken loggen. Het is niet mogelijk vanuit de bestaande Render-koppeling de Cloudflare D1/Durable Objects te beheren.
 
+## Voorbereide één-klikuitrol (alleen synthetisch)
+
+De handmatige GitHub Action **RANK11 besloten testpilot uitrollen** is voorbereid. Er is nog **geen** Cloudflare-uitrol uitgevoerd. Deze workflow voert achtereenvolgens codecontroles, Cloudflare-preflight, een beveiligde Worker-deploy, drie Worker-secrets, afzonderlijke D1-testmigraties, private R2-assets (index.html als laatste), de eind-deploy en een online toegangscheck uit.
+
+Benodigde GitHub Actions repository-secrets (nooit in chat of code delen):
+
+- `CLOUDFLARE_ACCOUNT_ID` — juiste Cloudflare-account-ID.
+- `CLOUDFLARE_API_TOKEN` — beperkt Cloudflare-token met benodigde D1-, R2- en Workers-/domeinrechten.
+- `RANK11_PILOT_ACCESS_USER` — willekeurige pilot-login voor HTTP Basic Auth.
+- `RANK11_PILOT_ACCESS_PASSWORD` — sterk willekeurig wachtwoord van minimaal 32 tekens.
+- `RANK11_INTEGRATION_KEY` — willekeurige integratiesleutel van minimaal 32 tekens.
+
+De workflow kan alleen vanaf `main` starten met exact `SYNTHETIC-ONLY`. Zonder groene resourcecontrole of secrets wordt hij gestopt. Hij beperkt wijzigingen tot `rank11-api-test`, D1 `rank11-test` en R2 `rank11-test-web`; overige Denckh.-services en Render worden niet gewijzigd. De testdatabase kan remote migraties ontvangen; laat eerst controleren dat er alleen fictieve testgegevens in staan. GitHub Actions heeft geen auditbewijs van bestaande data als er geen toegang bestaat.
+
+Bij falen na de eerste deploy kan een gedeeltelijk uitgerolde en afgeschermde (503) pilot overblijven. Dat is veiliger dan de site openbaar maken; herstel met de gecontroleerde Cloudflare Worker-versie. Maak geen echte gebruikers aan voordat alle gehoste checks én fase-B privacychecks zijn geslaagd.
+
 ## Vrijgave
 
 - **Synthetische pilot**: pas na gehoste controles van alle routes en de werkende app.

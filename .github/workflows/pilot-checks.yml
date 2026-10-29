@@ -35,6 +35,10 @@ jobs:
         run: npm run typecheck
       - name: Webbuild
         run: npm run build
+      - name: Controleer online-only multiplayerbuild zonder publicatie
+        run: |
+          VITE_PUBLIC_DEMO=0 VITE_ONLINE_ONLY=1 npm run build
+          node scripts/assert-online-build.mjs
       - name: Wrangler dry-run (geen deployment)
         run: npm run deploy:dry -w apps/api
       - name: Pilotcheck-regressietests

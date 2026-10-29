@@ -5,11 +5,13 @@ import { OnlineStoreProvider } from './state/onlineStore';
 import { App } from './App';
 import iconUrl from './assets/icon.svg';
 
-type Mode = 'checking' | 'choose' | 'online' | 'demo';
+type Mode = 'checking' | 'choose' | 'online' | 'demo' | 'unavailable';
 const MODE_KEY = 'rank11-mode';
 // Publieke demo-build (VITE_PUBLIC_DEMO=1): geen server, geen inlog- of accountscherm. Start meteen de
 // lokale demo, zodat de publieke omgeving nooit om een account vraagt en niet eerst 1,5s op een server wacht.
 const PUBLIC_DEMO = import.meta.env.VITE_PUBLIC_DEMO === '1';
+// De echte online-versie mag nooit stilzwijgend naar lokale demo-cijfers terugvallen.
+const ONLINE_ONLY = import.meta.env.VITE_ONLINE_ONLY === '1';
 const readMode = () => { try { return localStorage.getItem(MODE_KEY); } catch { return null; } };
 const writeMode = (m: string | null) => { try { if (m) localStorage.setItem(MODE_KEY, m); else localStorage.removeItem(MODE_KEY); } catch { /* geen opslag */ } };
 
@@ -20,16 +22,17 @@ const writeMode = (m: string | null) => { try { if (m) localStorage.setItem(MODE
 export function Root() {
   const [mode, setMode] = useState<Mode>(PUBLIC_DEMO ? 'demo' : 'checking');
   const [hasServer, setHasServer] = useState(false);
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
     if (PUBLIC_DEMO) return; // publieke demo: geen serverdetectie
     let alive = true;
     (async () => {
-      const server = await serverAvailable();
+      const server = await serverAvailable(ONLINE_ONLY ? 6000 : 1500);
       if (!alive) return;
       setHasServer(server);
-      if (!server) return setMode('demo');
-      if (readMode() === 'demo') return setMode('demo');
+      if (!server) return setMode(ONLINE_ONLY ? 'unavailable' : 'demo');
+      if (!ONLINE_ONLY && readMode() === 'demo') return setMode('demo');
       try {
         await api('GET', '/me');
         if (alive) setMode('online');
@@ -38,18 +41,28 @@ export function Root() {
       }
     })();
     return () => { alive = false; };
-  }, []);
+  }, [retry]);
 
   const loggedOut = useCallback(() => { writeMode(null); setMode('choose'); }, []);
   const exitDemo = useCallback(() => { writeMode(null); setMode(hasServer ? 'choose' : 'demo'); }, [hasServer]);
 
   if (mode === 'checking') return <div className="boot"><div className="stadium" /><div className="boot-card"><span>RANK11. start…</span></div></div>;
-  if (mode === 'choose') return <AuthScreen onOnline={() => { writeMode('online'); setMode('online'); }} onDemo={() => { writeMode('demo'); setMode('demo'); }} />;
+  if (mode === 'unavailable') return (
+    <div className="boot"><div className="stadium" />
+      <div className="boot-card" role="alert">
+        <h1>RANK11. is tijdelijk niet bereikbaar</h1>
+        <p>De online server reageert niet. Je cijfers en wedstrijden blijven op de server bewaard. Er wordt niets lokaal als echt cijfer opgeslagen.</p>
+        <button className="btn" onClick={() => { setMode('checking'); setRetry((n) => n + 1); }}>Opnieuw verbinden</button>
+      </div>
+    </div>
+  );
+  if (mode === 'choose') return <AuthScreen onOnline={() => { writeMode('online'); setMode('online'); }}
+    onDemo={ONLINE_ONLY ? undefined : () => { writeMode('demo'); setMode('demo'); }} />;
   if (mode === 'online') return <OnlineStoreProvider onLoggedOut={loggedOut}><App /></OnlineStoreProvider>;
   return <StoreProvider onExit={hasServer ? exitDemo : undefined}><App /></StoreProvider>;
 }
 
-function AuthScreen({ onOnline, onDemo }: { onOnline: () => void; onDemo: () => void }) {
+function AuthScreen({ onOnline, onDemo }: { onOnline: () => void; onDemo?: () => void }) {
   const [tab, setTab] = useState<'login' | 'register'>('login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -77,10 +90,12 @@ function AuthScreen({ onOnline, onDemo }: { onOnline: () => void; onDemo: () => 
       <div className="stadium" />
       <main className="auth-card panel gold">
         <div className="auth-brand"><img src={iconUrl} alt="" width={56} height={56} /><div><div className="display auth-title">RANK11.</div><div className="dim small">Your grades. Your squad.</div></div></div>
-        <div className="seg" role="tablist" aria-label="Inloggen of account maken">
-          <button role="tab" aria-pressed={tab === 'login'} aria-selected={tab === 'login'} onClick={() => setTab('login')}>Inloggen</button>
-          <button role="tab" aria-pressed={tab === 'register'} aria-selected={tab === 'register'} onClick={() => setTab('register')}>Account maken</button>
-        </div>
+        {!ONLINE_ONLY && (
+          <div className="seg" role="tablist" aria-label="Inloggen of account maken">
+            <button role="tab" aria-pressed={tab === 'login'} aria-selected={tab === 'login'} onClick={() => setTab('login')}>Inloggen</button>
+            <button role="tab" aria-pressed={tab === 'register'} aria-selected={tab === 'register'} onClick={() => setTab('register')}>Account maken</button>
+          </div>
+        )}
         <form className="form" onSubmit={submit}>
           <label className="field"><span>Gebruikersnaam</span><input className="input" autoComplete="username" value={username} maxLength={20} onChange={(e) => setUsername(e.target.value)} /></label>
           <label className="field"><span>Wachtwoord</span><input className="input" type="password" autoComplete={tab === 'login' ? 'current-password' : 'new-password'} value={password} onChange={(e) => setPassword(e.target.value)} /></label>
@@ -92,9 +107,15 @@ function AuthScreen({ onOnline, onDemo }: { onOnline: () => void; onDemo: () => 
           <button className="btn" type="submit" disabled={busy}>{busy ? 'Bezig…' : tab === 'login' ? 'Inloggen' : 'Account maken'}</button>
         </form>
         <div className="auth-demo">
-          <span className="tag demo">testomgeving</span>
-          <p className="hint">Besloten testomgeving met uitnodigingen. Gebruik uitsluitend verzonnen cijfers. Zonder account kun je de demo op dit toestel spelen.</p>
-          <button className="link-btn" onClick={onDemo}>Demo zonder account</button>
+          {ONLINE_ONLY ? (
+            <p className="hint">Toegang uitsluitend voor uitgenodigde accounts. Nieuwe accounts worden pas vrijgegeven nadat de privacy- en beveiligingscontroles zijn afgerond.</p>
+          ) : (
+            <>
+              <span className="tag demo">testomgeving</span>
+              <p className="hint">Besloten testomgeving met uitnodigingen. Gebruik uitsluitend verzonnen cijfers. Zonder account kun je de demo op dit toestel spelen.</p>
+              <button className="link-btn" onClick={onDemo}>Demo zonder account</button>
+            </>
+          )}
         </div>
       </main>
     </div>

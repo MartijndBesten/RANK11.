@@ -5,6 +5,7 @@
  */
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 async function javascript(directory) {
   const result = [];
@@ -32,7 +33,7 @@ export async function verifyOnlineBuild(dir) {
 }
 
 if (process.argv[1]?.endsWith('assert-online-build.mjs')) {
-  verifyOnlineBuild(new URL('../apps/web/dist/', import.meta.url)).catch((error) => {
+  verifyOnlineBuild(fileURLToPath(new URL('../apps/web/dist/', import.meta.url))).catch((error) => {
     console.error(error.message);
     process.exitCode = 1;
   });

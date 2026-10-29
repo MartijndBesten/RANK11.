@@ -40,6 +40,7 @@ jobs:
           npm run typecheck
           node --test scripts/*.test.mjs
           VITE_PUBLIC_DEMO=0 VITE_ONLINE_ONLY=1 npm run build
+          node scripts/assert-online-build.mjs
           npm run deploy:dry -w apps/api
       - name: Verifieer EU-D1 en volledig private R2
         run: node scripts/cloudflare-pilot-preflight.mjs

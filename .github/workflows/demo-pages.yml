@@ -1,14 +1,10 @@
-name: RANK11 demo publiceren
+# Optionele statische GitHub Pages-demo. De echte RANK11-testpilot draait op Cloudflare.
+# GitHub Pages moet door een repo-admin worden ingeschakeld; de GitHub App kan
+# de Pages-site niet aanmaken (403 Resource not accessible by integration).
+# Daarom geen automatische push-deploy die onterecht rood blijft.
+name: RANK11 GitHub Pages-demo (optioneel)
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/demo-pages.yml'
-      - 'apps/web/**'
-      - 'packages/engine/**'
-      - 'package.json'
-      - 'package-lock.json'
   workflow_dispatch:
 
 permissions:
@@ -24,27 +20,20 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Node.js 22
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
-      - name: Dependencies
-        run: npm ci
-      - name: Tests en privacycheck
-        run: npm test
-      - name: Typecheck
-        run: npm run typecheck
-      - name: Bouw speelbare demo (geen backend)
+      - run: npm ci
+      - run: npm test
+      - run: npm run typecheck
+      - name: Bouw uitsluitend de fictieve demo
         run: npm run build
-      - name: Configureer Pages
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
-      - name: Upload statische demo
-        uses: actions/upload-pages-artifact@v3
+        env:
+          VITE_PUBLIC_DEMO: 'true'
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
         with:
           path: apps/web/dist
   deploy:
@@ -55,5 +44,4 @@ jobs:
     needs: build
     steps:
       - id: deployment
-        name: Publiceer op GitHub Pages
         uses: actions/deploy-pages@v4

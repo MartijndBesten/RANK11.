@@ -52,6 +52,17 @@ Start handmatig via GitHub Actions → **RANK11 gehoste synthetische speltest** 
 
 **Let op:** deze rooktest is bewust muterend en laat testrecords achter. Hij mag niet tegen een productieomgeving of echte leerlingaccounts worden uitgevoerd. Ook een groene uitkomst vervangt geen iPhone-Safari/PWA-test of AVG- en oudertoestemmingcontroles. Als de extra secrets ontbreken, slaat de workflow niet stilzwijgend over maar stopt hij met een fout.
 
+## RANK11 zonder demomodus — frontend is servergebonden
+
+De besloten Cloudflare-build gebruikt expliciet `VITE_PUBLIC_DEMO=0 VITE_ONLINE_ONLY=1`. In die configuratie:
+
+- leidt een uitgevallen of onbereikbare API **niet** tot de lokale demomodus, maar tot een storingsscherm met herhaalactie;
+- kan een browsergebruiker niet via het inlogscherm naar een lokale demo omschakelen;
+- wordt de frontend pas op R2 gezet als `scripts/assert-online-build.mjs` de servergebonden build bevestigt;
+- blijven cijfers en multiplayerresultaten alleen op de D1/DO-server. Er worden geen echte cijfers in een lokale spelstand gezet.
+
+Dit is een technische voorwaarde, geen bewijs dat de multiplayer-host live staat. De openbare Render-site blijft bewust een afzonderlijke fictieve proefversie. Een definitieve korte naam zonder `demo` of `test` vereist een afzonderlijke, gecontroleerde Cloudflare-domeinconfiguratie én fase-B privacygoedkeuring; verander de bestaande testorigin niet zonder de app-, Worker- en certificaatconfiguratie samen aan te passen.
+
 ## Vrijgave
 
 - **Synthetische pilot**: pas na gehoste controles van alle routes en de werkende app.

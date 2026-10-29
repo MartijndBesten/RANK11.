@@ -36,6 +36,7 @@ jobs:
         run: |
           npm ci
           npm test
+          npm audit --omit=dev --audit-level=high
           npm run typecheck
           node --test scripts/*.test.mjs
           npm run build

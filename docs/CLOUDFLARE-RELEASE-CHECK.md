@@ -17,7 +17,7 @@ Er worden **geen** resources aangemaakt, secrets gewijzigd, migraties toegepast 
 ## Exacte volgende handeling (alleen door accountbeheerder)
 
 1. Open GitHub-repository `MartijndBesten/RANK11.` → Settings → Secrets and variables → Actions.
-2. Voeg beveiligde repository-secrets `CLOUDFLARE_ACCOUNT_ID` en `CLOUDFLARE_API_TOKEN` toe. Deel geen geheimen in een chat, commit, issue of log. Gebruik een beperkt token met alleen noodzakelijke leesrechten op D1 en R2, in het juiste account.
+2. Voeg beveiligde repository-secrets `CLOUDFLARE_ACCOUNT_ID` en `CLOUDFLARE_API_TOKEN` toe. Deel geen geheimen in een chat, commit, issue of log. Gebruik een beperkt token voor het juiste account: de resourcecontrole heeft D1/R2-leesrechten nodig; de handmatige uitrol vereist aanvullend de passende schrijfrechten voor uitsluitend RANK11 D1, R2 en Workers.
 3. Open Actions → **RANK11 Cloudflare resourcecontrole** → Run workflow (main). Controleer of de output expliciet een EU-D1 en niet-publieke R2 bevestigt. Een 403 betekent geen verificatie en géén GO.
 4. Controleer daarna de Worker-secrets `PILOT_ACCESS_USER`, `PILOT_ACCESS_PASSWORD` (willekeurig, minimaal 32 tekens), en `INTEGRATION_KEY` uitsluitend in Cloudflare secret storage.
 5. Voer pas na een geslaagde resourcecontrole de bestaande procedure in [PILOT-UITROL.md](PILOT-UITROL.md) uit: remote migraties, web-build naar de private R2-bucket, Worker-deploy, registratie dicht en online rooktest met twee synthetische accounts.

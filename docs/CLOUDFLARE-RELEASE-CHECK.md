@@ -41,6 +41,17 @@ De workflow kan alleen vanaf `main` starten met exact `SYNTHETIC-ONLY`. Zonder g
 
 Bij falen na de eerste deploy kan een gedeeltelijk uitgerolde en afgeschermde (503) pilot overblijven. Dat is veiliger dan de site openbaar maken; herstel met de gecontroleerde Cloudflare Worker-versie. Maak geen echte gebruikers aan voordat alle gehoste checks én fase-B privacychecks zijn geslaagd.
 
+## Gehoste eindtest met twee fictieve accounts
+
+Na de veilige Worker-publicatie moeten twee reeds bestaande accounts, met uitsluitend fictieve namen en cijfers, zijn aangemaakt. Alleen de beheerder beheert deze testgegevens; sluit registratie direct na aanmaak. Daarna kunnen deze vier aanvullende GitHub Secrets worden ingesteld:
+
+- `RANK11_SMOKE_USER_A` en `RANK11_SMOKE_PASSWORD_A`
+- `RANK11_SMOKE_USER_B` en `RANK11_SMOKE_PASSWORD_B`
+
+Start handmatig via GitHub Actions → **RANK11 gehoste synthetische speltest** → `main`, met invoer `SYNTHETIC-ONLY`. De workflow controleert eerst dat de volledige omgeving alleen achter Basic Auth bereikbaar is. Daarna schrijft de bestaande rooktest uitsluitend nieuwe fictieve pool-, battle- en cijferrecords in de gehoste testdatabase en controleert zij de hele gameflow.
+
+**Let op:** deze rooktest is bewust muterend en laat testrecords achter. Hij mag niet tegen een productieomgeving of echte leerlingaccounts worden uitgevoerd. Ook een groene uitkomst vervangt geen iPhone-Safari/PWA-test of AVG- en oudertoestemmingcontroles. Als de extra secrets ontbreken, slaat de workflow niet stilzwijgend over maar stopt hij met een fout.
+
 ## Vrijgave
 
 - **Synthetische pilot**: pas na gehoste controles van alle routes en de werkende app.

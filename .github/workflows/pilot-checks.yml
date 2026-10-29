@@ -29,6 +29,8 @@ jobs:
         run: npm ci
       - name: Engine-, API- en privacytests
         run: npm test
+      - name: Controleer productieafhankelijkheden op ernstige kwetsbaarheden
+        run: npm audit --omit=dev --audit-level=high
       - name: Typecheck
         run: npm run typecheck
       - name: Webbuild

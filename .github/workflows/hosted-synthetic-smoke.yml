@@ -1,0 +1,60 @@
+name: RANK11 gehoste synthetische speltest
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Typ SYNTHETIC-ONLY voor tests met uitsluitend vooraf aangemaakte fictieve accounts'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rank11-synthetic-smoke
+  cancel-in-progress: false
+
+jobs:
+  hosted-smoke:
+    runs-on: ubuntu-latest
+    environment: rank11-test
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Controleer hoofdbranch, bevestiging en synthetische accounts
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+          SMOKE_USER_A: ${{ secrets.RANK11_SMOKE_USER_A }}
+          SMOKE_PASSWORD_A: ${{ secrets.RANK11_SMOKE_PASSWORD_A }}
+          SMOKE_USER_B: ${{ secrets.RANK11_SMOKE_USER_B }}
+          SMOKE_PASSWORD_B: ${{ secrets.RANK11_SMOKE_PASSWORD_B }}
+        run: |
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test "$CONFIRMATION" = 'SYNTHETIC-ONLY'
+          test -n "$SMOKE_USER_A"
+          test -n "$SMOKE_PASSWORD_A"
+          test -n "$SMOKE_USER_B"
+          test -n "$SMOKE_PASSWORD_B"
+          test "$SMOKE_USER_A" != "$SMOKE_USER_B"
+      - name: Controleer eerst afscherming en bereikbaarheid
+        run: node scripts/check-pilot-access.mjs
+        env:
+          PILOT_REQUIRE_AUTH: '1'
+          PILOT_URL: https://rank11-test.martijndenbesten.com
+          PILOT_ACCESS_USER: ${{ secrets.RANK11_PILOT_ACCESS_USER }}
+          PILOT_ACCESS_PASSWORD: ${{ secrets.RANK11_PILOT_ACCESS_PASSWORD }}
+      - name: Controleer inloggen, pool, kaarten, battle, eventlog en cijferbeloning
+        run: node apps/api/scripts/smoke.mjs https://rank11-test.martijndenbesten.com
+        env:
+          SMOKE_USER_A: ${{ secrets.RANK11_SMOKE_USER_A }}
+          SMOKE_PASSWORD_A: ${{ secrets.RANK11_SMOKE_PASSWORD_A }}
+          SMOKE_USER_B: ${{ secrets.RANK11_SMOKE_USER_B }}
+          SMOKE_PASSWORD_B: ${{ secrets.RANK11_SMOKE_PASSWORD_B }}
+          PILOT_ACCESS_USER: ${{ secrets.RANK11_PILOT_ACCESS_USER }}
+          PILOT_ACCESS_PASSWORD: ${{ secrets.RANK11_PILOT_ACCESS_PASSWORD }}
+      - name: Documenteer uitsluitend dat de synthetische smoke is geslaagd
+        run: echo 'Synthetic hosted smoke succeeded. Geen vrijgave van echte leerlinggegevens of iPhone-acceptatie.'

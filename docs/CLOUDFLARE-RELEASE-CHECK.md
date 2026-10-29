@@ -17,13 +17,29 @@ Er worden **geen** resources aangemaakt, secrets gewijzigd, migraties toegepast 
 ## Exacte volgende handeling (alleen door accountbeheerder)
 
 1. Open GitHub-repository `MartijndBesten/RANK11.` → Settings → Secrets and variables → Actions.
-2. Voeg beveiligde repository-secrets `CLOUDFLARE_ACCOUNT_ID` en `CLOUDFLARE_API_TOKEN` toe. Deel geen geheimen in een chat, commit, issue of log. Gebruik een beperkt token met alleen noodzakelijke leesrechten op D1 en R2, in het juiste account.
+2. Voeg beveiligde repository-secrets `CLOUDFLARE_ACCOUNT_ID` en `CLOUDFLARE_API_TOKEN` toe. Deel geen geheimen in een chat, commit, issue of log. Gebruik een beperkt token voor het juiste account: de resourcecontrole heeft D1/R2-leesrechten nodig; de handmatige uitrol vereist aanvullend de passende schrijfrechten voor uitsluitend RANK11 D1, R2 en Workers.
 3. Open Actions → **RANK11 Cloudflare resourcecontrole** → Run workflow (main). Controleer of de output expliciet een EU-D1 en niet-publieke R2 bevestigt. Een 403 betekent geen verificatie en géén GO.
 4. Controleer daarna de Worker-secrets `PILOT_ACCESS_USER`, `PILOT_ACCESS_PASSWORD` (willekeurig, minimaal 32 tekens), en `INTEGRATION_KEY` uitsluitend in Cloudflare secret storage.
 5. Voer pas na een geslaagde resourcecontrole de bestaande procedure in [PILOT-UITROL.md](PILOT-UITROL.md) uit: remote migraties, web-build naar de private R2-bucket, Worker-deploy, registratie dicht en online rooktest met twee synthetische accounts.
 6. Na de uitrol Actions → **RANK11 online beveiliging controleren** handmatig draaien, met de aparte GitHub-repository-secrets `RANK11_PILOT_ACCESS_USER` en `RANK11_PILOT_ACCESS_PASSWORD`. Test daarna de volledige account-, cijfer-, pack- en wedstrijdroute en de echte iPhone.
 
 **Belangrijk:** de GitHub-repository is publiek; de gegevens van de daadwerkelijke tester of geheimen mogen nergens in bestanden of issue-comments terechtkomen. De Read-only-controle mag geen toegangstoken loggen. Het is niet mogelijk vanuit de bestaande Render-koppeling de Cloudflare D1/Durable Objects te beheren.
+
+## Voorbereide één-klikuitrol (alleen synthetisch)
+
+De handmatige GitHub Action **RANK11 besloten testpilot uitrollen** is voorbereid. Er is nog **geen** Cloudflare-uitrol uitgevoerd. Deze workflow voert achtereenvolgens codecontroles, Cloudflare-preflight, een beveiligde Worker-deploy, drie Worker-secrets, afzonderlijke D1-testmigraties, private R2-assets (index.html als laatste), de eind-deploy en een online toegangscheck uit.
+
+Benodigde GitHub Actions repository-secrets (nooit in chat of code delen):
+
+- `CLOUDFLARE_ACCOUNT_ID` — juiste Cloudflare-account-ID.
+- `CLOUDFLARE_API_TOKEN` — beperkt Cloudflare-token met benodigde D1-, R2- en Workers-/domeinrechten.
+- `RANK11_PILOT_ACCESS_USER` — willekeurige pilot-login voor HTTP Basic Auth.
+- `RANK11_PILOT_ACCESS_PASSWORD` — sterk willekeurig wachtwoord van minimaal 32 tekens.
+- `RANK11_INTEGRATION_KEY` — willekeurige integratiesleutel van minimaal 32 tekens.
+
+De workflow kan alleen vanaf `main` starten met exact `SYNTHETIC-ONLY`. Zonder groene resourcecontrole of secrets wordt hij gestopt. Hij beperkt wijzigingen tot `rank11-api-test`, D1 `rank11-test` en R2 `rank11-test-web`; overige Denckh.-services en Render worden niet gewijzigd. De testdatabase kan remote migraties ontvangen; laat eerst controleren dat er alleen fictieve testgegevens in staan. GitHub Actions heeft geen auditbewijs van bestaande data als er geen toegang bestaat.
+
+Bij falen na de eerste deploy kan een gedeeltelijk uitgerolde en afgeschermde (503) pilot overblijven. Dat is veiliger dan de site openbaar maken; herstel met de gecontroleerde Cloudflare Worker-versie. Maak geen echte gebruikers aan voordat alle gehoste checks én fase-B privacychecks zijn geslaagd.
 
 ## Vrijgave
 

@@ -1,0 +1,25 @@
+# Alleen lezen: deze workflow voert GEEN Cloudflare-wijzigingen uit.
+# Vereist repository-secrets RANK11_PILOT_ACCESS_USER/PASSWORD voor een volledige controle.
+name: RANK11 online beveiliging controleren
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  remote-access-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Controleer dat testorigin nergens anoniem bereikbaar is
+        run: node scripts/check-pilot-access.mjs
+        env:
+          PILOT_REQUIRE_AUTH: '1'
+          PILOT_URL: https://rank11-test.martijndenbesten.com
+          PILOT_ACCESS_USER: ${{ secrets.RANK11_PILOT_ACCESS_USER }}
+          PILOT_ACCESS_PASSWORD: ${{ secrets.RANK11_PILOT_ACCESS_PASSWORD }}

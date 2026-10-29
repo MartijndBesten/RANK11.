@@ -93,7 +93,7 @@ function AuthScreen({ onOnline, onDemo }: { onOnline: () => void; onDemo: () => 
         </form>
         <div className="auth-demo">
           <span className="tag demo">testomgeving</span>
-          <p className="hint">Deze server draait lokaal met alleen synthetische testaccounts. Zonder account kun je de demo op dit toestel spelen.</p>
+          <p className="hint">Besloten testomgeving met uitnodigingen. Gebruik uitsluitend verzonnen cijfers. Zonder account kun je de demo op dit toestel spelen.</p>
           <button className="link-btn" onClick={onDemo}>Demo zonder account</button>
         </div>
       </main>

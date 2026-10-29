@@ -36,4 +36,4 @@ jobs:
       - name: Wrangler dry-run (geen deployment)
         run: npm run deploy:dry -w apps/api
       - name: Pilotcheck-regressietests
-        run: node --test scripts/check-pilot-access.test.mjs scripts/cloudflare-pilot-preflight.test.mjs
+        run: node --test scripts/check-pilot-access.test.mjs scripts/cloudflare-pilot-preflight.test.mjs scripts/upload-pilot-assets.test.mjs

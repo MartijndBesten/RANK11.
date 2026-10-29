@@ -22,7 +22,7 @@ test('de check staat uitsluitend de vaste test-URL toe', () => {
   for (const input of ['http://rank11-test.martijndenbesten.com',
     'https://rank11-demo.martijndenbesten.com',
     origin + '/api/health',
-    'https://user:password@rank11-test.martijndenbesten.com']) {
+    origin + '?unexpected=query']) {
     assert.throws(() => validateOrigin(input));
   }
 });

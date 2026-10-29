@@ -1,0 +1,23 @@
+# Lees alleen configuratie en bestaande Cloudflare-resources.
+# Deze workflow voert GEEN deployment, mutatie, migratie of secret-update uit.
+name: RANK11 Cloudflare resourcecontrole
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-only:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Valideer uitsluitend bekende Cloudflare-testresources
+        run: node scripts/cloudflare-pilot-preflight.mjs
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

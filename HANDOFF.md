@@ -1,3 +1,5 @@
+> **Actualisatie 30-10-2026:** de gehardde online-only pilot (PR #9) is nu daadwerkelijk uitgerold en van buitenaf geverifieerd op https://rank11-test.martijndenbesten.com — Basic Auth op alles (401 zonder login), registratie dicht (403), bestaande synthetische accounts kunnen inloggen, EU-D1 (WEUR) met migraties, geen cron. Details in [apps/api/TEST-DEPLOY.md](apps/api/TEST-DEPLOY.md). De publieke demo staat los op https://rank11-demo.martijndenbesten.com. Nog open: strikt EU-**jurisdictie** i.p.v. plaatsing, en — vóór echte leerlingen — ouderlijke toestemming + DPIA. Geen vrijgave voor echte leerlinggegevens.
+>
 > **Actualisatie 28-10-2026:** onderstaande historische status kan achterhaald zijn. De actuele synthetische pilotprocedure en resterende uitrolblokkades staan in [docs/PILOT-UITROL.md](docs/PILOT-UITROL.md). Accountexport/verwijderen en importfixes staan in de code; gehoste beveiliging en Cloudflare-resourceconfiguratie zijn nog niet geverifieerd. Geen vrijgave voor echte leerlinggegevens.
 
 # HANDOFF — RANK11.

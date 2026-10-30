@@ -91,3 +91,43 @@ bucket_name = "rank11-test-web"
 [[env.test.durable_objects.bindings]]
 name = "MATCH"
 class_name = "MatchDO"
+
+# ---------------------------------------------------------------------------------------------
+# Productie (hoofdomgeving). Eigen resources, los van de test, zodat testdeploys de hoofdapp
+# nooit raken. D1 met EXPLICIETE EU-jurisdictie. Voorlopig ook achter Basic Auth (besloten gezinsproef);
+# echte leerlinggegevens pas na privacyvoorwaarden. Secrets via `wrangler secret put ... --env prod`.
+[env.prod]
+name = "rank11-api"
+workers_dev = false
+
+[env.prod.vars]
+PILOT_MODE = "true"
+REGISTRATION_ENABLED = "true" # dubbel afgeschermd: Basic Auth + geldige uitnodigingscode
+ENVIRONMENT = "test" # houdt dezelfde afscherming (Basic Auth, noindex) aan als de testomgeving
+FEATURE_MARKET = "false"
+FEATURE_ACADEMY = "true"
+ASYNC_DEADLINE_HOURS = "48"
+ALLOWED_ORIGINS = "https://rank11.martijndenbesten.com"
+PBKDF2_ITERATIONS = "100000"
+SESSION_TTL_DAYS = "30"
+POOL_MAX_MEMBERS_DEFAULT = "20"
+LOGIN_MAX_FAILURES = "5"
+LOGIN_MAX_FAILURES_IP = "30"
+
+[[env.prod.routes]]
+pattern = "rank11.martijndenbesten.com"
+custom_domain = true
+
+[[env.prod.d1_databases]]
+binding = "DB"
+database_name = "rank11"
+database_id = "a28d94a7-a865-417a-8900-d472081fef27" # rank11, EU-JURISDICTIE (regio EEUR)
+migrations_dir = "migrations"
+
+[[env.prod.r2_buckets]]
+binding = "ASSETS"
+bucket_name = "rank11-web"
+
+[[env.prod.durable_objects.bindings]]
+name = "MATCH"
+class_name = "MatchDO"

@@ -17,6 +17,7 @@ import { getConfig } from './modules/config.ts';
 import { getSettings, putSettings } from './modules/settings.ts';
 import { connectIntegration, disconnectIntegration, getIntegration, listIntegrations, syncIntegration } from './modules/integrations/routes.ts';
 import { deleteAccount, exportAccount } from './modules/account.ts';
+import { adminListFeedback, adminUpdateFeedback, createFeedback } from './modules/feedback.ts';
 import { runScheduledSync } from './modules/integrations/sync.ts';
 import { draftStatus, pickInDraft, startDraft } from './modules/drafts.ts';
 import { createGoal, createUpcoming, deleteGoal, deleteUpcoming, getPlanning } from './modules/planning.ts';
@@ -46,6 +47,10 @@ export const router = new Router()
   .add('GET', '/api/me', me)
   .add('GET', '/api/me/export', exportAccount)
   .add('DELETE', '/api/me', deleteAccount)
+  // feedback van testgebruikers
+  .add('POST', '/api/feedback', createFeedback)
+  .add('GET', '/api/admin/feedback', adminListFeedback)
+  .add('POST', '/api/admin/feedback/:id/status', adminUpdateFeedback)
   .add('GET', '/api/admin/platform-invites', adminListPlatformInvites)
   .add('POST', '/api/admin/platform-invites', adminCreatePlatformInvite)
   .add('POST', '/api/admin/platform-invites/:id/revoke', adminRevokePlatformInvite)

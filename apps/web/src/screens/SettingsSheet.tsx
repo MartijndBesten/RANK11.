@@ -83,6 +83,77 @@ function Toggle({ label, note, on, onChange }: { label: string; note?: string; o
   );
 }
 
+const FEEDBACK_KINDS: { value: string; label: string }[] = [
+  { value: 'werkt-niet', label: 'Er werkt iets niet' },
+  { value: 'onduidelijk', label: 'Iets is onduidelijk' },
+  { value: 'idee', label: 'Ik heb een idee' },
+];
+
+/** Compact feedbackformulier, bereikbaar vanuit de app. Geen extra persoonsgegevens. */
+function FeedbackForm() {
+  const [kind, setKind] = useState('werkt-niet');
+  const [message, setMessage] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const send = async () => {
+    setBusy(true); setErr(null);
+    try { await api('POST', '/feedback', { kind, message, context: location.hash.slice(1) || undefined }); setDone(true); setMessage(''); }
+    catch (e) { setErr(e instanceof ApiError ? e.message : 'Versturen mislukt.'); } finally { setBusy(false); }
+  };
+  if (done) return <p className="hint" role="status">Bedankt voor je melding! <button className="link-btn" onClick={() => setDone(false)}>Nog een melding</button></p>;
+  return (
+    <div>
+      <div className="seg" role="radiogroup" aria-label="Soort melding" style={{ marginTop: 6 }}>
+        {FEEDBACK_KINDS.map((k) => (
+          <button key={k.value} role="radio" aria-checked={kind === k.value} aria-pressed={kind === k.value} onClick={() => setKind(k.value)}>{k.label}</button>
+        ))}
+      </div>
+      <label className="field" style={{ marginTop: 8 }}><span className="dim small">Jouw melding</span>
+        <textarea className="input" rows={3} maxLength={1000} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Wat werkt niet, wat is onduidelijk, of welk idee heb je?" /></label>
+      {err && <p className="form-error" role="alert">{err}</p>}
+      <div style={{ marginTop: 8 }}><button className="btn small" disabled={busy || message.trim().length < 2} onClick={() => void send()}>{busy ? 'Versturen…' : 'Versturen'}</button></div>
+    </div>
+  );
+}
+
+interface FeedbackItem { id: string; kind: string; message: string; status: string; context: string | null; created_at: number; username: string | null }
+
+/** Beheerder: binnengekomen meldingen bekijken en op status zetten. */
+function FeedbackAdmin() {
+  const [items, setItems] = useState<FeedbackItem[] | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const load = useCallback(async () => {
+    try { const r = await api<{ feedback: FeedbackItem[] }>('GET', '/admin/feedback'); setItems(r.feedback); setErr(null); }
+    catch (e) { setErr(e instanceof ApiError ? e.message : 'Kan meldingen niet laden.'); }
+  }, []);
+  useEffect(() => { void load(); }, [load]);
+  const setStatus = async (id: string, status: string) => {
+    try { await api('POST', `/admin/feedback/${id}/status`, { status }); await load(); } catch { /* opnieuw proberen */ }
+  };
+  const kindLabel = (k: string) => FEEDBACK_KINDS.find((x) => x.value === k)?.label ?? k;
+  if (err) return <p className="form-error">{err}</p>;
+  if (items === null) return <p className="dim small">Laden…</p>;
+  if (items.length === 0) return <p className="dim small">Nog geen meldingen.</p>;
+  return (
+    <ul className="rows" style={{ marginTop: 8 }}>
+      {items.map((f) => (
+        <li className="row" key={f.id}>
+          <div className="row-main">
+            <span className="row-title">{kindLabel(f.kind)}{f.username ? ` · ${f.username}` : ''}</span>
+            <span className="row-sub">{f.message}</span>
+          </div>
+          <select className="input" style={{ maxWidth: 130 }} value={f.status} onChange={(e) => void setStatus(f.id, e.target.value)} aria-label="Status">
+            <option value="nieuw">Nieuw</option>
+            <option value="bekeken">Bekeken</option>
+            <option value="afgehandeld">Afgehandeld</option>
+          </select>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /** Instellingen: speluitleg, geluid, animaties, Academy, meldingen met stille uren, en demo opnieuw beginnen. */
 export function SettingsSheet({ onClose }: { onClose: () => void }) {
   const { state, setSetting, setNotify, setTipsOn, reset, mode, user, logout, can } = useStore();
@@ -119,8 +190,15 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
               <div className="eyebrow" style={{ marginTop: 18 }}>Uitnodigingen beheren</div>
               <p className="hint">Maak codes aan voor familie en vrienden, of trek ze in. Deel een code privé, niet openbaar.</p>
               <InviteAdmin />
+              <div className="eyebrow" style={{ marginTop: 18 }}>Meldingen</div>
+              <p className="hint">Feedback van testers. Zet een melding op bekeken of afgehandeld.</p>
+              <FeedbackAdmin />
             </>
           )}
+
+          <div className="eyebrow" style={{ marginTop: 18 }}>Feedback</div>
+          <p className="hint">Werkt iets niet, is iets onduidelijk of heb je een idee? Laat het weten.</p>
+          <FeedbackForm />
         </>
       ) : (
         <>

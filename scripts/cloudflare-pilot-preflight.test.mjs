@@ -7,6 +7,7 @@ const toml = [
   '[env.test]',
   'name = "rank11-api-test"',
   '[env.test.vars]',
+  'PILOT_MODE = "true"',
   'REGISTRATION_ENABLED = "false"',
   '[[env.test.d1_databases]]',
   'database_name = "rank11-test"',
@@ -38,7 +39,9 @@ test('bindings zijn expliciet beperkt tot RANK11 test', () => {
   assert.equal(readPilotResources(toml).bucketName, 'rank11-test-web');
   assert.throws(() => readPilotResources(toml.replace('rank11-test-web', 'andere-bucket')), /geïsoleerde/);
   assert.throws(() => readPilotResources(toml.replace('workers_dev = false', 'workers_dev = true')), /workers.dev/);
-  assert.throws(() => readPilotResources(toml.replace('REGISTRATION_ENABLED = "false"', 'REGISTRATION_ENABLED = "true"')), /registratie/);
+  assert.equal(readPilotResources(toml.replace('REGISTRATION_ENABLED = "false"', 'REGISTRATION_ENABLED = "true"')).databaseName, 'rank11-test');
+  assert.throws(() => readPilotResources(toml.replace('PILOT_MODE = "true"', 'PILOT_MODE = "false"')), /Basic-auth/);
+  assert.throws(() => readPilotResources(toml.replace('REGISTRATION_ENABLED = "false"', 'REGISTRATION_ENABLED = "on"')), /true of false/);
 });
 test('EU-D1 en private R2 staan resourcecheck toe', async () => {
   const r = await checkCloudflarePilot(opts());

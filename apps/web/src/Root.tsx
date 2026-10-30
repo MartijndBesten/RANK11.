@@ -22,6 +22,8 @@ const writeMode = (m: string | null) => { try { if (m) localStorage.setItem(MODE
 export function Root() {
   const [mode, setMode] = useState<Mode>(PUBLIC_DEMO ? 'demo' : 'checking');
   const [hasServer, setHasServer] = useState(false);
+  // De server bepaalt of nieuwe accounts tijdens de besloten test zijn toegestaan.
+  const [registrationEnabled, setRegistrationEnabled] = useState(!ONLINE_ONLY);
   const [retry, setRetry] = useState(0);
 
   useEffect(() => {
@@ -32,6 +34,15 @@ export function Root() {
       if (!alive) return;
       setHasServer(server);
       if (!server) return setMode(ONLINE_ONLY ? 'unavailable' : 'demo');
+      if (ONLINE_ONLY) {
+        try {
+          const config = await api<{ registrationEnabled: boolean }>('GET', '/config');
+          if (alive) setRegistrationEnabled(config.registrationEnabled === true);
+        } catch {
+          // Fail closed: geen registratietab als de actuele serverinstelling onbekend is.
+          if (alive) setRegistrationEnabled(false);
+        }
+      }
       if (!ONLINE_ONLY && readMode() === 'demo') return setMode('demo');
       try {
         await api('GET', '/me');
@@ -57,12 +68,15 @@ export function Root() {
     </div>
   );
   if (mode === 'choose') return <AuthScreen onOnline={() => { writeMode('online'); setMode('online'); }}
+    registrationEnabled={registrationEnabled}
     onDemo={ONLINE_ONLY ? undefined : () => { writeMode('demo'); setMode('demo'); }} />;
   if (mode === 'online') return <OnlineStoreProvider onLoggedOut={loggedOut}><App /></OnlineStoreProvider>;
   return <StoreProvider onExit={hasServer ? exitDemo : undefined}><App /></StoreProvider>;
 }
 
-function AuthScreen({ onOnline, onDemo }: { onOnline: () => void; onDemo?: () => void }) {
+function AuthScreen({ onOnline, onDemo, registrationEnabled }: {
+  onOnline: () => void; onDemo?: () => void; registrationEnabled: boolean;
+}) {
   const [tab, setTab] = useState<'login' | 'register'>('login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -90,7 +104,7 @@ function AuthScreen({ onOnline, onDemo }: { onOnline: () => void; onDemo?: () =>
       <div className="stadium" />
       <main className="auth-card panel gold">
         <div className="auth-brand"><img src={iconUrl} alt="" width={56} height={56} /><div><div className="display auth-title">RANK11.</div><div className="dim small">Your grades. Your squad.</div></div></div>
-        {!ONLINE_ONLY && (
+        {registrationEnabled && (
           <div className="seg" role="tablist" aria-label="Inloggen of account maken">
             <button role="tab" aria-pressed={tab === 'login'} aria-selected={tab === 'login'} onClick={() => setTab('login')}>Inloggen</button>
             <button role="tab" aria-pressed={tab === 'register'} aria-selected={tab === 'register'} onClick={() => setTab('register')}>Account maken</button>
@@ -108,7 +122,9 @@ function AuthScreen({ onOnline, onDemo }: { onOnline: () => void; onDemo?: () =>
         </form>
         <div className="auth-demo">
           {ONLINE_ONLY ? (
-            <p className="hint">Toegang uitsluitend voor uitgenodigde accounts. Nieuwe accounts worden pas vrijgegeven nadat de privacy- en beveiligingscontroles zijn afgerond.</p>
+            <p className="hint">{registrationEnabled
+              ? 'Registratie is tijdelijk geopend op uitnodiging. Gebruik uitsluitend fictieve gegevens; geen echte leerlingcijfers.'
+              : 'Registratie is gesloten. Bestaande uitgenodigde accounts kunnen inloggen.'}</p>
           ) : (
             <>
               <span className="tag demo">testomgeving</span>

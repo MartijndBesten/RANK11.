@@ -33,8 +33,12 @@ export function readPilotResources(toml) {
   insist(UUID_RE.test(databaseId) && !/^00000000-/.test(databaseId), 'Ongeldig of placeholder D1-ID.');
   insist(databaseName === 'rank11-test' && bucketName === 'rank11-test-web',
     'De bindings verwijzen niet naar de geïsoleerde RANK11-testresources.');
-  insist(/^\[env\.test\]/m.test(toml) && /REGISTRATION_ENABLED\s*=\s*"false"/.test(toml),
-    'De pilot moet standaard gesloten registratie hebben.');
+  const vars = toml.split('[env.test.vars]')[1]?.split(/\r?\n(?=\[)/)[0] ?? '';
+  insist(/^\[env\.test\]/m.test(toml), 'Testomgeving ontbreekt.');
+  insist(field(vars, 'PILOT_MODE') === 'true', 'De besloten pilot mag nooit de Basic-auth-afscherming overslaan.');
+  const registration = field(vars, 'REGISTRATION_ENABLED');
+  insist(registration === 'true' || registration === 'false',
+    'Registratie moet expliciet true of false zijn, uitsluitend achter de pilottoegang.');
   insist(/workers_dev\s*=\s*false/.test(toml), 'workers.dev moet uitgeschakeld blijven.');
   return { databaseId, databaseName, bucketName };
 }

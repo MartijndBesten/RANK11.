@@ -57,6 +57,25 @@ naam.
 **Waarom bewaren we dit?** Om het spel te laten werken en om aan te kunnen
 tonen dat er ouderlijke toestemming is gegeven.
 
+**Hoe geeft u toestemming?** Er zijn drie manieren; bij alle drie bevestigt u
+bewust dat u ouder of wettelijk vertegenwoordiger bent, en leggen we vast
+welke methode is gebruikt:
+
+1. **Per e-mail (standaard).** Uw kind vult uw e-mailadres in; u krijgt een
+   e-mail met een beveiligde link en geeft op uw eigen apparaat toestemming.
+2. **Samen op één plek (QR of koppelcode).** Zit u naast uw kind? RANK11. toont
+   op het scherm van uw kind een korte koppelcode en een QR-code. U scant die
+   met uw telefoon of typt de code in op de toestemmingspagina en geeft daar
+   toestemming. De code is kort geldig en eenmalig.
+3. **Via een beheerder met de koppelcode.** Een beheerder kan alleen goedkeuren
+   met de koppelcode die uw kind toont — dat bewijst de koppeling tussen ouder
+   en kind. Er is bewust **geen** knop waarmee een beheerder willekeurige
+   kinderen kan goedkeuren; een beheerder is niet automatisch een ouder.
+
+Bij alle routes controleert de server de status: zonder geldige toestemming
+krijgt het account geen toegang tot het spel, ook niet via een bestaande
+sessie of de API.
+
 **Over de cijfers:** die zijn door het kind zelf ingevoerd, niet officieel en
 privé. Ze zijn niet zichtbaar voor andere spelers en er zijn geen openbare
 lijsten.

@@ -22,20 +22,26 @@ a{color:#1f6bff}.note{background:#f4f6fb;border-radius:12px;padding:12px;font-si
 <p class="muted" style="text-align:center;margin-top:14px">RANK11. · schoolcijfers blijven privé</p></div></body></html>`,
   { headers: { 'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex, nofollow' } });
 
-async function lookup(env: Env, token: string | null, purpose: string, now: number): Promise<{ username: string } | null> {
-  if (!token || token.length < 10 || token.length > 200 || !env.DB) return null;
+async function lookupField(env: Env, field: 'token_hash' | 'claim_code_hash', hash: string, purpose: string, now: number): Promise<{ username: string } | null> {
+  if (!env.DB) return null;
   const row = await env.DB.prepare(
-    "SELECT u.username AS username FROM parent_consents pc JOIN users u ON u.id = pc.user_id WHERE pc.token_hash = ? AND pc.purpose = ? AND pc.status = 'pending' AND pc.expires_at > ?")
-    .bind(await sha256Hex(token), purpose, now).first<{ username: string }>();
+    `SELECT u.username AS username FROM parent_consents pc JOIN users u ON u.id = pc.user_id WHERE pc.${field} = ? AND pc.purpose = ? AND pc.status = 'pending' AND pc.expires_at > ?`)
+    .bind(hash, purpose, now).first<{ username: string }>();
   return row ?? null;
 }
+const lookupToken = (env: Env, token: string | null, purpose: string, now: number) =>
+  (!token || token.length < 10 || token.length > 200) ? Promise.resolve(null) : sha256Hex(token).then((h) => lookupField(env, 'token_hash', h, purpose, now));
+const lookupClaim = (env: Env, claim: string | null, now: number) =>
+  (!claim || claim.length < 4 || claim.length > 40) ? Promise.resolve(null) : sha256Hex(`claim:${claim.toUpperCase().replace(/[^A-Z0-9]/g, '')}`).then((h) => lookupField(env, 'claim_code_hash', h, 'approval', now));
 
 const esc = (s: string) => s.replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]!));
 
-const decideScript = (token: string, endpoint: string, approveOnly = false) => `<script>
+// credKey is 'token' of 'claimCode'; op goedkeuren wordt guardianConfirmed meegestuurd (knop staat pas aan na de vinkbevestiging).
+const decideScript = (credKey: string, credVal: string, endpoint: string, approveOnly = false) => `<script>
 function go(decision){
   var btns=document.querySelectorAll('button');btns.forEach(function(b){b.disabled=true});
-  fetch('${endpoint}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(${approveOnly ? "{token:'" + token + "'}" : "{token:'" + token + "',decision:decision}"})})
+  var body = ${approveOnly ? `{${credKey}:'${credVal}'}` : `{${credKey}:'${credVal}',decision:decision,guardianConfirmed:true}`};
+  fetch('${endpoint}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
    .then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j}})})
    .then(function(res){document.getElementById('result').innerHTML = res.ok
      ? '<div class="note">'+(${approveOnly ? "'Je toestemming is ingetrokken.'" : "(decision==='approve'?'Gelukt! Je kind kan nu RANK11 spelen. Je kunt dit venster sluiten.':'Oké, er is geen toestemming gegeven. Je kind kan niet spelen.')"})+'</div>'
@@ -53,8 +59,11 @@ export async function servePages(request: Request, env: Env): Promise<Response |
 
   if (url.pathname === '/ouder/toestemming') {
     const token = url.searchParams.get('token');
-    const found = await lookup(env, token, 'approval', now);
-    if (!found) return page('Toestemming', `<h1>Link ongeldig of verlopen</h1><p>Deze goedkeuringslink werkt niet meer. Vraag je kind om een nieuwe e-mail te laten versturen vanuit RANK11.</p>`);
+    const claim = url.searchParams.get('claim');
+    const found = token ? await lookupToken(env, token, 'approval', now) : await lookupClaim(env, claim, now);
+    const credKey = token ? 'token' : 'claimCode';
+    const credVal = esc((token ?? claim ?? '').trim());
+    if (!found) return page('Toestemming', `<h1>Link of code ongeldig of verlopen</h1><p>Dit werkt niet meer. Vraag je kind om een nieuwe e-mail of een nieuwe koppelcode vanuit RANK11.</p>`);
     return page('Toestemming geven', `
 <h1>Toestemming voor RANK11.</h1>
 <p>Je kind <b>${esc(found.username)}</b> wil graag RANK11 spelen.</p>
@@ -66,19 +75,19 @@ export async function servePages(request: Request, env: Env): Promise<Response |
   <button class="btn no" onclick="go('decline')">Geen toestemming</button>
 </div>
 <div id="result"></div>
-${decideScript(esc(token!), '/api/consent/decide')}`);
+${decideScript(credKey, credVal, '/api/consent/decide')}`);
   }
 
   if (url.pathname === '/ouder/intrekken') {
     const token = url.searchParams.get('token');
-    const found = await lookup(env, token, 'revoke', now);
+    const found = await lookupToken(env, token, 'revoke', now);
     if (!found) return page('Intrekken', `<h1>Link ongeldig of verlopen</h1><p>Deze link werkt niet meer. Vraag zo nodig een nieuwe intreklink aan.</p>`);
     return page('Toestemming intrekken', `
 <h1>Toestemming intrekken</h1>
 <p>Je staat op het punt je toestemming voor <b>${esc(found.username)}</b> in te trekken. Daarna kan dit account niet meer spelen en worden de sessies beëindigd.</p>
 <div id="actions"><button class="btn no" onclick="go()">Toestemming intrekken</button></div>
 <div id="result"></div>
-${decideScript(esc(token!), '/api/consent/revoke', true)}`);
+${decideScript('token', esc(token!), '/api/consent/revoke', true)}`);
   }
 
   if (url.pathname === '/privacy') {

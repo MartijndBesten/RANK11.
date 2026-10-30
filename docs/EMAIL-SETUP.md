@@ -26,7 +26,7 @@ HTTPS-API; een andere provider is later in `apps/api/src/modules/email.ts` eenvo
    En in `wrangler.toml` onder de betreffende `[env.*.vars]`:
    ```toml
    EMAIL_PROVIDER = "resend"
-   EMAIL_FROM = "RANK11 <geen-antwoord@martijndenbesten.com>"
+   EMAIL_FROM = "RANK11 <geen-antwoord@example.nl>"  # vervang door je eigen (geverifieerde) domein
    ```
 5. Deploy opnieuw: `wrangler deploy --env prod`.
 

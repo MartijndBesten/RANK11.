@@ -74,6 +74,61 @@ function InviteAdmin() {
   );
 }
 
+interface ConsentItem { id: string; user_id: string; status: string; method: string | null; created_at: number; decided_at: number | null; username: string | null; account_status: string | null; guardian_username: string | null }
+
+const CONSENT_STATUS: Record<string, string> = { pending: 'Wacht op toestemming', approved: 'Goedgekeurd', rejected: 'Afgewezen', revoked: 'Ingetrokken', expired: 'Verlopen' };
+const CONSENT_METHOD: Record<string, string> = { email: 'e-mail', admin: 'ouder/beheerder', qr: 'QR/koppelcode' };
+
+/** Beheerder: ouderlijke goedkeuringen. Een ouder/voogd keurt het eigen kind goed MET de koppelcode die het
+ * kind toont (aantoonbare koppeling) — er is bewust geen knop om willekeurige kinderen goed te keuren. */
+function ConsentAdmin() {
+  const [items, setItems] = useState<ConsentItem[] | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [code, setCode] = useState('');
+  const [confirmed, setConfirmed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const load = useCallback(async () => {
+    try { const r = await api<{ consents: ConsentItem[] }>('GET', '/admin/consents'); setItems(r.consents); setErr(null); }
+    catch (e) { setErr(e instanceof ApiError ? e.message : 'Kan goedkeuringen niet laden.'); }
+  }, []);
+  useEffect(() => { void load(); }, [load]);
+  const approve = async () => {
+    setBusy(true); setMsg(null);
+    try {
+      const r = await api<{ username?: string }>('POST', '/admin/consents/approve', { claimCode: code.trim(), decision: 'approve', guardianConfirmed: true });
+      setMsg(`Goedgekeurd${r.username ? `: ${r.username}` : ''}. Het kind kan nu spelen.`);
+      setCode(''); setConfirmed(false); await load();
+    } catch (e) { setMsg(e instanceof ApiError ? e.message : 'Goedkeuren mislukt.'); } finally { setBusy(false); }
+  };
+  const fmt = (ms: number) => new Date(ms).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
+  return (
+    <div>
+      <label className="field" style={{ marginTop: 8 }}><span>Koppelcode van het kind</span>
+        <input className="input" value={code} maxLength={16} placeholder="bijv. K7P2M3QA" style={{ letterSpacing: '0.08em', textTransform: 'uppercase' }} onChange={(e) => setCode(e.target.value)} /></label>
+      <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 8 }}>
+        <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} style={{ marginTop: 3 }} />
+        <span className="dim small">Ik ben de ouder of wettelijk vertegenwoordiger van dit kind en geef toestemming voor het gebruik van RANK11.</span>
+      </label>
+      <div style={{ marginTop: 8 }}><button className="btn small" disabled={busy || code.trim().length < 4 || !confirmed} onClick={() => void approve()}>{busy ? 'Bezig…' : 'Goedkeuren met koppelcode'}</button></div>
+      {msg && <p className="hint" role="status" style={{ marginTop: 6 }}>{msg}</p>}
+      {err && <p className="form-error" role="alert">{err}</p>}
+      <ul className="rows" style={{ marginTop: 10 }}>
+        {items === null ? <li className="row"><span className="dim small">Laden…</span></li>
+          : items.length === 0 ? <li className="row"><span className="dim small">Nog geen aanvragen.</span></li>
+          : items.map((c) => (
+            <li className="row" key={c.id}>
+              <div className="row-main">
+                <span className="row-title">{c.username ?? 'Onbekend'}</span>
+                <span className="row-sub">{CONSENT_STATUS[c.status] ?? c.status}{c.method ? ` · via ${CONSENT_METHOD[c.method] ?? c.method}` : ''}{c.guardian_username ? ` · door ${c.guardian_username}` : ''} · {fmt(c.decided_at ?? c.created_at)}</span>
+              </div>
+            </li>
+          ))}
+      </ul>
+    </div>
+  );
+}
+
 function Toggle({ label, note, on, onChange }: { label: string; note?: string; on: boolean; onChange: (v: boolean) => void }) {
   return (
     <div className="toggle-row">
@@ -190,6 +245,9 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
               <div className="eyebrow" style={{ marginTop: 18 }}>Uitnodigingen beheren</div>
               <p className="hint">Maak codes aan voor familie en vrienden, of trek ze in. Deel een code privé, niet openbaar.</p>
               <InviteAdmin />
+              <div className="eyebrow" style={{ marginTop: 18 }}>Ouderlijke goedkeuringen</div>
+              <p className="hint">Zit een ouder naast het kind? Vraag de koppelcode die het kind in RANK11 toont en keur hier goed. Zonder die code kun je niemand goedkeuren — een beheerder is niet automatisch een ouder.</p>
+              <ConsentAdmin />
               <div className="eyebrow" style={{ marginTop: 18 }}>Meldingen</div>
               <p className="hint">Feedback van testers. Zet een melding op bekeken of afgehandeld.</p>
               <FeedbackAdmin />

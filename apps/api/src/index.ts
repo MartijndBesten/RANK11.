@@ -18,7 +18,7 @@ import { getSettings, putSettings } from './modules/settings.ts';
 import { connectIntegration, disconnectIntegration, getIntegration, listIntegrations, syncIntegration } from './modules/integrations/routes.ts';
 import { adminDeleteUser, deleteAccount, exportAccount } from './modules/account.ts';
 import { adminListFeedback, adminUpdateFeedback, createFeedback } from './modules/feedback.ts';
-import { adminApprovalLink, adminBlockUser, adminListConsents, consentStatus, decideConsent, requestRevoke, resendConsent, revokeConsent } from './modules/consent.ts';
+import { adminApproveByCode, adminBlockUser, adminListConsents, consentStatus, decideConsent, requestRevoke, resendConsent, revokeConsent, rotateClaimCode } from './modules/consent.ts';
 import { runScheduledSync } from './modules/integrations/sync.ts';
 import { draftStatus, pickInDraft, startDraft } from './modules/drafts.ts';
 import { createGoal, createUpcoming, deleteGoal, deleteUpcoming, getPlanning } from './modules/planning.ts';
@@ -61,9 +61,10 @@ export const router = new Router()
   .add('POST', '/api/consent/request-revoke', requestRevoke)
   .add('GET', '/api/consent/status', consentStatus)
   .add('POST', '/api/consent/resend', resendConsent)
-  // beheer: toestemmingen, blokkeren, verwijderen
+  .add('POST', '/api/consent/claim-code', rotateClaimCode)
+  // beheer: toestemmingen (ouder/beheerder keurt eigen kind goed met koppelcode), blokkeren, verwijderen
   .add('GET', '/api/admin/consents', adminListConsents)
-  .add('POST', '/api/admin/consents/:userId/link', adminApprovalLink)
+  .add('POST', '/api/admin/consents/approve', adminApproveByCode)
   .add('POST', '/api/admin/users/:userId/block', adminBlockUser)
   .add('POST', '/api/admin/users/:userId/delete', adminDeleteUser)
   // club
@@ -135,7 +136,7 @@ const PUBLIC = new Set(['/api/health', '/api/config', '/api/auth/register', '/ap
 
 // Wachtende (ouderlijke toestemming) of geblokkeerde accounts hebben geen toegang tot het spel:
 // alleen hun status bekijken, de mail opnieuw laten sturen, uitloggen of hun account verwijderen.
-const PENDING_ALLOWED = new Set(['/api/me', '/api/config', '/api/consent/status', '/api/consent/resend', '/api/auth/logout']);
+const PENDING_ALLOWED = new Set(['/api/me', '/api/config', '/api/consent/status', '/api/consent/resend', '/api/consent/claim-code', '/api/auth/logout']);
 
 export async function handle(request: Request, env: Env): Promise<Response> {
   if (request.method === 'OPTIONS') return preflight(request, env);

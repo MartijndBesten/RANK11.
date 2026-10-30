@@ -147,10 +147,10 @@ export async function register(ctx: Ctx): Promise<Response> {
 
   const user: User = { id: userId, username, role: 'player', status };
   if (under16) {
-    const { send } = await startParentConsent(ctx, userId, username, parentEmail!);
+    const { send, claimCode } = await startParentConsent(ctx, userId, username, parentEmail!);
     const headers: Record<string, string> = {};
     if (body.cookie === true) headers['Set-Cookie'] = sessionCookie(session.token, Math.floor((session.expiresAt - ctx.now) / 1000));
-    return json({ token: session.token, expiresAt: session.expiresAt, user, pending: true, emailSent: send.sent }, 201, headers);
+    return json({ token: session.token, expiresAt: session.expiresAt, user, pending: true, emailSent: send.sent, claimCode }, 201, headers);
   }
   return authResponse(user, session.token, session.expiresAt, ctx.now, body.cookie === true, 201);
 }

@@ -1,9 +1,15 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import qrcode from 'qrcode-generator';
 import { api, ApiError, serverAvailable } from './api/client';
 import { StoreProvider } from './state/store';
 import { OnlineStoreProvider } from './state/onlineStore';
 import { App } from './App';
 import iconUrl from './assets/icon.svg';
+
+/** Maakt een QR-code als data-URL (foutcorrectie M). Geeft null bij een fout. */
+function makeQr(text: string): string | null {
+  try { const qr = qrcode(0, 'M'); qr.addData(text); qr.make(); return qr.createDataURL(6, 8); } catch { return null; }
+}
 
 type Mode = 'checking' | 'choose' | 'online' | 'demo' | 'unavailable' | 'pending';
 const MODE_KEY = 'rank11-mode';
@@ -65,17 +71,30 @@ export function Root() {
   return <StoreProvider onExit={hasServer ? exitDemo : undefined}><App /></StoreProvider>;
 }
 
-/** Wachtscherm: het kind is ingelogd maar wacht op toestemming van de ouder. */
+/** Wachtscherm: het kind is ingelogd maar wacht op toestemming van de ouder.
+ * Twee manieren om toestemming te krijgen: via de e-mail aan de ouder, of — als de ouder naast je zit —
+ * via een koppelcode/QR die de ouder op het eigen apparaat of in het beheer invoert. */
 function PendingScreen({ onLoggedOut }: { onLoggedOut: () => void }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
+  const [showQr, setShowQr] = useState(false);
+  const [claim, setClaim] = useState<string | null>(null);
+  const [claimBusy, setClaimBusy] = useState(false);
+  const [claimErr, setClaimErr] = useState<string | null>(null);
   useEffect(() => { void api<{ consent: { parentEmailMasked: string } | null }>('GET', '/consent/status').then((r) => setEmail(r.consent?.parentEmailMasked ?? null)).catch(() => {}); }, []);
   const resend = async () => {
     setBusy(true); setMsg(null);
     try { await api('POST', '/consent/resend'); setMsg('We hebben de e-mail opnieuw verstuurd.'); }
     catch (e) { setMsg(e instanceof ApiError ? e.message : 'Opnieuw versturen lukte niet.'); } finally { setBusy(false); }
   };
+  const getCode = async () => {
+    setClaimBusy(true); setClaimErr(null);
+    try { const r = await api<{ claimCode: string }>('POST', '/consent/claim-code'); setClaim(r.claimCode); }
+    catch (e) { setClaimErr(e instanceof ApiError ? e.message : 'Een code maken lukte niet.'); } finally { setClaimBusy(false); }
+  };
+  const openQr = () => { setShowQr(true); if (!claim) void getCode(); };
+  const qrUrl = useMemo(() => (claim ? makeQr(`${location.origin}/ouder/toestemming?claim=${claim}`) : null), [claim]);
   return (
     <div className="auth"><div className="stadium" />
       <main className="auth-card panel gold">
@@ -85,8 +104,28 @@ function PendingScreen({ onLoggedOut }: { onLoggedOut: () => void }) {
         {msg && <p className="hint" role="status">{msg}</p>}
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 10 }}>
           <button className="btn small" disabled={busy} onClick={() => void resend()}>{busy ? 'Bezig…' : 'E-mail opnieuw sturen'}</button>
+          {!showQr && <button className="btn ghost small" onClick={openQr}>Ouder zit naast je? Toon code</button>}
           <button className="link-btn" onClick={onLoggedOut}>Uitloggen</button>
         </div>
+        {showQr && (
+          <div className="panel gold" style={{ marginTop: 12, padding: 14 }}>
+            <div className="eyebrow">Ouder zit naast je?</div>
+            <p className="hint" style={{ marginTop: 4 }}>Je ouder scant deze QR-code met de telefoon, of typt de koppelcode in op de toestemmingspagina (of een beheerder in het beheer). Daarna kun je spelen.</p>
+            {claimErr && <p className="form-error" role="alert">{claimErr}</p>}
+            {claimBusy && !claim && <p className="dim small">Code maken…</p>}
+            {claim && (
+              <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', marginTop: 8 }}>
+                {qrUrl && <img src={qrUrl} alt="QR-code voor ouderlijke toestemming" width={132} height={132} style={{ borderRadius: 10, background: '#fff', padding: 6 }} />}
+                <div>
+                  <div className="dim small">Koppelcode</div>
+                  <code style={{ fontSize: '1.5em', letterSpacing: '0.12em', userSelect: 'all' }}>{claim}</code>
+                  <div style={{ marginTop: 8 }}><button className="btn ghost small" disabled={claimBusy} onClick={() => void getCode()}>{claimBusy ? 'Bezig…' : 'Nieuwe code'}</button></div>
+                </div>
+              </div>
+            )}
+            <p className="hint" style={{ marginTop: 10 }}>Let op: alleen een ouder of wettelijk vertegenwoordiger mag toestemming geven. De code is kort geldig en maar één keer te gebruiken.</p>
+          </div>
+        )}
       </main>
     </div>
   );
@@ -163,7 +202,7 @@ function AuthScreen({ onOnline, onPending, onDemo, config }: {
               </div>
               {under16 === true && (
                 <label className="field"><span>E-mailadres van je ouder of verzorger</span>
-                  <input className="input" type="email" autoComplete="email" value={parentEmail} placeholder="ouder@voorbeeld.nl" onChange={(e) => setParentEmail(e.target.value)} />
+                  <input className="input" type="email" autoComplete="email" value={parentEmail} placeholder="ouder@example.nl" onChange={(e) => setParentEmail(e.target.value)} />
                   <small className="dim">Je ouder krijgt een e-mail om toestemming te geven. Daarna kun je spelen.</small></label>
               )}
               {!config.openRegistration && (

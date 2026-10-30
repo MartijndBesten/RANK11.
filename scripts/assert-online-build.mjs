@@ -19,7 +19,8 @@ async function javascript(directory) {
 
 export function isOnlineOnlyBuild(contents) {
   return contents.includes('RANK11. is tijdelijk niet bereikbaar')
-    && contents.includes('Toegang uitsluitend voor uitgenodigde accounts');
+    && contents.includes('Registratie is tijdelijk geopend op uitnodiging')
+    && contents.includes('Registratie is gesloten. Bestaande uitgenodigde accounts');
 }
 
 export async function verifyOnlineBuild(dir) {

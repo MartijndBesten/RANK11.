@@ -3,11 +3,41 @@
  * (art. 17). Alleen voor jezelf. Nodig voor een besloten test met (minderjarige) gebruikers.
  */
 import { requireUser } from '../auth.ts';
-import { many, one, run, stmt } from '../db.ts';
+import { auditStmt, many, one, stmt } from '../db.ts';
 import { SESSION_COOKIE } from '../auth.ts';
-import { json, type Ctx } from '../http.ts';
+import { ApiError, json, type Ctx } from '../http.ts';
 
 const CLEAR_COOKIE = `${SESSION_COOKIE}=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0`;
+
+/**
+ * Verwijdert één gebruiker en alle persoonlijke gegevens. Gedeelde gegevens blijven: een pool van de
+ * gebruiker gaat naar het oudste andere lid, anders vervalt de pool. Gebruikt door zelf-verwijderen én
+ * door de beheerder, en door het opruimen van niet-goedgekeurde accounts.
+ */
+export async function deleteUserById(db: D1Database, id: string, now: number, actorId: string | null = null): Promise<void> {
+  const ownedPools = await many<{ id: string }>(db, 'SELECT id FROM pools WHERE created_by = ?', id);
+  const pre: ReturnType<typeof stmt>[] = [];
+  for (const p of ownedPools) {
+    const heir = await one<{ user_id: string }>(db, 'SELECT user_id FROM pool_members WHERE pool_id = ? AND user_id != ? ORDER BY joined_at LIMIT 1', p.id, id);
+    if (heir) {
+      pre.push(stmt(db, 'UPDATE pools SET created_by = ? WHERE id = ?', heir.user_id, p.id));
+      pre.push(stmt(db, "UPDATE pool_members SET role = 'admin' WHERE pool_id = ? AND user_id = ?", p.id, heir.user_id));
+      pre.push(stmt(db, 'UPDATE competitions SET created_by = ? WHERE pool_id = ? AND created_by = ?', heir.user_id, p.id, id));
+    } else {
+      pre.push(stmt(db, 'DELETE FROM pools WHERE id = ?', p.id));
+    }
+  }
+  await db.batch([
+    ...pre,
+    stmt(db, 'DELETE FROM matches WHERE home_user_id = ? OR away_user_id = ? OR challenger_id = ?', id, id, id),
+    stmt(db, 'DELETE FROM competition_fixtures WHERE home_user_id = ? OR away_user_id = ?', id, id),
+    stmt(db, 'DELETE FROM competitions WHERE created_by = ?', id),
+    stmt(db, 'DELETE FROM pool_invites WHERE created_by = ?', id),
+    stmt(db, 'DELETE FROM idempotency_keys WHERE user_id = ?', id),
+    ...(actorId ? [auditStmt(db, actorId, 'admin.delete_user', id, {}, now)] : []),
+    stmt(db, 'DELETE FROM users WHERE id = ?', id),
+  ]);
+}
 
 /** Alle eigen gegevens als JSON. Geen tokens, geen gegevens van anderen. */
 export async function exportAccount(ctx: Ctx): Promise<Response> {
@@ -39,33 +69,16 @@ export async function exportAccount(ctx: Ctx): Promise<Response> {
  */
 export async function deleteAccount(ctx: Ctx): Promise<Response> {
   const user = requireUser(ctx);
-  const db = ctx.env.DB;
-  const id = user.id;
-
-  // Pools die deze gebruiker aanmaakte: overdragen aan het oudste andere lid, anders de pool verwijderen.
-  const ownedPools = await many<{ id: string }>(db, 'SELECT id FROM pools WHERE created_by = ?', id);
-  const pre: ReturnType<typeof stmt>[] = [];
-  for (const p of ownedPools) {
-    const heir = await one<{ user_id: string }>(db, 'SELECT user_id FROM pool_members WHERE pool_id = ? AND user_id != ? ORDER BY joined_at LIMIT 1', p.id, id);
-    if (heir) {
-      pre.push(stmt(db, 'UPDATE pools SET created_by = ? WHERE id = ?', heir.user_id, p.id));
-      pre.push(stmt(db, "UPDATE pool_members SET role = 'admin' WHERE pool_id = ? AND user_id = ?", p.id, heir.user_id));
-      pre.push(stmt(db, 'UPDATE competitions SET created_by = ? WHERE pool_id = ? AND created_by = ?', heir.user_id, p.id, id));
-    } else {
-      pre.push(stmt(db, 'DELETE FROM pools WHERE id = ?', p.id)); // cascade: leden, wedstrijden, competities, uitnodigingen
-    }
-  }
-
-  await db.batch([
-    ...pre,
-    // Overige verwijzingen zonder cascade.
-    stmt(db, 'DELETE FROM matches WHERE home_user_id = ? OR away_user_id = ? OR challenger_id = ?', id, id, id),
-    stmt(db, 'DELETE FROM competition_fixtures WHERE home_user_id = ? OR away_user_id = ?', id, id),
-    stmt(db, 'DELETE FROM competitions WHERE created_by = ?', id),
-    stmt(db, 'DELETE FROM pool_invites WHERE created_by = ?', id),
-    stmt(db, 'DELETE FROM idempotency_keys WHERE user_id = ?', id),
-    // De gebruiker zelf: cascade wist alle persoonlijke tabellen (cijfers, collectie, XP, koppelingen, sessies, ...).
-    stmt(db, 'DELETE FROM users WHERE id = ?', id),
-  ]);
+  await deleteUserById(ctx.env.DB, user.id, ctx.now);
   return json({ deleted: true }, 200, { 'Set-Cookie': CLEAR_COOKIE });
+}
+
+/** POST /api/admin/users/:userId/delete — de beheerder verwijdert een account (met logging). */
+export async function adminDeleteUser(ctx: Ctx): Promise<Response> {
+  const admin = requireUser(ctx);
+  if (admin.role !== 'platform_admin') throw new ApiError(404, 'not_found', 'Niet gevonden.');
+  const userId = ctx.params.userId as string;
+  if (userId === admin.id) throw new ApiError(400, 'bad_request', 'Je kunt jezelf hier niet verwijderen.');
+  await deleteUserById(ctx.env.DB, userId, ctx.now, admin.id);
+  return json({ deleted: true });
 }

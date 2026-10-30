@@ -2,6 +2,17 @@
 import { safeEqual, sha256Hex } from './crypto.ts';
 import type { Env } from './env.ts';
 import { serveStatic } from './static.ts';
+import { servePages } from './consent-pages.ts';
+
+/** Routeert een verzoek: /api → de API, /ouder|/privacy → Worker-pagina's, de rest → de statische frontend. */
+async function route(request: Request, env: Env, api: (request: Request, env: Env) => Promise<Response>): Promise<Response> {
+  const path = new URL(request.url).pathname;
+  if (path === '/api' || path.startsWith('/api/')) return api(request, env);
+  const pageRes = await servePages(request, env);
+  if (pageRes) return pageRes;
+  if (request.method === 'GET' || request.method === 'HEAD') return serveStatic(request, env);
+  return new Response('Methode niet toegestaan.', { status: 405 });
+}
 
 function privateResponse(res: Response): Response {
   if (res.status === 101) return res;
@@ -16,8 +27,10 @@ function privateResponse(res: Response): Response {
 export async function servePilot(
   request: Request, env: Env, api: (request: Request, env: Env) => Promise<Response>,
 ): Promise<Response> {
-  if (env.PILOT_MODE !== 'true' && env.ENVIRONMENT !== 'test') return api(request, env);
-  // Ontbrekende configuratie mag de website nooit openbaar maken.
+  // Publieke (niet-pilot) modus: gewoon routeren, geen Basic Auth, wel de frontend en de ouder-pagina's.
+  if (env.PILOT_MODE !== 'true' && env.ENVIRONMENT !== 'test') return route(request, env, api);
+
+  // Besloten pilot: alles achter HTTP Basic Auth. Ontbrekende configuratie mag de site nooit openbaar maken.
   if (!env.PILOT_ACCESS_USER || !env.PILOT_ACCESS_PASSWORD || env.PILOT_ACCESS_PASSWORD.length < 32 || !env.ASSETS) {
     return privateResponse(new Response('Testomgeving nog niet beschikbaar.', { status: 503 }));
   }
@@ -34,11 +47,5 @@ export async function servePilot(
       status: 401, headers: { 'WWW-Authenticate': 'Basic realm="RANK11 pilot", charset="UTF-8"' },
     }));
   }
-  const path = new URL(request.url).pathname;
-  // Zelfde origin voor de app en API: Secure/SameSite=Strict-sessiecookies blijven werken.
-  return privateResponse(await (path === '/api' || path.startsWith('/api/')
-    ? api(request, env)
-    : (request.method === 'GET' || request.method === 'HEAD'
-      ? serveStatic(request, env)
-      : Promise.resolve(new Response('Methode niet toegestaan.', { status: 405 })))));
+  return privateResponse(await route(request, env, api));
 }

@@ -18,7 +18,7 @@ describe('beheer van platformuitnodigingen', () => {
 
   it('admin maakt een code aan, die werkt voor registratie, en kan hem intrekken', async () => {
     const app = createApp();
-    const admin = await makeAdmin(app, 'Beheerder');
+    const admin = await makeAdmin(app, 'Chefkok');
 
     const created = await app.api('POST', '/api/admin/platform-invites', { token: admin.token, idem: idem(), body: { maxUses: 2, expiresInHours: 48, note: 'familie' } });
     expect(created.status).toBe(201);

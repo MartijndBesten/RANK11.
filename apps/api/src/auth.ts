@@ -10,8 +10,30 @@ import {
 } from './crypto.ts';
 import { auditStmt, isConstraintError, many, one, run, stmt } from './db.ts';
 import { intVar, type Env } from './env.ts';
-import { starterStatements } from './modules/collection.ts';
+import { cleanupExpiredPending, isValidEmail, onboardingStatements, startParentConsent } from './modules/consent.ts';
 import { allowedOrigins, ApiError, badRequest, conflict, json, readJson, str, type Ctx, type User } from './http.ts';
+
+/** Lichte moderatie van gebruikersnamen: geen gereserveerde of beledigende namen. */
+const RESERVED = new Set(['admin', 'administrator', 'beheerder', 'moderator', 'rank11', 'root', 'support', 'staff']);
+const BANNED = ['kanker', 'hoer', 'nazi', 'neger', 'fuck', 'shit', 'bitch', 'slet', 'kut', 'lul'];
+function moderateUsername(username: string): void {
+  const low = username.toLowerCase();
+  if (RESERVED.has(low)) throw badRequest('Deze gebruikersnaam is niet toegestaan.');
+  if (BANNED.some((w) => low.includes(w))) throw badRequest('Kies een nette gebruikersnaam.');
+}
+
+/** Cloudflare Turnstile-verificatie (bot-bescherming). Alleen actief als TURNSTILE_SECRET is gezet. */
+async function verifyTurnstile(secret: string, token: unknown, ip: string): Promise<boolean> {
+  if (typeof token !== 'string' || !token || token.length > 2048) return false;
+  try {
+    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret, response: token, remoteip: ip }),
+    });
+    const data = await res.json() as { success?: boolean };
+    return data.success === true;
+  } catch { return false; }
+}
 
 export const SESSION_COOKIE = 'rank11_session';
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
@@ -71,9 +93,24 @@ export async function register(ctx: Ctx): Promise<Response> {
   }
   const body = await readJson(ctx.req);
   const { username, password } = validateCredentials(body);
-  const inviteCode = typeof body.inviteCode === 'string' ? body.inviteCode : '';
-  const invite = await findUsableInvite(ctx.env, inviteCode, ctx.now);
-  if (!invite) throw new ApiError(400, 'registration_failed', GENERIC_REGISTER_ERROR);
+  moderateUsername(username);
+  if (Math.random() < 0.1) await cleanupExpiredPending(ctx.env, ctx.now).catch(() => {}); // opruimen (bewaartermijn)
+
+  // Bot-bescherming (indien geconfigureerd).
+  if (ctx.env.TURNSTILE_SECRET && !(await verifyTurnstile(ctx.env.TURNSTILE_SECRET, body.turnstileToken, ctx.ip))) {
+    throw new ApiError(400, 'captcha_failed', 'Beveiligingscontrole mislukt. Probeer het opnieuw.');
+  }
+
+  // Open registratie (zelfregistratie) heeft geen uitnodigingscode nodig; anders wel.
+  const openReg = ctx.env.OPEN_REGISTRATION === 'true';
+  const invite = openReg ? null : await findUsableInvite(ctx.env, typeof body.inviteCode === 'string' ? body.inviteCode : '', ctx.now);
+  if (!openReg && !invite) throw new ApiError(400, 'registration_failed', GENERIC_REGISTER_ERROR);
+
+  // Leeftijd: onder 16 vereist ouderlijke toestemming per e-mail vóór toegang.
+  const under16 = body.under16 === true;
+  const parentEmail = under16 && isValidEmail(body.parentEmail) ? body.parentEmail : null;
+  if (under16 && !parentEmail) throw badRequest('Vul het e-mailadres van je ouder of verzorger in.');
+
   const norm = normalizeUsername(username);
   if (await one(ctx.env.DB, 'SELECT 1 AS x FROM users WHERE username_norm = ?', norm)) {
     throw conflict('username_taken', 'Deze gebruikersnaam is niet beschikbaar.');
@@ -82,22 +119,23 @@ export async function register(ctx: Ctx): Promise<Response> {
   const passwordHash = await hashPassword(password, iterations(ctx.env));
   const session = await newSession(ctx.env, userId, ctx.now);
   const db = ctx.env.DB;
+  const status = under16 ? 'pending_parent_approval' : 'active';
+  const inviteUse = invite
+    ? [invite.kind === 'pool'
+        ? stmt(db, 'UPDATE pool_invites SET uses = uses + 1 WHERE id = ?', invite.id)
+        : stmt(db, 'UPDATE platform_invites SET uses = uses + 1 WHERE id = ?', invite.id)]
+    : [];
   const statements = [
-    invite.kind === 'pool'
-      ? stmt(db, 'UPDATE pool_invites SET uses = uses + 1 WHERE id = ?', invite.id)
-      : stmt(db, 'UPDATE platform_invites SET uses = uses + 1 WHERE id = ?', invite.id),
-    stmt(db, 'INSERT INTO users (id, username, username_norm, password_hash, role, created_at) VALUES (?, ?, ?, ?, ?, ?)', userId, username, norm, passwordHash, 'player', ctx.now),
+    ...inviteUse,
+    stmt(db, 'INSERT INTO users (id, username, username_norm, password_hash, role, status, is_minor, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      userId, username, norm, passwordHash, 'player', status, under16 ? 1 : 0, ctx.now),
   ];
-  if (invite.kind === 'pool') {
+  if (invite && invite.kind === 'pool') {
     statements.push(stmt(db, 'INSERT INTO pool_members (pool_id, user_id, role, joined_at) VALUES (?, ?, ?, ?)', invite.pool_id, userId, 'member', ctx.now));
   }
-  // Standaardclub op naam van de speler (later aan te passen via PUT /api/club).
-  const short = username.replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase().padEnd(3, 'X');
-  statements.push(stmt(db, 'INSERT INTO clubs (user_id, name, short, crest_json, updated_at) VALUES (?, ?, ?, ?, ?)', userId, `FC ${username}`.slice(0, 24), short,
-    JSON.stringify({ shape: 'shield', symbol: 'star', pattern: 'sash', primary: '#0b1f4d', secondary: '#1f6bff', accent: '#f2cf73' }), ctx.now));
-  // V-013: iedereen begint met een compleet startelftal met reserves (in dezelfde transactie als het account).
-  statements.push(...starterStatements(db, userId, ctx.now).statements);
-  statements.push(session.statement, auditStmt(db, userId, 'account.register', userId, { via: invite.kind, inviteId: invite.id }, ctx.now));
+  // Een actief account (16+) krijgt meteen een club + startelftal; een wachtend account nog niet (dataminimalisatie).
+  if (!under16) statements.push(...onboardingStatements(db, userId, username, ctx.now));
+  statements.push(session.statement, auditStmt(db, userId, 'account.register', userId, { via: invite ? invite.kind : 'open', minor: under16 }, ctx.now));
   try {
     await db.batch(statements);
   } catch (err) {
@@ -106,7 +144,14 @@ export async function register(ctx: Ctx): Promise<Response> {
     if (isConstraintError(err)) throw new ApiError(400, 'registration_failed', GENERIC_REGISTER_ERROR);
     throw err;
   }
-  const user: User = { id: userId, username, role: 'player' };
+
+  const user: User = { id: userId, username, role: 'player', status };
+  if (under16) {
+    const { send } = await startParentConsent(ctx, userId, username, parentEmail!);
+    const headers: Record<string, string> = {};
+    if (body.cookie === true) headers['Set-Cookie'] = sessionCookie(session.token, Math.floor((session.expiresAt - ctx.now) / 1000));
+    return json({ token: session.token, expiresAt: session.expiresAt, user, pending: true, emailSent: send.sent }, 201, headers);
+  }
   return authResponse(user, session.token, session.expiresAt, ctx.now, body.cookie === true, 201);
 }
 
@@ -185,11 +230,11 @@ export async function authenticate(req: Request, env: Env, now: number): Promise
     if (!origin || !allowedOrigins(env).includes(origin)) return { user: null, token: null };
   }
   const hash = await sha256Hex(token);
-  const row = await one<{ token_hash: string; id: string; username: string; role: User['role'] }>(env.DB,
-    `SELECT s.token_hash, u.id, u.username, u.role FROM sessions s JOIN users u ON u.id = s.user_id
+  const row = await one<{ token_hash: string; id: string; username: string; role: User['role']; status: User['status'] }>(env.DB,
+    `SELECT s.token_hash, u.id, u.username, u.role, u.status FROM sessions s JOIN users u ON u.id = s.user_id
      WHERE s.token_hash = ? AND s.expires_at > ?`, hash, now);
   if (!row || !safeEqual(row.token_hash, hash)) return { user: null, token: null };
-  return { user: { id: row.id, username: row.username, role: row.role }, token };
+  return { user: { id: row.id, username: row.username, role: row.role, status: row.status ?? 'active' }, token };
 }
 
 export function requireUser(ctx: Ctx): User {

@@ -28,6 +28,18 @@ export interface Env {
   INTEGRATION_KEY?: string;
   /** Statische frontend-build (same-origin). Alleen gebonden in omgevingen die de frontend meeserveren. */
   ASSETS?: R2Bucket;
+  /** Open registratie (zelfregistratie zonder uitnodigingscode). 'true' schakelt de nieuwe flow in. */
+  OPEN_REGISTRATION?: string;
+  /** Canonieke publieke URL voor e-maillinks (bijv. https://rank11.martijndenbesten.com). */
+  PUBLIC_BASE_URL?: string;
+  /** E-mailprovider voor oudertoestemming: 'resend' of leeg (dan wordt er niets verzonden). */
+  EMAIL_PROVIDER?: string;
+  EMAIL_FROM?: string;
+  RESEND_API_KEY?: string;
+  /** Cloudflare Turnstile secret voor bot-bescherming op registratie/e-mail. Leeg = check uit. */
+  TURNSTILE_SECRET?: string;
+  /** Publieke Turnstile-sitekey voor de frontend-widget (mag zichtbaar zijn). */
+  TURNSTILE_SITE_KEY?: string;
 }
 
 export function intVar(value: string | undefined, fallback: number): number {

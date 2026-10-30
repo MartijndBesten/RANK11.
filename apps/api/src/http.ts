@@ -131,6 +131,7 @@ export interface User {
   id: string;
   username: string;
   role: 'player' | 'platform_admin';
+  status?: 'active' | 'pending_parent_approval' | 'blocked';
 }
 
 export interface Ctx {

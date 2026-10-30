@@ -57,9 +57,10 @@ workers_dev = false
 
 [env.test.vars]
 PILOT_MODE = "true"
-# Besloten test: registratie open, maar dubbel afgeschermd (Basic Auth + geldige uitnodigingscode).
-# Volledig publiek (Basic Auth eraf) pas na oudertoestemming + DPIA (echte leerlingen = fase 3).
+# Besloten test: zelfregistratie (met leeftijdsvraag + oudertoestemming), achter Basic Auth.
 REGISTRATION_ENABLED = "true"
+OPEN_REGISTRATION = "true"   # zelfregistratie zonder uitnodigingscode (nog wel achter Basic Auth)
+PUBLIC_BASE_URL = "https://rank11-test.martijndenbesten.com"
 # INTEGRATION_KEY, PILOT_ACCESS_USER en PILOT_ACCESS_PASSWORD via wrangler secret put.
 ENVIRONMENT = "test"
 FEATURE_MARKET = "false" # V-015: transfermarkt uit
@@ -101,8 +102,10 @@ name = "rank11-api"
 workers_dev = false
 
 [env.prod.vars]
-PILOT_MODE = "true"
-REGISTRATION_ENABLED = "true" # dubbel afgeschermd: Basic Auth + geldige uitnodigingscode
+PILOT_MODE = "true"           # nog achter Basic Auth; publieke opening pas na privacy-vrijgave
+REGISTRATION_ENABLED = "true"
+OPEN_REGISTRATION = "true"    # zelfregistratie met leeftijdsvraag + oudertoestemming (achter Basic Auth)
+PUBLIC_BASE_URL = "https://rank11.martijndenbesten.com"
 ENVIRONMENT = "test" # houdt dezelfde afscherming (Basic Auth, noindex) aan als de testomgeving
 FEATURE_MARKET = "false"
 FEATURE_ACADEMY = "true"

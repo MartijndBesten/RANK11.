@@ -16,8 +16,9 @@ import { academyOverview, createSession, submitSession } from './modules/academy
 import { getConfig } from './modules/config.ts';
 import { getSettings, putSettings } from './modules/settings.ts';
 import { connectIntegration, disconnectIntegration, getIntegration, listIntegrations, syncIntegration } from './modules/integrations/routes.ts';
-import { deleteAccount, exportAccount } from './modules/account.ts';
+import { adminDeleteUser, deleteAccount, exportAccount } from './modules/account.ts';
 import { adminListFeedback, adminUpdateFeedback, createFeedback } from './modules/feedback.ts';
+import { adminApprovalLink, adminBlockUser, adminListConsents, consentStatus, decideConsent, requestRevoke, resendConsent, revokeConsent } from './modules/consent.ts';
 import { runScheduledSync } from './modules/integrations/sync.ts';
 import { draftStatus, pickInDraft, startDraft } from './modules/drafts.ts';
 import { createGoal, createUpcoming, deleteGoal, deleteUpcoming, getPlanning } from './modules/planning.ts';
@@ -54,6 +55,17 @@ export const router = new Router()
   .add('GET', '/api/admin/platform-invites', adminListPlatformInvites)
   .add('POST', '/api/admin/platform-invites', adminCreatePlatformInvite)
   .add('POST', '/api/admin/platform-invites/:id/revoke', adminRevokePlatformInvite)
+  // ouderlijke toestemming (publiek, token-gebaseerd)
+  .add('POST', '/api/consent/decide', decideConsent)
+  .add('POST', '/api/consent/revoke', revokeConsent)
+  .add('POST', '/api/consent/request-revoke', requestRevoke)
+  .add('GET', '/api/consent/status', consentStatus)
+  .add('POST', '/api/consent/resend', resendConsent)
+  // beheer: toestemmingen, blokkeren, verwijderen
+  .add('GET', '/api/admin/consents', adminListConsents)
+  .add('POST', '/api/admin/consents/:userId/link', adminApprovalLink)
+  .add('POST', '/api/admin/users/:userId/block', adminBlockUser)
+  .add('POST', '/api/admin/users/:userId/delete', adminDeleteUser)
   // club
   .add('GET', '/api/club', getClub)
   .add('PUT', '/api/club', idempotent(putClub, opt))
@@ -118,7 +130,12 @@ export const router = new Router()
   .add('POST', '/api/packs/buy', idempotent(buyPack, req))
   .add('POST', '/api/packs/:grantId/open', idempotent(openPackGrant, req));
 
-const PUBLIC = new Set(['/api/health', '/api/config', '/api/auth/register', '/api/auth/login']);
+const PUBLIC = new Set(['/api/health', '/api/config', '/api/auth/register', '/api/auth/login',
+  '/api/consent/decide', '/api/consent/revoke', '/api/consent/request-revoke']);
+
+// Wachtende (ouderlijke toestemming) of geblokkeerde accounts hebben geen toegang tot het spel:
+// alleen hun status bekijken, de mail opnieuw laten sturen, uitloggen of hun account verwijderen.
+const PENDING_ALLOWED = new Set(['/api/me', '/api/config', '/api/consent/status', '/api/consent/resend', '/api/auth/logout']);
 
 export async function handle(request: Request, env: Env): Promise<Response> {
   if (request.method === 'OPTIONS') return preflight(request, env);
@@ -130,6 +147,11 @@ export async function handle(request: Request, env: Env): Promise<Response> {
     const now = Date.now();
     const auth = PUBLIC.has(url.pathname) ? { user: null, token: null } : await authenticate(request, env, now);
     if (!PUBLIC.has(url.pathname) && !auth.user) throw new ApiError(401, 'unauthorized', 'Log eerst in.');
+    // Geen spel-toegang zolang een account wacht op ouderlijke toestemming of geblokkeerd is.
+    const selfDelete = request.method === 'DELETE' && url.pathname === '/api/me';
+    if (auth.user && auth.user.status && auth.user.status !== 'active' && !PENDING_ALLOWED.has(url.pathname) && !selfDelete) {
+      throw new ApiError(403, 'account_not_active', auth.user.status === 'blocked' ? 'Dit account heeft geen toegang.' : 'Wacht op toestemming van je ouder.');
+    }
     const ctx: Ctx = {
       req: request, env, url, params: match.params, now,
       ip: request.headers.get('CF-Connecting-IP') ?? 'onbekend',

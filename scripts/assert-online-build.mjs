@@ -18,9 +18,9 @@ async function javascript(directory) {
 }
 
 export function isOnlineOnlyBuild(contents) {
+  // Beide teksten staan in het storingsscherm dat alleen in de online-only build (ONLINE_ONLY) wordt meegecompileerd.
   return contents.includes('RANK11. is tijdelijk niet bereikbaar')
-    && contents.includes('Registratie is tijdelijk geopend op uitnodiging')
-    && contents.includes('Registratie is gesloten. Bestaande uitgenodigde accounts');
+    && contents.includes('De online server reageert niet');
 }
 
 export async function verifyOnlineBuild(dir) {

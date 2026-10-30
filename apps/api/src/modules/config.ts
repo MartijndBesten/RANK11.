@@ -26,6 +26,8 @@ export async function getConfig(ctx: Ctx): Promise<Response> {
     flags: flags(ctx.env),
     // Alleen UI-weergave; de register-endpoint blijft zelfstandig afgeschermd.
     registrationEnabled: ctx.env.REGISTRATION_ENABLED === 'true',
+    openRegistration: ctx.env.OPEN_REGISTRATION === 'true', // zelfregistratie zonder uitnodigingscode
+    turnstileSiteKey: ctx.env.TURNSTILE_SITE_KEY ?? null,   // publieke captcha-sleutel (mag zichtbaar zijn)
     asyncDeadlineHours: asyncDeadlineHours(ctx.env),
     versions: { rewards: CURRENT_REWARD_CONFIG.version, progress: CURRENT_PROGRESS_CONFIG.version, motivation: DEFAULT_MOTIVATION_CONFIG.version },
   });

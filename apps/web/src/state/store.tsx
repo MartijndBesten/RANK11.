@@ -233,7 +233,7 @@ type MaybePromise<T> = T | Promise<T>;
 export interface Store {
   mode: 'demo' | 'online';
   /** Ingelogde speler (alleen online). */
-  user?: { id: string; username: string } | null;
+  user?: { id: string; username: string; role?: string } | null;
   state: GameState;
   owned: Player[];
   /** Alle actuele cijfers (afgeleid uit de eventlog), inclusief cijfers waarvan de beloning nog wacht. */

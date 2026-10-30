@@ -1,7 +1,78 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Sheet } from '../components/Sheet';
 import { useStore } from '../state/store';
 import { Koppelingen } from './Koppelingen';
+import { api, ApiError } from '../api/client';
+
+interface AdminInvite { id: string; note: string | null; maxUses: number; uses: number; expiresAt: number; revokedAt: number | null; createdAt: number; active: boolean }
+
+/** Beheerder: uitnodigingscodes aanmaken en intrekken, zonder databasecommando's. Alleen zichtbaar voor platform_admin. */
+function InviteAdmin() {
+  const [invites, setInvites] = useState<AdminInvite[] | null>(null);
+  const [newCode, setNewCode] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [maxUses, setMaxUses] = useState(5);
+  const [days, setDays] = useState(14);
+
+  const load = useCallback(async () => {
+    try { const r = await api<{ invites: AdminInvite[] }>('GET', '/admin/platform-invites'); setInvites(r.invites); setErr(null); }
+    catch (e) { setErr(e instanceof ApiError ? e.message : 'Kan uitnodigingen niet laden.'); }
+  }, []);
+  useEffect(() => { void load(); }, [load]);
+
+  const create = async () => {
+    setBusy(true); setErr(null); setNewCode(null); setCopied(false);
+    try {
+      const r = await api<{ code: string }>('POST', '/admin/platform-invites', { maxUses, expiresInHours: days * 24 });
+      setNewCode(r.code); await load();
+    } catch (e) { setErr(e instanceof ApiError ? e.message : 'Aanmaken mislukt.'); } finally { setBusy(false); }
+  };
+  const revoke = async (id: string) => {
+    setBusy(true); setErr(null);
+    try { await api('POST', `/admin/platform-invites/${id}/revoke`); await load(); }
+    catch (e) { setErr(e instanceof ApiError ? e.message : 'Intrekken mislukt.'); } finally { setBusy(false); }
+  };
+  const copy = async () => { if (!newCode) return; try { await navigator.clipboard.writeText(newCode); setCopied(true); } catch { /* selecteren mag ook */ } };
+  const fmt = (ms: number) => new Date(ms).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
+
+  return (
+    <div className="invite-admin">
+      <div className="form-row" style={{ marginTop: 8, alignItems: 'end' }}>
+        <label className="field"><span>Aantal keer bruikbaar</span>
+          <input className="input" type="number" min={1} max={100} value={maxUses} onChange={(e) => setMaxUses(Math.max(1, Math.min(100, Number(e.target.value) || 1)))} /></label>
+        <label className="field"><span>Geldig (dagen)</span>
+          <input className="input" type="number" min={1} max={30} value={days} onChange={(e) => setDays(Math.max(1, Math.min(30, Number(e.target.value) || 1)))} /></label>
+        <button className="btn small" disabled={busy} onClick={() => void create()}>{busy ? 'Bezig…' : 'Nieuwe code'}</button>
+      </div>
+      {newCode && (
+        <div className="panel gold" style={{ marginTop: 10, padding: 12 }}>
+          <div className="eyebrow">Nieuwe uitnodigingscode — noteer deze nu</div>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 6, flexWrap: 'wrap' }}>
+            <code className="invite-code" style={{ fontSize: '1.2em', letterSpacing: '0.08em', userSelect: 'all' }}>{newCode}</code>
+            <button className="btn ghost small" onClick={() => void copy()}>{copied ? 'Gekopieerd' : 'Kopiëren'}</button>
+          </div>
+          <p className="hint" style={{ marginTop: 6 }}>De code is hierna niet meer op te vragen; maak zo nodig een nieuwe aan.</p>
+        </div>
+      )}
+      {err && <p className="form-error" role="alert">{err}</p>}
+      <ul className="rows" style={{ marginTop: 10 }}>
+        {invites === null ? <li className="row"><span className="dim small">Laden…</span></li>
+          : invites.length === 0 ? <li className="row"><span className="dim small">Nog geen uitnodigingen.</span></li>
+          : invites.map((iv) => (
+            <li className="row" key={iv.id}>
+              <div className="row-main">
+                <span className="row-title">{iv.uses}/{iv.maxUses} gebruikt · t/m {fmt(iv.expiresAt)}</span>
+                <span className="row-sub">{iv.revokedAt ? 'Ingetrokken' : iv.active ? 'Actief' : iv.uses >= iv.maxUses ? 'Vol' : 'Verlopen'}{iv.note ? ` · ${iv.note}` : ''}</span>
+              </div>
+              {iv.active && <button className="btn ghost small" disabled={busy} onClick={() => void revoke(iv.id)}>Intrekken</button>}
+            </li>
+          ))}
+      </ul>
+    </div>
+  );
+}
 
 function Toggle({ label, note, on, onChange }: { label: string; note?: string; on: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -41,8 +112,15 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
       {mode === 'online' ? (
         <>
           <div className="eyebrow" style={{ marginTop: 18 }}>Account</div>
-          <p className="hint">Ingelogd als <b>{user?.username}</b>. Je cijfers, club, collectie en beloningen staan op de (lokale test)server. Speluitleg onthouden we bij je account; de andere voorkeuren gelden alleen voor dit toestel.</p>
+          <p className="hint">Ingelogd als <b>{user?.username}</b>. Je cijfers, club, collectie en beloningen staan veilig op de server. Speluitleg onthouden we bij je account; de andere voorkeuren gelden alleen voor dit toestel.</p>
           <div style={{ marginTop: 10 }}><button className="btn ghost small" onClick={() => { onClose(); void logout(); }}>Uitloggen</button></div>
+          {user?.role === 'platform_admin' && (
+            <>
+              <div className="eyebrow" style={{ marginTop: 18 }}>Uitnodigingen beheren</div>
+              <p className="hint">Maak codes aan voor familie en vrienden, of trek ze in. Deel een code privé, niet openbaar.</p>
+              <InviteAdmin />
+            </>
+          )}
         </>
       ) : (
         <>

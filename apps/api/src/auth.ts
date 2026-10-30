@@ -8,7 +8,7 @@ import {
   hashInviteCode, hashPassword, newId, randomInviteCode, randomToken, safeEqual, sha256Hex, verifyPassword,
   MAX_PBKDF2_ITERATIONS,
 } from './crypto.ts';
-import { auditStmt, isConstraintError, one, run, stmt } from './db.ts';
+import { auditStmt, isConstraintError, many, one, run, stmt } from './db.ts';
 import { intVar, type Env } from './env.ts';
 import { starterStatements } from './modules/collection.ts';
 import { allowedOrigins, ApiError, badRequest, conflict, json, readJson, str, type Ctx, type User } from './http.ts';
@@ -59,7 +59,7 @@ async function findUsableInvite(env: Env, code: string, now: number): Promise<In
   const pool = await one<InviteRow>(env.DB,
     `SELECT id, 'pool' AS kind, pool_id, expires_at, max_uses, uses FROM pool_invites WHERE code_hash = ? AND revoked_at IS NULL`, hash);
   const invite = pool ?? await one<InviteRow>(env.DB,
-    `SELECT id, 'platform' AS kind, NULL AS pool_id, expires_at, max_uses, uses FROM platform_invites WHERE code_hash = ?`, hash);
+    `SELECT id, 'platform' AS kind, NULL AS pool_id, expires_at, max_uses, uses FROM platform_invites WHERE code_hash = ? AND revoked_at IS NULL`, hash);
   if (!invite || invite.expires_at <= now || invite.uses >= invite.max_uses) return null;
   return invite;
 }
@@ -220,6 +220,41 @@ export async function adminCreatePlatformInvite(ctx: Ctx): Promise<Response> {
   const body = await readJson(ctx.req);
   const maxUses = typeof body.maxUses === 'number' && Number.isInteger(body.maxUses) && body.maxUses > 0 && body.maxUses <= 100 ? body.maxUses : 1;
   const hours = typeof body.expiresInHours === 'number' && body.expiresInHours > 0 && body.expiresInHours <= 24 * 30 ? body.expiresInHours : 72;
-  const invite = await createPlatformInvite(ctx.env.DB, { now: ctx.now, expiresAt: ctx.now + hours * 3600_000, maxUses, actorId: user.id });
+  const invite = await createPlatformInvite(ctx.env.DB, { now: ctx.now, expiresAt: ctx.now + hours * 3600_000, maxUses, note: typeof body.note === 'string' ? body.note.slice(0, 80) : undefined, actorId: user.id });
   return json({ ...invite, maxUses, expiresAt: ctx.now + hours * 3600_000 }, 201);
+}
+
+function requirePlatformAdmin(ctx: Ctx): User {
+  const user = requireUser(ctx);
+  if (user.role !== 'platform_admin') throw new ApiError(404, 'not_found', 'Niet gevonden.');
+  return user;
+}
+
+interface InviteAdminRow { id: string; note: string | null; max_uses: number; uses: number; expires_at: number; revoked_at: number | null; created_at: number }
+
+/** Overzicht van platformuitnodigingen voor de beheerder. De leesbare code staat er bewust NIET bij
+ * (die is alleen bij aanmaken zichtbaar); wel of een code nog bruikbaar is. */
+export async function adminListPlatformInvites(ctx: Ctx): Promise<Response> {
+  requirePlatformAdmin(ctx);
+  const rows = await many<InviteAdminRow>(ctx.env.DB,
+    'SELECT id, note, max_uses, uses, expires_at, revoked_at, created_at FROM platform_invites ORDER BY created_at DESC LIMIT 100');
+  const invites = rows.map((r) => ({
+    id: r.id, note: r.note, maxUses: r.max_uses, uses: r.uses, expiresAt: r.expires_at,
+    revokedAt: r.revoked_at, createdAt: r.created_at,
+    active: r.revoked_at === null && r.expires_at > ctx.now && r.uses < r.max_uses,
+  }));
+  return json({ invites });
+}
+
+/** Trekt een uitnodiging in: direct onbruikbaar om te registreren. */
+export async function adminRevokePlatformInvite(ctx: Ctx): Promise<Response> {
+  const user = requirePlatformAdmin(ctx);
+  const id = ctx.params.id as string;
+  const row = await one<{ id: string }>(ctx.env.DB, 'SELECT id FROM platform_invites WHERE id = ?', id);
+  if (!row) throw new ApiError(404, 'not_found', 'Niet gevonden.');
+  await ctx.env.DB.batch([
+    stmt(ctx.env.DB, 'UPDATE platform_invites SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL', ctx.now, id),
+    auditStmt(ctx.env.DB, user.id, 'platform_invite.revoke', id, {}, ctx.now),
+  ]);
+  return json({ id, revokedAt: ctx.now });
 }

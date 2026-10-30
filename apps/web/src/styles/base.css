@@ -344,7 +344,8 @@ button:disabled { cursor: not-allowed; }
   position: fixed;
   z-index: 90;
   left: 50%;
-  top: calc(var(--top-h) + var(--safe-t) + 12px);
+  /* Onderaan, net boven de navigatiebalk: zo overlapt de melding nooit de subtabs bovenin. */
+  bottom: calc(var(--nav-h) + var(--safe-b) + 12px);
   transform: translateX(-50%);
   display: flex;
   align-items: center;
@@ -362,7 +363,7 @@ button:disabled { cursor: not-allowed; }
 @keyframes fade-in { from { opacity: 0; } }
 @keyframes sheet-up { from { transform: translateY(100%); } }
 @keyframes sheet-pop { from { opacity: 0; transform: translate(-50%, 24px); } }
-@keyframes toast-in { from { opacity: 0; transform: translate(-50%, -20px) scale(0.9); } }
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, 20px) scale(0.9); } }
 
 /* Odds-tabel */
 .odds { width: 100%; border-collapse: collapse; font-size: 14px; }

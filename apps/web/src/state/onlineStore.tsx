@@ -17,7 +17,7 @@ import { todayIso } from './school';
 import type { AcademyOverview, PracticeResult } from '../academy/types';
 
 interface Loaded {
-  user: { id: string; username: string };
+  user: { id: string; username: string; role?: string };
   club: { name: string; short: string; crest: Omit<CrestData, 'short' | 'stars'> };
   balances: { coins: number; vouchers: number };
   cards: ApiCard[];

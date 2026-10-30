@@ -30,7 +30,7 @@ const until = (ms: number) => {
 };
 
 function ServerNote() {
-  return <p className="hint">Echte accounts op de lokale testserver, alleen met synthetische testgegevens. Nog niet online voor echte gebruikers.</p>;
+  return <p className="hint">Besloten test met echte accounts op de server, alleen met synthetische testgegevens. Nog niet open voor echte leerlinggegevens.</p>;
 }
 
 export function OnlineCompetition({ nav, sub }: { nav: Nav; sub: string }) {
@@ -211,13 +211,13 @@ export function OnlineCompetition({ nav, sub }: { nav: Nav; sub: string }) {
       <div className="leagues">
         <section className="panel league-card rank" role="button" tabIndex={0} onClick={() => nav.go('competitie-rankleague')} onKeyDown={(e) => e.key === 'Enter' && nav.go('competitie-rankleague')}>
           <div className="eyebrow">RANK League · kaartbattles</div>
-          <div className="league-pos"><span className="big-num">{myRank?.rank ?? '–'}</span><span className="dim">e van {standings.length}</span></div>
+          <div className="league-pos">{standings.length === 0 ? <span className="dim">Nog geen stand</span> : <><span className="big-num">{myRank?.rank ?? '–'}</span><span className="dim">e van {standings.length}</span></>}</div>
           <div className="dim small">{myRank ? `${myRank.points} punten · ${myRank.played} gespeeld` : ''}</div>
           {incoming.length + active.length > 0 && <div className="league-next"><b>{incoming.length + active.length}</b> wedstrijd{incoming.length + active.length === 1 ? '' : 'en'} wacht{incoming.length + active.length === 1 ? '' : 'en'} op jou</div>}
         </section>
         <section className="panel league-card grade" role="button" tabIndex={0} onClick={() => nav.go('competitie-gradeleague')} onKeyDown={(e) => e.key === 'Enter' && nav.go('competitie-gradeleague')}>
           <div className="eyebrow">Grade League · {gl?.period.name}</div>
-          <div className="league-pos"><span className="big-num">{myGl?.rank ?? '–'}</span><span className="dim">e van {gl?.rows.filter((r) => r.eligible).length ?? 0}</span></div>
+          <div className="league-pos">{(gl?.rows.filter((r) => r.eligible).length ?? 0) === 0 ? <span className="dim">Nog geen stand</span> : <><span className="big-num">{myGl?.rank ?? '–'}</span><span className="dim">e van {gl?.rows.filter((r) => r.eligible).length ?? 0}</span></>}</div>
           <div className="dim small">{myGl?.eligible ? `Score ${myGl.score?.toFixed(1).replace('.', ',')}` : 'Nog te weinig cijfers deze periode'}</div>
         </section>
         <section className="panel league-card academy">

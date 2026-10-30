@@ -2,7 +2,7 @@
  * RANK11. API — Cloudflare Worker. Server-authoritative: clients sturen intenties,
  * de spelregels komen uit @rank11/engine.
  */
-import { adminCreatePlatformInvite, authenticate, login, logout, me, register } from './auth.ts';
+import { adminCreatePlatformInvite, adminListPlatformInvites, adminRevokePlatformInvite, authenticate, login, logout, me, register } from './auth.ts';
 import type { Env } from './env.ts';
 import { servePilot } from './pilot.ts';
 import { ApiError, errorResponse, finalize, preflight, Router, type Ctx } from './http.ts';
@@ -46,7 +46,9 @@ export const router = new Router()
   .add('GET', '/api/me', me)
   .add('GET', '/api/me/export', exportAccount)
   .add('DELETE', '/api/me', deleteAccount)
+  .add('GET', '/api/admin/platform-invites', adminListPlatformInvites)
   .add('POST', '/api/admin/platform-invites', adminCreatePlatformInvite)
+  .add('POST', '/api/admin/platform-invites/:id/revoke', adminRevokePlatformInvite)
   // club
   .add('GET', '/api/club', getClub)
   .add('PUT', '/api/club', idempotent(putClub, opt))

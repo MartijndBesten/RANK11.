@@ -17,6 +17,19 @@ function pilot() {
 }
 
 describe('besloten pilot', () => {
+  it('geeft de actuele uitnodigingsregistratie-status door aan de frontend, zonder de toegangspoort te passeren', async () => {
+    const { app, request } = pilot();
+    const locked = await request('/api/config');
+    expect(locked.status).toBe(401);
+    const open = await request('/api/config', { headers: { Authorization: basic } });
+    expect(open.status).toBe(200);
+    expect((await open.json()).registrationEnabled).toBe(true);
+    app.env.REGISTRATION_ENABLED = 'false';
+    const closed = await request('/api/config', { headers: { Authorization: basic } });
+    expect(closed.status).toBe(200);
+    expect((await closed.json()).registrationEnabled).toBe(false);
+  });
+
   it('schermt HTML, assets, API en preflight af, ook bij ongeldige credentials', async () => {
     const { assets, request } = pilot();
     for (const path of ['/', '/assets/app.js', '/api/health', '/api/auth/register']) {

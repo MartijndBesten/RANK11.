@@ -14,7 +14,9 @@ en is van buitenaf gecontroleerd:
   (`WWW-Authenticate: Basic realm="RANK11 pilot"`), met `noindex, nofollow, noarchive` en `no-store`.
 - Met Basic Auth: `/api/health` → `{ok:true}`, de online-only app laadt (geen demo-terugval,
   geen demo-knop, geen registratietab; storingsscherm bij serveruitval).
-- Registratie dicht: `POST /api/auth/register` met geldige invite → **403 `registration_closed`**.
+- Registratie open maar dubbel afgeschermd: `POST /api/auth/register` lukt alleen mét Basic Auth
+  én geldige uitnodigingscode (201); zonder invite 400, zonder Basic Auth 401. Volledig publiek
+  (Basic Auth eraf) pas na oudertoestemming + DPIA.
 - Bestaande synthetische accounts kunnen inloggen (200) en spelen; echte serverdata, geen demo-cijfers.
 - Secrets gezet: `INTEGRATION_KEY`, `PILOT_ACCESS_USER`, `PILOT_ACCESS_PASSWORD`. Geen test-cron.
 - D1 `rank11-test` draait in regio **WEUR** met alle 6 migraties toegepast. Let op: WEUR is een

@@ -57,7 +57,9 @@ workers_dev = false
 
 [env.test.vars]
 PILOT_MODE = "true"
-REGISTRATION_ENABLED = "false"
+# Besloten test: registratie open, maar dubbel afgeschermd (Basic Auth + geldige uitnodigingscode).
+# Volledig publiek (Basic Auth eraf) pas na oudertoestemming + DPIA (echte leerlingen = fase 3).
+REGISTRATION_ENABLED = "true"
 # INTEGRATION_KEY, PILOT_ACCESS_USER en PILOT_ACCESS_PASSWORD via wrangler secret put.
 ENVIRONMENT = "test"
 FEATURE_MARKET = "false" # V-015: transfermarkt uit

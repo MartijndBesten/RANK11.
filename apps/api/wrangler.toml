@@ -102,11 +102,13 @@ name = "rank11-api"
 workers_dev = false
 
 [env.prod.vars]
-PILOT_MODE = "true"           # nog achter Basic Auth; publieke opening pas na privacy-vrijgave
-REGISTRATION_ENABLED = "true"
-OPEN_REGISTRATION = "true"    # zelfregistratie met leeftijdsvraag + oudertoestemming (achter Basic Auth)
+# FASE A: publieke voordeur open (geen Basic Auth). Publieke routes (homepage, login, /ouder, /privacy,
+# statische assets) zijn vrij; persoonlijke/beheerdersroutes blijven via de sessie beveiligd (zie handle()).
+PILOT_MODE = "false"
+REGISTRATION_ENABLED = "true"  # registratiescherm zichtbaar
+OPEN_REGISTRATION = "false"    # FASE A: account maken vereist nog een uitnodigingscode; open zelfregistratie = FASE B
 PUBLIC_BASE_URL = "https://rank11.martijndenbesten.com"
-ENVIRONMENT = "test" # houdt dezelfde afscherming (Basic Auth, noindex) aan als de testomgeving
+ENVIRONMENT = "prod"
 FEATURE_MARKET = "false"
 FEATURE_ACADEMY = "true"
 ASYNC_DEADLINE_HOURS = "48"

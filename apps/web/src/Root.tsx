@@ -1,17 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import qrcode from 'qrcode-generator';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { api, ApiError, serverAvailable } from './api/client';
 import { StoreProvider } from './state/store';
 import { OnlineStoreProvider } from './state/onlineStore';
 import { App } from './App';
+import { Landing } from './screens/Landing';
 import iconUrl from './assets/icon.svg';
 
-/** Maakt een QR-code als data-URL (foutcorrectie M). Geeft null bij een fout. */
-function makeQr(text: string): string | null {
-  try { const qr = qrcode(0, 'M'); qr.addData(text); qr.make(); return qr.createDataURL(6, 8); } catch { return null; }
-}
-
-type Mode = 'checking' | 'choose' | 'online' | 'demo' | 'unavailable' | 'pending';
+type Mode = 'checking' | 'landing' | 'choose' | 'online' | 'demo' | 'unavailable' | 'pending';
 const MODE_KEY = 'rank11-mode';
 const PUBLIC_DEMO = import.meta.env.VITE_PUBLIC_DEMO === '1';
 const ONLINE_ONLY = import.meta.env.VITE_ONLINE_ONLY === '1';
@@ -24,6 +19,7 @@ export function Root() {
   const [mode, setMode] = useState<Mode>(PUBLIC_DEMO ? 'demo' : 'checking');
   const [hasServer, setHasServer] = useState(false);
   const [config, setConfig] = useState<Config>({ registrationEnabled: !ONLINE_ONLY, openRegistration: false, turnstileSiteKey: null });
+  const [authTab, setAuthTab] = useState<'login' | 'register'>('login');
   const [retry, setRetry] = useState(0);
 
   useEffect(() => {
@@ -45,13 +41,14 @@ export function Root() {
         const me = await api<{ user: { status?: string } }>('GET', '/me');
         if (!alive) return;
         setMode(me.user?.status && me.user.status !== 'active' ? 'pending' : 'online');
-      } catch { if (alive) setMode('choose'); }
+      } catch { if (alive) setMode('landing'); } // niet ingelogd: toon de publieke startpagina
     })();
     return () => { alive = false; };
   }, [retry]);
 
-  const loggedOut = useCallback(() => { writeMode(null); setMode('choose'); }, []);
-  const exitDemo = useCallback(() => { writeMode(null); setMode(hasServer ? 'choose' : 'demo'); }, [hasServer]);
+  const loggedOut = useCallback(() => { writeMode(null); setMode('landing'); }, []);
+  const exitDemo = useCallback(() => { writeMode(null); setMode(hasServer ? 'landing' : 'demo'); }, [hasServer]);
+  const goAuth = useCallback((tab: 'login' | 'register') => { setAuthTab(tab); setMode('choose'); }, []);
 
   if (mode === 'checking') return <div className="boot"><div className="stadium" /><div className="boot-card"><span>RANK11. start…</span></div></div>;
   if (ONLINE_ONLY && mode === 'unavailable') return (
@@ -63,67 +60,76 @@ export function Root() {
       </div>
     </div>
   );
+  if (mode === 'landing') return <Landing onRegister={() => goAuth('register')} onLogin={() => goAuth('login')} />;
   if (mode === 'pending') return <PendingScreen onLoggedOut={() => { void api('POST', '/auth/logout').catch(() => {}); loggedOut(); }} />;
-  if (mode === 'choose') return <AuthScreen config={config} onOnline={() => { writeMode('online'); setMode('online'); }}
+  if (mode === 'choose') return <AuthScreen config={config} initialTab={authTab}
+    onOnline={() => { writeMode('online'); setMode('online'); }}
     onPending={() => setMode('pending')}
+    onBack={() => setMode('landing')}
     onDemo={ONLINE_ONLY ? undefined : () => { writeMode('demo'); setMode('demo'); }} />;
   if (mode === 'online') return <OnlineStoreProvider onLoggedOut={loggedOut}><App /></OnlineStoreProvider>;
   return <StoreProvider onExit={hasServer ? exitDemo : undefined}><App /></StoreProvider>;
 }
 
-/** Wachtscherm: het kind is ingelogd maar wacht op toestemming van de ouder.
- * Twee manieren om toestemming te krijgen: via de e-mail aan de ouder, of — als de ouder naast je zit —
- * via een koppelcode/QR die de ouder op het eigen apparaat of in het beheer invoert. */
+/** Wachtscherm: het kind is ingelogd maar wacht op toestemming van de ouder. Standaard gaat dat via een
+ * e-mail aan de ouder (beveiligde link). Werkt e-mail nog niet, dan is er de beheerder-route: het kind toont
+ * een koppelcode die een beheerder in de app invoert. Een koppelcode leidt NOOIT tot zelfgoedkeuring. */
 function PendingScreen({ onLoggedOut }: { onLoggedOut: () => void }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
-  const [showQr, setShowQr] = useState(false);
+  const [emailOn, setEmailOn] = useState<boolean | null>(null);
+  const [showCode, setShowCode] = useState(false);
   const [claim, setClaim] = useState<string | null>(null);
   const [claimBusy, setClaimBusy] = useState(false);
   const [claimErr, setClaimErr] = useState<string | null>(null);
-  useEffect(() => { void api<{ consent: { parentEmailMasked: string } | null }>('GET', '/consent/status').then((r) => setEmail(r.consent?.parentEmailMasked ?? null)).catch(() => {}); }, []);
+  useEffect(() => {
+    void api<{ emailConfigured?: boolean; consent: { parentEmailMasked: string } | null }>('GET', '/consent/status')
+      .then((r) => { setEmail(r.consent?.parentEmailMasked ?? null); setEmailOn(r.emailConfigured === true); })
+      .catch(() => {});
+  }, []);
   const resend = async () => {
     setBusy(true); setMsg(null);
-    try { await api('POST', '/consent/resend'); setMsg('We hebben de e-mail opnieuw verstuurd.'); }
-    catch (e) { setMsg(e instanceof ApiError ? e.message : 'Opnieuw versturen lukte niet.'); } finally { setBusy(false); }
+    try {
+      const r = await api<{ emailSent?: boolean }>('POST', '/consent/resend');
+      setMsg(r.emailSent ? 'We hebben de e-mail opnieuw verstuurd.' : 'E-mail staat nog niet aan. Vraag een beheerder om je goed te keuren met je koppelcode.');
+    } catch (e) { setMsg(e instanceof ApiError ? e.message : 'Opnieuw versturen lukte niet.'); } finally { setBusy(false); }
   };
   const getCode = async () => {
     setClaimBusy(true); setClaimErr(null);
     try { const r = await api<{ claimCode: string }>('POST', '/consent/claim-code'); setClaim(r.claimCode); }
     catch (e) { setClaimErr(e instanceof ApiError ? e.message : 'Een code maken lukte niet.'); } finally { setClaimBusy(false); }
   };
-  const openQr = () => { setShowQr(true); if (!claim) void getCode(); };
-  const qrUrl = useMemo(() => (claim ? makeQr(`${location.origin}/ouder/toestemming?claim=${claim}`) : null), [claim]);
+  const openCode = () => { setShowCode(true); if (!claim) void getCode(); };
   return (
     <div className="auth"><div className="stadium" />
       <main className="auth-card panel gold">
         <div className="auth-brand"><img src={iconUrl} alt="" width={56} height={56} /><div><div className="display auth-title">RANK11.</div><div className="dim small">Your grades. Your squad.</div></div></div>
         <h1 style={{ fontSize: 20, margin: '6px 0 8px' }}>We wachten op je ouder</h1>
-        <p className="hint">We hebben je ouder{email ? ` (${email})` : ''} een e-mail gestuurd. Zodra je ouder toestemming geeft, kun je RANK11 spelen.</p>
+        {emailOn === false ? (
+          <p className="hint">Voor kinderen onder de 16 moet een ouder toestemming geven. E-mail staat nu nog niet aan, dus vraag een beheerder om je account goed te keuren met jouw koppelcode (hieronder).</p>
+        ) : (
+          <p className="hint">We hebben je ouder{email ? ` (${email})` : ''} een e-mail gestuurd met een beveiligde link. Zodra je ouder toestemming geeft, kun je RANK11 spelen.</p>
+        )}
         {msg && <p className="hint" role="status">{msg}</p>}
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 10 }}>
-          <button className="btn small" disabled={busy} onClick={() => void resend()}>{busy ? 'Bezig…' : 'E-mail opnieuw sturen'}</button>
-          {!showQr && <button className="btn ghost small" onClick={openQr}>Ouder zit naast je? Toon code</button>}
+          {emailOn !== false && <button className="btn small" disabled={busy} onClick={() => void resend()}>{busy ? 'Bezig…' : 'E-mail opnieuw sturen'}</button>}
+          {!showCode && <button className="btn ghost small" onClick={openCode}>Toon koppelcode voor beheerder</button>}
           <button className="link-btn" onClick={onLoggedOut}>Uitloggen</button>
         </div>
-        {showQr && (
+        {showCode && (
           <div className="panel gold" style={{ marginTop: 12, padding: 14 }}>
-            <div className="eyebrow">Ouder zit naast je?</div>
-            <p className="hint" style={{ marginTop: 4 }}>Je ouder scant deze QR-code met de telefoon, of typt de koppelcode in op de toestemmingspagina (of een beheerder in het beheer). Daarna kun je spelen.</p>
+            <div className="eyebrow">Koppelcode voor de beheerder</div>
+            <p className="hint" style={{ marginTop: 4 }}>Geef deze code aan een beheerder. Alleen een beheerder kan je hiermee goedkeuren — de code werkt niet om jezelf goed te keuren.</p>
             {claimErr && <p className="form-error" role="alert">{claimErr}</p>}
             {claimBusy && !claim && <p className="dim small">Code maken…</p>}
             {claim && (
-              <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', marginTop: 8 }}>
-                {qrUrl && <img src={qrUrl} alt="QR-code voor ouderlijke toestemming" width={132} height={132} style={{ borderRadius: 10, background: '#fff', padding: 6 }} />}
-                <div>
-                  <div className="dim small">Koppelcode</div>
-                  <code style={{ fontSize: '1.5em', letterSpacing: '0.12em', userSelect: 'all' }}>{claim}</code>
-                  <div style={{ marginTop: 8 }}><button className="btn ghost small" disabled={claimBusy} onClick={() => void getCode()}>{claimBusy ? 'Bezig…' : 'Nieuwe code'}</button></div>
-                </div>
+              <div style={{ marginTop: 8 }}>
+                <code style={{ fontSize: '1.6em', letterSpacing: '0.14em', userSelect: 'all' }}>{claim}</code>
+                <div style={{ marginTop: 8 }}><button className="btn ghost small" disabled={claimBusy} onClick={() => void getCode()}>{claimBusy ? 'Bezig…' : 'Nieuwe code'}</button></div>
               </div>
             )}
-            <p className="hint" style={{ marginTop: 10 }}>Let op: alleen een ouder of wettelijk vertegenwoordiger mag toestemming geven. De code is kort geldig en maar één keer te gebruiken.</p>
+            <p className="hint" style={{ marginTop: 10 }}>De code is kort geldig en maar één keer te gebruiken. Alleen een ouder of wettelijk vertegenwoordiger mag toestemming geven.</p>
           </div>
         )}
       </main>
@@ -133,10 +139,10 @@ function PendingScreen({ onLoggedOut }: { onLoggedOut: () => void }) {
 
 declare global { interface Window { turnstile?: { render: (el: HTMLElement, opts: Record<string, unknown>) => void } } }
 
-function AuthScreen({ onOnline, onPending, onDemo, config }: {
-  onOnline: () => void; onPending: () => void; onDemo?: () => void; config: Config;
+function AuthScreen({ onOnline, onPending, onBack, onDemo, config, initialTab }: {
+  onOnline: () => void; onPending: () => void; onBack: () => void; onDemo?: () => void; config: Config; initialTab: 'login' | 'register';
 }) {
-  const [tab, setTab] = useState<'login' | 'register'>('login');
+  const [tab, setTab] = useState<'login' | 'register'>(initialTab);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [invite, setInvite] = useState('');
@@ -203,7 +209,7 @@ function AuthScreen({ onOnline, onPending, onDemo, config }: {
               {under16 === true && (
                 <label className="field"><span>E-mailadres van je ouder of verzorger</span>
                   <input className="input" type="email" autoComplete="email" value={parentEmail} placeholder="ouder@example.nl" onChange={(e) => setParentEmail(e.target.value)} />
-                  <small className="dim">Je ouder krijgt een e-mail om toestemming te geven. Daarna kun je spelen.</small></label>
+                  <small className="dim">Een ouder moet eerst toestemming geven voordat je kunt spelen.</small></label>
               )}
               {!config.openRegistration && (
                 <label className="field"><span>Uitnodigingscode</span><input className="input" value={invite} placeholder="ABCDE-FGHJK" onChange={(e) => setInvite(e.target.value)} /></label>
@@ -216,6 +222,7 @@ function AuthScreen({ onOnline, onPending, onDemo, config }: {
           <button className="btn" type="submit" disabled={busy}>{busy ? 'Bezig…' : tab === 'login' ? 'Inloggen' : 'Account maken'}</button>
         </form>
         <div className="auth-demo">
+          <button className="link-btn" onClick={onBack}>← Terug naar de startpagina</button>
           {ONLINE_ONLY ? (
             <p className="hint"><a href="/privacy" style={{ color: 'inherit' }}>Privacyverklaring</a>{canRegister ? '' : ' · Registratie is momenteel gesloten.'}</p>
           ) : (

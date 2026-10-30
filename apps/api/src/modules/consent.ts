@@ -1,12 +1,14 @@
 /**
- * Ouderlijke toestemming voor spelers onder 16 — één centraal systeem voor drie routes:
- *  1. E-mail: ouder krijgt een link en keurt op het eigen apparaat goed (standaard).
- *  2. Ouder/beheerder: een ingelogde ouder/voogd keurt het eigen kind goed met de KOPPELCODE die het
+ * Ouderlijke toestemming voor spelers onder 16 — één centraal systeem met twee goedkeurroutes:
+ *  1. E-mail (STANDAARD): de ouder krijgt een beveiligde link per e-mail en keurt bewust goed. De token gaat
+ *     alleen naar de mailbox van de ouder en bewijst zo controle over dat e-mailadres.
+ *  2. Ouder/beheerder: een ingelogde platform-beheerder keurt het eigen kind goed met de KOPPELCODE die het
  *     kind toont (aantoonbare koppeling; geen blanco knop om willekeurige kinderen goed te keuren).
- *  3. QR: het kind toont een QR met dezelfde koppelcode; de ouder scant met het eigen apparaat.
- * Statusvocabulaire: pending | approved | rejected | revoked | expired. De gebruikte verificatiemethode en
- * (indien ingelogd) de ouder/voogd worden vastgelegd. Tokens/koppelcodes zijn eenmalig, verlopen na 48 u en
- * worden alleen als hash bewaard. Goedkeuren is altijd een bewuste POST. Geen tokens of geheimen in logs.
+ * BEVEILIGING: een koppelcode wordt aan het KIND getoond en geldt daarom NOOIT als publieke toestemming —
+ * de publieke /consent/decide accepteert uitsluitend de e-mailtoken. Een koppelcode werkt alleen via de
+ * ingelogde beheerder-route. Statusvocabulaire: pending | approved | rejected | revoked | expired. De
+ * gebruikte methode en (indien ingelogd) de voogd worden vastgelegd. Tokens/koppelcodes zijn eenmalig,
+ * verlopen na 48 u en worden alleen als hash bewaard. Geen tokens of geheimen in logs.
  */
 import { newId, randomToken, sha256Hex } from '../crypto.ts';
 import { auditStmt, many, one, run, stmt } from '../db.ts';
@@ -15,7 +17,7 @@ import { ApiError, json, readJson, type Ctx, type User } from '../http.ts';
 import { starterStatements } from './collection.ts';
 import { buildConsentEmail, buildRevokeEmail, sendEmail, type SendResult } from './email.ts';
 
-export const CONSENT_INFO_VERSION = '2026.10-2';
+export const CONSENT_INFO_VERSION = '2026.10-3';
 const TOKEN_TTL_MS = 48 * 3600_000;
 const RESEND_MIN_INTERVAL_MS = 2 * 60_000;
 const RESEND_MAX = 5;
@@ -35,7 +37,6 @@ const hashClaim = (c: string) => sha256Hex(`claim:${normalizeClaim(c)}`);
 
 const baseUrl = (ctx: Ctx) => (ctx.env.PUBLIC_BASE_URL || new URL(ctx.req.url).origin).replace(/\/$/, '');
 const approvalUrl = (ctx: Ctx, token: string) => `${baseUrl(ctx)}/ouder/toestemming?token=${token}`;
-const claimUrl = (ctx: Ctx, code: string) => `${baseUrl(ctx)}/ouder/toestemming?claim=${code}`;
 const revokeUrl = (ctx: Ctx, token: string) => `${baseUrl(ctx)}/ouder/intrekken?token=${token}`;
 const privacyUrl = (ctx: Ctx) => `${baseUrl(ctx)}/privacy`;
 
@@ -84,8 +85,11 @@ export async function consentStatus(ctx: Ctx): Promise<Response> {
   const row = await one<{ status: string; parent_email: string; claim_code_hash: string | null }>(ctx.env.DB,
     "SELECT status, parent_email, claim_code_hash FROM parent_consents WHERE user_id = ? AND purpose = 'approval' ORDER BY created_at DESC LIMIT 1", user.id);
   const mask = (e: string) => e.replace(/^(.).*(@.*)$/, (_, a, b) => `${a}•••${b}`);
+  // Of e-mail daadwerkelijk kan worden verzonden (zelfde voorwaarde als sendEmail). Zo kan de UI eerlijk zijn
+  // en niet beweren dat er een e-mail is verstuurd als er geen provider is geconfigureerd.
+  const emailConfigured = ctx.env.EMAIL_PROVIDER === 'resend' && !!ctx.env.RESEND_API_KEY && !!ctx.env.EMAIL_FROM;
   // De koppelcode staat alleen in het geheugen bij aanmaken; na herladen tonen we hem niet opnieuw (alleen hash bewaard).
-  return json({ accountStatus: user.status ?? 'active', consent: row ? { status: row.status, parentEmailMasked: mask(row.parent_email) } : null });
+  return json({ accountStatus: user.status ?? 'active', emailConfigured, consent: row ? { status: row.status, parentEmailMasked: mask(row.parent_email) } : null });
 }
 
 /** POST /api/consent/resend — stuurt de toestemmingsmail opnieuw en geeft een verse koppelcode (begrensd). */
@@ -103,13 +107,14 @@ export async function resendConsent(ctx: Ctx): Promise<Response> {
     await sha256Hex(token), await hashClaim(claimCode), ctx.now + TOKEN_TTL_MS, ctx.now, row.id);
   const mail = buildConsentEmail(user.username, approvalUrl(ctx, token), privacyUrl(ctx));
   const send = await sendEmail(ctx.env, { to: row.parent_email, subject: mail.subject, html: mail.html, text: mail.text });
-  return json({ ok: true, emailSent: send.sent, claimCode, claimUrl: claimUrl(ctx, claimCode) });
+  return json({ ok: true, emailSent: send.sent, claimCode });
 }
 
-/** POST /api/consent/claim-code — verse koppelcode voor QR/beheerder, ZONDER e-mail.
- * Zo kan het wachtende kind de QR/koppelcode opnieuw tonen (bijv. na herladen) zonder mails te stoken.
- * Vereist een geldige wachtende sessie; roteren is goedkoop en ongevaarlijk, dus geen aparte begrenzing.
- * De e-mailteller (last_sent_at) wordt bewust niet aangeraakt. */
+/** POST /api/consent/claim-code — verse koppelcode voor de BEHEERDER-route, ZONDER e-mail.
+ * Zo kan het wachtende kind de koppelcode tonen aan een beheerder (bijv. na herladen) zonder mails te
+ * stoken. De koppelcode leidt NIET tot zelfgoedkeuring: alleen een ingelogde beheerder kan ermee goedkeuren.
+ * Vereist een geldige wachtende sessie; roteren is goedkoop, dus geen aparte begrenzing. De e-mailteller
+ * (last_sent_at) wordt bewust niet aangeraakt. */
 export async function rotateClaimCode(ctx: Ctx): Promise<Response> {
   const user = ctx.user;
   if (!user) throw new ApiError(401, 'unauthorized', 'Log eerst in.');
@@ -119,7 +124,7 @@ export async function rotateClaimCode(ctx: Ctx): Promise<Response> {
   const claimCode = newClaimCode();
   await run(ctx.env.DB, 'UPDATE parent_consents SET claim_code_hash = ?, expires_at = ? WHERE id = ?',
     await hashClaim(claimCode), Math.max(row.expires_at, ctx.now + TOKEN_TTL_MS), row.id);
-  return json({ ok: true, claimCode, claimUrl: claimUrl(ctx, claimCode) });
+  return json({ ok: true, claimCode });
 }
 
 /** Zoekt een openstaand goedkeuringsverzoek op via de e-mailtoken of de koppelcode. */
@@ -136,7 +141,7 @@ async function lookupApproval(ctx: Ctx, by: { token?: unknown; claim?: unknown }
 }
 
 /** Past een beslissing toe (goedkeuren of afwijzen) en legt methode + ouder/voogd vast. Eenmalig. */
-async function applyDecision(ctx: Ctx, row: ConsentRow, decision: 'approve' | 'decline', method: 'email' | 'admin' | 'qr', guardianId: string | null): Promise<Response> {
+async function applyDecision(ctx: Ctx, row: ConsentRow, decision: 'approve' | 'decline', method: 'email' | 'admin', guardianId: string | null): Promise<Response> {
   const u = await one<{ username: string }>(ctx.env.DB, 'SELECT username FROM users WHERE id = ?', row.user_id);
   if (!u) throw new ApiError(400, 'invalid_token', 'Dit verzoek is ongeldig of verlopen.');
   if (decision === 'approve') {
@@ -159,16 +164,20 @@ async function applyDecision(ctx: Ctx, row: ConsentRow, decision: 'approve' | 'd
   return json({ ok: true, decision: 'decline', username: u.username });
 }
 
-/** POST /api/consent/decide — e-mailtoken of QR-koppelcode (geen login). Ouder bevestigt bewust. */
+/** POST /api/consent/decide — publieke goedkeuring, UITSLUITEND via de e-mailtoken (geen login).
+ * Beveiliging: de e-mailtoken wordt alleen naar de mailbox van de ouder gestuurd en bewijst zo dat de
+ * beslisser toegang heeft tot dat e-mailadres. Een koppelcode wordt aan het KIND getoond en mag daarom
+ * NOOIT via deze publieke route het eigen account goedkeuren — een koppelcode werkt uitsluitend via de
+ * ingelogde, gecontroleerde beheerder-route (adminApproveByCode). Zo is een vinkje + koppelcode geen
+ * voldoende bewijs van ouderlijke toestemming. */
 export async function decideConsent(ctx: Ctx): Promise<Response> {
   const body = await readJson(ctx.req);
   const decision = body.decision === 'approve' ? 'approve' : body.decision === 'decline' ? 'decline' : null;
   if (!decision) throw new ApiError(400, 'bad_request', 'Onbekende keuze.');
   if (decision === 'approve' && body.guardianConfirmed !== true) throw new ApiError(400, 'confirm_required', 'Bevestig dat je de ouder of wettelijk vertegenwoordiger bent.');
-  const viaToken = typeof body.token === 'string';
-  const row = await lookupApproval(ctx, { token: body.token, claim: body.claimCode });
-  if (!row) throw new ApiError(400, 'invalid_token', 'Deze link of code is ongeldig of verlopen.');
-  return applyDecision(ctx, row, decision, viaToken ? 'email' : 'qr', null);
+  const row = await lookupApproval(ctx, { token: body.token }); // bewust geen claim-code hier
+  if (!row) throw new ApiError(400, 'invalid_token', 'Deze link is ongeldig of verlopen.');
+  return applyDecision(ctx, row, decision, 'email', null);
 }
 
 /** POST /api/admin/consents/approve — een ingelogde ouder/voogd keurt het eigen kind goed met de koppelcode.

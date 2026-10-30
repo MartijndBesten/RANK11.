@@ -35,6 +35,24 @@ async function verifyTurnstile(secret: string, token: unknown, ip: string): Prom
   } catch { return false; }
 }
 
+/** Basis-misbruikrem voor OPEN registratie: beperk het aantal registraties per IP per uur. Bij
+ * uitnodigingsregistratie is de code al de rem; Turnstile is de sterkere optie zodra er sleutels zijn.
+ * Hergebruikt de login_attempts-tabel met een eigen bucket en een venster van één uur. */
+const REG_WINDOW_MS = 60 * 60 * 1000;
+async function registrationThrottled(env: Env, ip: string, now: number): Promise<boolean> {
+  const max = intVar(env.REG_MAX_PER_IP, 15);
+  const key = `reg:ip:${await sha256Hex(ip)}`;
+  const cutoff = now - REG_WINDOW_MS;
+  await run(env.DB,
+    `INSERT INTO login_attempts (bucket, window_start, failures) VALUES (?, ?, 1)
+     ON CONFLICT(bucket) DO UPDATE SET
+       failures = CASE WHEN window_start <= ? THEN 1 ELSE failures + 1 END,
+       window_start = CASE WHEN window_start <= ? THEN ? ELSE window_start END`,
+    key, now, cutoff, cutoff, now);
+  const row = await one<{ failures: number }>(env.DB, 'SELECT failures FROM login_attempts WHERE bucket = ?', key);
+  return (row?.failures ?? 0) > max;
+}
+
 export const SESSION_COOKIE = 'rank11_session';
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const GENERIC_LOGIN_ERROR = 'Gebruikersnaam of wachtwoord onjuist.';
@@ -103,6 +121,10 @@ export async function register(ctx: Ctx): Promise<Response> {
 
   // Open registratie (zelfregistratie) heeft geen uitnodigingscode nodig; anders wel.
   const openReg = ctx.env.OPEN_REGISTRATION === 'true';
+  // Basis-misbruikrem alleen bij open registratie: beperk registraties per IP per uur.
+  if (openReg && await registrationThrottled(ctx.env, ctx.ip, ctx.now)) {
+    throw new ApiError(429, 'rate_limited', 'Te veel registraties vanaf dit netwerk. Probeer het later opnieuw.');
+  }
   const invite = openReg ? null : await findUsableInvite(ctx.env, typeof body.inviteCode === 'string' ? body.inviteCode : '', ctx.now);
   if (!openReg && !invite) throw new ApiError(400, 'registration_failed', GENERIC_REGISTER_ERROR);
 

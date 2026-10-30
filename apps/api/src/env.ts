@@ -30,6 +30,8 @@ export interface Env {
   ASSETS?: R2Bucket;
   /** Open registratie (zelfregistratie zonder uitnodigingscode). 'true' schakelt de nieuwe flow in. */
   OPEN_REGISTRATION?: string;
+  /** Maximaal aantal open registraties per IP per uur (basis-misbruikrem naast Turnstile). Standaard 15. */
+  REG_MAX_PER_IP?: string;
   /** Canonieke publieke URL voor e-maillinks (bijv. https://rank11.martijndenbesten.com). */
   PUBLIC_BASE_URL?: string;
   /** E-mailprovider voor oudertoestemming: 'resend' of leeg (dan wordt er niets verzonden). */

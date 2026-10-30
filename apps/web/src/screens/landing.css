@@ -1,0 +1,54 @@
+/* Publieke startpagina: donker stadion, gold-accenten, mobiel-eerst. Eigen scrollcontainer (body is fixed). */
+.landing { position: relative; height: 100%; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
+.landing-inner {
+  position: relative; z-index: 1;
+  width: min(980px, 100%); margin: 0 auto;
+  padding: calc(var(--safe-t) + 20px) max(16px, env(safe-area-inset-left, 0px)) calc(var(--safe-b) + 40px);
+  display: grid; gap: 34px;
+}
+
+/* Hero */
+.landing-hero { display: grid; gap: 14px; justify-items: start; }
+.landing-brand { display: flex; align-items: center; gap: 12px; }
+.landing-brand img { width: 52px; height: 52px; }
+.landing-brand .display { font-size: clamp(34px, 11vw, 52px); }
+.landing-tag { color: var(--gold-2); font: 700 14px var(--font-display); letter-spacing: 0.14em; text-transform: uppercase; }
+.landing-lead { font-size: clamp(17px, 4.6vw, 21px); line-height: 1.4; max-width: 34ch; color: var(--text); }
+.landing-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 4px; }
+.landing-cta .btn { min-width: 150px; text-align: center; }
+
+/* Voorproefje: kaarten in een horizontaal te scrollen rij */
+.landing-cards {
+  display: flex; gap: 14px; overflow-x: auto; padding: 6px 2px 12px; margin: 0 -2px;
+  scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
+}
+.landing-cards > * { scroll-snap-align: center; flex: 0 0 auto; }
+
+/* Secties */
+.landing-sec { display: grid; gap: 14px; }
+.landing-sec h2 { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.02em; font-size: clamp(22px, 6vw, 30px); margin: 0; }
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.step {
+  display: grid; gap: 6px; padding: 16px; border-radius: var(--radius);
+  border: 1px solid var(--line); background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+}
+.step .step-n { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 9px;
+  font: 800 16px var(--font-display); color: var(--bg-0);
+  background: linear-gradient(180deg, var(--gold-1), var(--gold-3)); }
+.step b { font-size: 16px; }
+.step p { margin: 0; color: var(--text-dim); font-size: 14px; line-height: 1.45; }
+
+/* Voor ouders */
+.landing-parents {
+  display: grid; gap: 10px; padding: 18px; border-radius: 16px;
+  border: 1px solid rgba(58,168,255,0.3); background: linear-gradient(180deg, rgba(58,168,255,0.10), rgba(58,168,255,0.03));
+}
+.landing-parents h2 { font-size: clamp(20px, 5.5vw, 26px); }
+.landing-parents ul { margin: 2px 0 0; padding-left: 18px; display: grid; gap: 4px; }
+.landing-parents li { color: var(--text); font-size: 14px; }
+
+.landing-footer { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center;
+  border-top: 1px solid var(--line); padding-top: 16px; color: var(--text-dim); font-size: 14px; }
+.landing-footer a { color: var(--gold-2); text-decoration: none; }
+.landing-footer a:hover { text-decoration: underline; }
+.landing-note { color: var(--text-dim); font-size: 13px; }

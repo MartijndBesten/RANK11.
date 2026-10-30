@@ -24,11 +24,21 @@ function privateResponse(res: Response): Response {
   return out;
 }
 
+/** Basis-securityheaders voor de publieke site (geen no-store/noindex: de homepage mag cachen en indexeren;
+ * ouder-/privacypagina's zetten hun eigen noindex). Persoonlijke API-routes blijven via de sessie beveiligd. */
+function hardenPublic(res: Response): Response {
+  if (res.status === 101) return res;
+  const out = new Response(res.body, res);
+  out.headers.set('X-Content-Type-Options', 'nosniff');
+  if (!out.headers.has('Referrer-Policy')) out.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  return out;
+}
+
 export async function servePilot(
   request: Request, env: Env, api: (request: Request, env: Env) => Promise<Response>,
 ): Promise<Response> {
-  // Publieke (niet-pilot) modus: gewoon routeren, geen Basic Auth, wel de frontend en de ouder-pagina's.
-  if (env.PILOT_MODE !== 'true' && env.ENVIRONMENT !== 'test') return route(request, env, api);
+  // Publieke (niet-pilot) modus: geen Basic Auth; publieke routes open, persoonlijke/admin via de sessie.
+  if (env.PILOT_MODE !== 'true' && env.ENVIRONMENT !== 'test') return hardenPublic(await route(request, env, api));
 
   // Besloten pilot: alles achter HTTP Basic Auth. Ontbrekende configuratie mag de site nooit openbaar maken.
   if (!env.PILOT_ACCESS_USER || !env.PILOT_ACCESS_PASSWORD || env.PILOT_ACCESS_PASSWORD.length < 32 || !env.ASSETS) {

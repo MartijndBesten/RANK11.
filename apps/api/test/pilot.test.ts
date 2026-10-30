@@ -85,6 +85,64 @@ describe('besloten pilot', () => {
   });
 });
 
+// Publieke modus (prod): geen Basic Auth-poort; publieke routes open, persoonlijke/admin via sessie.
+function publicSite() {
+  const app = createApp({ ENVIRONMENT: 'prod', REGISTRATION_ENABLED: 'true', OPEN_REGISTRATION: 'true' });
+  const assets = vi.fn(async () => ({ body: '<html>home</html>', httpEtag: 'test', writeHttpMetadata: (h: Headers) => h.set('Content-Type', 'text/html') }));
+  app.env.ASSETS = { get: assets } as unknown as R2Bucket;
+  const request = (path: string, opts: RequestInit = {}) => servePilot(new Request(`https://rank11.test${path}`, opts), app.env, handle);
+  return { app, assets, request };
+}
+
+describe('publieke site (geen Basic Auth-poort)', () => {
+  it('serveert de publieke voordeur zonder inloggen', async () => {
+    const { request } = publicSite();
+    expect((await request('/')).status).toBe(200);           // startpagina/app-shell
+    expect((await request('/assets/app.js')).status).toBe(200);
+    expect((await request('/api/health')).status).toBe(200);
+    expect((await request('/api/config')).status).toBe(200); // publieke config voor de UI
+    expect((await request('/privacy')).status).toBe(200);    // ouder/privacy-pagina's publiek
+  });
+
+  it('beschermt persoonlijke en beheerdersroutes zonder geldige sessie', async () => {
+    const { request } = publicSite();
+    expect((await request('/api/me')).status).toBe(401);
+    expect((await request('/api/grades')).status).toBe(401);
+    expect((await request('/api/club')).status).toBe(401);
+    expect((await request('/api/admin/consents')).status).toBe(401);
+    expect((await request('/api/admin/platform-invites')).status).toBe(401);
+  });
+
+  it('publieke toestemmingsroute valideert nog steeds (geen geldige token = 400)', async () => {
+    const { request } = publicSite();
+    const r = await request('/api/consent/decide', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: 'x'.repeat(40), decision: 'approve', guardianConfirmed: true }),
+    });
+    expect(r.status).toBe(400);
+  });
+
+  it('een koppelcode kan NIET via de publieke route goedkeuren (beveiliging)', async () => {
+    const { request } = publicSite();
+    const r = await request('/api/consent/decide', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ claimCode: 'ABCD2345', decision: 'approve', guardianConfirmed: true }),
+    });
+    expect(r.status).toBe(400);
+  });
+
+  it('open registratie heeft een misbruikrem per IP', async () => {
+    const { request } = publicSite();
+    const signup = (i: number) => request('/api/auth/register', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: `speler${i}`, password: 'synthetic-account-password', under16: false }),
+    });
+    let throttled = false;
+    for (let i = 0; i < 17; i++) { if ((await signup(i)).status === 429) { throttled = true; break; } }
+    expect(throttled).toBe(true);
+  });
+});
+
 // De echte Worker-ingang moet ook zonder PILOT_MODE gesloten blijven in env.test.
 describe('testomgeving fail-closed', () => {
   it('kan de toegangspoort niet overslaan door een ontbrekende vlag', async () => {

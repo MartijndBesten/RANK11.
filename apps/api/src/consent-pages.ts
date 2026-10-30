@@ -31,8 +31,6 @@ async function lookupField(env: Env, field: 'token_hash' | 'claim_code_hash', ha
 }
 const lookupToken = (env: Env, token: string | null, purpose: string, now: number) =>
   (!token || token.length < 10 || token.length > 200) ? Promise.resolve(null) : sha256Hex(token).then((h) => lookupField(env, 'token_hash', h, purpose, now));
-const lookupClaim = (env: Env, claim: string | null, now: number) =>
-  (!claim || claim.length < 4 || claim.length > 40) ? Promise.resolve(null) : sha256Hex(`claim:${claim.toUpperCase().replace(/[^A-Z0-9]/g, '')}`).then((h) => lookupField(env, 'claim_code_hash', h, 'approval', now));
 
 const esc = (s: string) => s.replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]!));
 
@@ -59,11 +57,13 @@ export async function servePages(request: Request, env: Env): Promise<Response |
 
   if (url.pathname === '/ouder/toestemming') {
     const token = url.searchParams.get('token');
-    const claim = url.searchParams.get('claim');
-    const found = token ? await lookupToken(env, token, 'approval', now) : await lookupClaim(env, claim, now);
-    const credKey = token ? 'token' : 'claimCode';
-    const credVal = esc((token ?? claim ?? '').trim());
-    if (!found) return page('Toestemming', `<h1>Link of code ongeldig of verlopen</h1><p>Dit werkt niet meer. Vraag je kind om een nieuwe e-mail of een nieuwe koppelcode vanuit RANK11.</p>`);
+    // Beveiliging: alleen de e-mailtoken geldt hier. Een koppelcode (die aan het kind wordt getoond) kan
+    // NIET tot zelfgoedkeuring leiden; die werkt uitsluitend via de ingelogde beheerder in de app.
+    if (!token && url.searchParams.get('claim')) {
+      return page('Toestemming', `<h1>Koppelcode is niet voor deze pagina</h1><p>Een koppelcode keur je hier niet goed. Geef de code aan een beheerder, of laat de ouder via de toestemmingsmail (met beveiligde link) toestemming geven.</p><p><a href="/privacy">Lees de privacyverklaring</a></p>`);
+    }
+    const found = await lookupToken(env, token, 'approval', now);
+    if (!found) return page('Toestemming', `<h1>Link ongeldig of verlopen</h1><p>Deze link werkt niet meer. Vraag je kind om een nieuwe toestemmingsmail vanuit RANK11.</p>`);
     return page('Toestemming geven', `
 <h1>Toestemming voor RANK11.</h1>
 <p>Je kind <b>${esc(found.username)}</b> wil graag RANK11 spelen.</p>
@@ -75,7 +75,7 @@ export async function servePages(request: Request, env: Env): Promise<Response |
   <button class="btn no" onclick="go('decline')">Geen toestemming</button>
 </div>
 <div id="result"></div>
-${decideScript(credKey, credVal, '/api/consent/decide')}`);
+${decideScript('token', esc(token!), '/api/consent/decide')}`);
   }
 
   if (url.pathname === '/ouder/intrekken') {

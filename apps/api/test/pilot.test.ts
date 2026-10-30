@@ -23,11 +23,11 @@ describe('besloten pilot', () => {
     expect(locked.status).toBe(401);
     const open = await request('/api/config', { headers: { Authorization: basic } });
     expect(open.status).toBe(200);
-    expect((await open.json()).registrationEnabled).toBe(true);
+    expect(((await open.json()) as { registrationEnabled: boolean }).registrationEnabled).toBe(true);
     app.env.REGISTRATION_ENABLED = 'false';
     const closed = await request('/api/config', { headers: { Authorization: basic } });
     expect(closed.status).toBe(200);
-    expect((await closed.json()).registrationEnabled).toBe(false);
+    expect(((await closed.json()) as { registrationEnabled: boolean }).registrationEnabled).toBe(false);
   });
 
   it('schermt HTML, assets, API en preflight af, ook bij ongeldige credentials', async () => {

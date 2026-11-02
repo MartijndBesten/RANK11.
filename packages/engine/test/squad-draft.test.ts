@@ -112,7 +112,7 @@ describe('draft', () => {
     }
     expect(hits / 2000).toBeGreaterThan(0.08);
     expect(hits / 2000).toBeLessThan(0.35);
-  });
+  }, 30_000);
   it('garantieteller en kansen zijn uitlegbaar', () => {
     expect(pityRemaining(event, { B: 1, A: 2 })).toEqual({ B: 9, A: 48 });
     const odds = draftOdds(event);

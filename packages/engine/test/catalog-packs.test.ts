@@ -73,7 +73,7 @@ describe('packs', () => {
     }
     expect(legends / N).toBeGreaterThan(0.015);
     expect(legends / N).toBeLessThan(0.025);
-  });
+  }, 30_000); // 20.000 packs: op de CI-runner trager dan 5 s
   it('kansentabel klopt per plek en voor "minstens één"', () => {
     const rows = oddsTable(PACKS.exam!);
     const leg = rows.find((r) => r.bucketId === 'leg')!;

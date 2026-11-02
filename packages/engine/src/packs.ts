@@ -20,7 +20,7 @@ export interface PackSlot {
   buckets: OddsBucket[];
 }
 
-export type PackTheme = 'bronze' | 'gold' | 'rare' | 'exam' | 'legend';
+export type PackTheme = 'bronze' | 'silver' | 'gold' | 'rare' | 'exam' | 'legend';
 
 export interface PackDef {
   id: string;
@@ -52,6 +52,21 @@ export const PACKS: Record<string, PackDef> = {
         { id: 'b', label: 'Brons', weight: 60, rarities: ['bronze'] },
         { id: 's', label: 'Zilver', weight: 36, rarities: ['silver'] },
         { id: 'g', label: 'Goud', weight: 4, rarities: ['gold'] },
+      ],
+    })),
+  },
+  silver: {
+    id: 'silver',
+    name: 'Zilverpack',
+    tagline: '3 spelers · zilver met goede kans op goud',
+    theme: 'silver',
+    coinPrice: 1800,
+    slots: Array.from({ length: 3 }, (_, i): PackSlot => ({
+      label: `Kaart ${i + 1}`,
+      buckets: [
+        { id: 's', label: 'Zilver', weight: 62, rarities: ['silver'] },
+        { id: 'g', label: 'Goud', weight: 32, rarities: ['gold'] },
+        { id: 'gh', label: 'Goud 82+', weight: 6, rarities: ['gold', 'rare_gold'], minRating: 82 },
       ],
     })),
   },

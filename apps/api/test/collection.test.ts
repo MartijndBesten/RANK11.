@@ -13,7 +13,7 @@ const coins = (app: TestApp, user: TestUser) => (app.db.db.prepare(`SELECT COALE
 async function earnCoins(app: TestApp, user: TestUser, grades: number, value = 7) {
   for (let i = 0; i < grades; i++) {
     const r = await app.api('POST', '/api/grades', { token: user.token, idem: idem(), body: { subjectId: 'ak', testName: `Toets ${i}`, value, weight: 1, date: '2026-10-20' } });
-    expect(r.body.reward.coins).toBe(value >= 9.5 ? 500 : 250);
+    expect(r.body.reward.coins).toBe(value >= 9.5 ? 550 : 250);
   }
 }
 
@@ -76,7 +76,7 @@ describe('wallet en packs', () => {
     expect(coins(app, u)).toBe(0);
     expect((await app.api('POST', '/api/packs/buy', { token: u.token, idem: idem(), body: { packId: 'elite' } })).status).toBe(404); // niet te koop
 
-    await earnCoins(app, u, 3); // 3 × 250 = 750 = prijs starterspack
+    await earnCoins(app, u, 3); // 3 × 250 coins = 750 = prijs starterspack; elke 7 geeft ook een Zilverpack
     expect(coins(app, u)).toBe(750);
     const [x, y] = await Promise.all([
       app.api('POST', '/api/packs/buy', { token: u.token, idem: idem(), body: { packId: 'starter' } }),
@@ -90,7 +90,7 @@ describe('wallet en packs', () => {
     expect(wallet.body.balances.coins).toBe(0);
     expect(wallet.body.ledger.some((l: { reason: string; delta: number }) => l.reason === 'pack.buy' && l.delta === -750)).toBe(true);
     const list = await app.api('GET', '/api/packs', { token: u.token });
-    expect(list.body.unopened.map((p: { packId: string }) => p.packId).sort()).toEqual(['starter', 'starter', 'starter', 'starter']);
+    expect(list.body.unopened.map((p: { packId: string }) => p.packId).sort()).toEqual(['silver', 'silver', 'silver', 'starter']);
     expect(list.body.shop.find((p: { id: string }) => p.id === 'gold').odds.length).toBeGreaterThan(0);
   });
 

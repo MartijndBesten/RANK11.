@@ -175,6 +175,20 @@ button.pc-wrap:active .pc { scale: 0.97; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.pc-club {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 4.6cqw;
+  line-height: 1.1;
+  margin-top: 1.4cqw;
+  max-width: 92%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.82;
+  text-align: center;
+}
+.size-xs .pc-club, .size-sm .pc-club { display: none; }
 .pc-stats {
   display: grid;
   grid-template-columns: repeat(6, 1fr);

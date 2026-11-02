@@ -118,6 +118,7 @@ export const PlayerCard = memo(function PlayerCard({
           {edition && <div className="pc-edition">{edition}</div>}
           <div className="pc-bottom">
             <div className="pc-name">{player.cardName}</div>
+            {real && player.clubName && <div className="pc-club">{player.clubName}</div>}
             <div className="pc-stats">
               {STAT_KEYS.map((k) => (
                 <div key={k} className="pc-stat">

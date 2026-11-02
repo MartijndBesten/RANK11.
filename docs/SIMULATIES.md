@@ -1,24 +1,24 @@
 # Balanssimulaties
 
-Gegenereerd met `tools/sim/balans.ts` op 2026-10-26. Catalogus: 245 kaarten (alleen spelers met portret).
+Gegenereerd met `tools/sim/balans.ts` op 2026-11-02. Catalogus: 245 kaarten (alleen spelers met portret).
 
 ## Draft: Toetsweek Draft I (10.000 drafts)
 
-Teamrating bij steeds de hoogste rating kiezen: gemiddeld **88,4**, p10 86, mediaan 88, p90 91 (min 82, max 94).
+Teamrating bij steeds de hoogste rating kiezen: gemiddeld **85,6**, p10 84, mediaan 86, p90 87 (min 82, max 89).
 
 | Groep | Kans per kaart (getoond) | Gemeten per kaart | Draft met deze groep of beter | Garantie ingegrepen | Langste reeks zonder |
 |---|---:|---:|---:|---:|---:|
-| A | 0,03% | 0,04% | 2,3% | 179× | 49 drafts |
-| B | 0,35% | 0,45% | 24,2% | 191× | 9 drafts |
-| C | 10,0% | 12,2% | 100,0% | 0× | 1 drafts |
-| D | 40,0% | 26,1% | 100,0% | 0× | 0 drafts |
-| E | 49,6% | 61,3% | 100,0% | 0× | 0 drafts |
+| A | 0,03% | 0,04% | 2,3% | 171× | 49 drafts |
+| B | 0,35% | 0,32% | 18,4% | 375× | 9 drafts |
+| C | 10,0% | 9,0% | 99,5% | 0× | 1 drafts |
+| D | 40,0% | 36,4% | 100,0% | 0× | 0 drafts |
+| E | 49,6% | 54,2% | 100,0% | 0× | 0 drafts |
 
 Verschil tussen getoond en gemeten komt door terugval (geen kandidaat op die positie in de gerolde groep) en door garanties. Zie de conclusies onderaan.
 
 ## Pack: Starterspack (10.000 packs)
 
-Gemiddelde rating per kaart 61,6 · walkout in 4,3% van de packs.
+Gemiddelde rating per kaart 65,9 · walkout in 0,72% van de packs.
 
 | Categorie | Minstens één (getoond) | Minstens één (gemeten) |
 |---|---:|---:|
@@ -26,9 +26,19 @@ Gemiddelde rating per kaart 61,6 · walkout in 4,3% van de packs.
 | Zilver | 73,8% | 73,8% |
 | Goud | 11,5% | 10,9% |
 
+## Pack: Zilverpack (10.000 packs)
+
+Gemiddelde rating per kaart 74,2 · walkout in 15,3% van de packs.
+
+| Categorie | Minstens één (getoond) | Minstens één (gemeten) |
+|---|---:|---:|
+| Zilver | 94,5% | 94,9% |
+| Goud | 68,6% | 68,1% |
+| Goud 82+ | 16,9% | 17,0% |
+
 ## Pack: Goudpack (10.000 packs)
 
-Gemiddelde rating per kaart 80,1 · walkout in 75,3% van de packs.
+Gemiddelde rating per kaart 79,6 · walkout in 80,8% van de packs.
 
 | Categorie | Minstens één (getoond) | Minstens één (gemeten) |
 |---|---:|---:|
@@ -39,7 +49,7 @@ Gemiddelde rating per kaart 80,1 · walkout in 75,3% van de packs.
 
 ## Pack: Toetsweekpack (10.000 packs)
 
-Gemiddelde rating per kaart 81,6 · walkout in 98,1% van de packs.
+Gemiddelde rating per kaart 80,3 · walkout in 90,7% van de packs.
 
 | Categorie | Minstens één (getoond) | Minstens één (gemeten) |
 |---|---:|---:|
@@ -53,7 +63,7 @@ Gemiddelde rating per kaart 81,6 · walkout in 98,1% van de packs.
 
 ## Pack: Elitepack (10.000 packs)
 
-Gemiddelde rating per kaart 91,9 · walkout in 100,0% van de packs.
+Gemiddelde rating per kaart 88,1 · walkout in 100,0% van de packs.
 
 | Categorie | Minstens één (getoond) | Minstens één (gemeten) |
 |---|---:|---:|
@@ -74,30 +84,30 @@ Gemiddelde rating per kaart 91,9 · walkout in 100,0% van de packs.
 _XP in deze tabel komt uit de oude beloningsconfiguratie; in de app komt XP uit de motivatie-engine (zie MOTIVATION-ENGINE.md). Coins, packs, vouchers en keuzes komen wel uit deze configuratie._
 ## Volledig schooljaar per leerlingprofiel (economie v3, ronde 5)
 
-40 schoolweken, 4 periodes, 2 cijfers per week (1 bij "weinig"), 16 seeds gemiddeld. Huidige economie: cijferbeloning `2026.10-haalbaar.1` + voortgang `2026.10-voortgang.2` + motivatie `2026.10-motivatie.4`; ter vergelijking v2 (`2026.10-eerlijk.1` + `2026.10-voortgang.1`). Kaarten komen binnen zodra een pack verdiend is; coins gaan direct naar een Goudpack zodra er genoeg zijn. Teamrating = beste 4-3-3.
+40 schoolweken, 4 periodes, 2 cijfers per week (1 bij "weinig"), 16 seeds gemiddeld. Huidige economie: cijferbeloning `2026.11-haalbaar.2` + voortgang `2026.11-voortgang.3` + motivatie `2026.10-motivatie.4`; ter vergelijking v2 (`2026.10-eerlijk.1` + `2026.10-voortgang.1`). Kaarten komen binnen zodra een pack verdiend is; coins gaan direct naar een Goudpack zodra er genoeg zijn. Teamrating = beste 4-3-3.
 
 **Winkans tegen het veld** = gemiddelde uitslag (winst 1, gelijk ½) van het eindelftal van dit profiel tegen de eindelftallen van álle profielen, met de battle-engine en een eenvoudige computerzet, 240 wedstrijden. 50% = gemiddeld. Meetruis ongeveer ±5 procentpunt.
 
 | Profiel | Gem. cijfer | Teamrating week 10 / 20 / 30 / 40 | Goudpacks+ per jaar (v2) | waarvan uit | Spelers 85+ (v2) | Vouchers | Winkans tegen het veld (v2) |
 |---|---:|---|---:|---|---:|---:|---:|
-| Sterk en stabiel (≈8,1) | 8,16 | 86,9 / 89,6 / 90,4 / 91,1 | **24** (100) | clubniveau 12, coins 5, 9,5+ 4, doel 3 | 12 (33) | 39,8 | **51,0%** (80,4%) |
-| Ruim voldoende (≈7,3) | 7,28 | 86,8 / 88,8 / 90,5 / 91,3 | **19** (89) | clubniveau 11, coins 5, doel 3, 9,5+ 1 | 11 (28) | 21,8 | **59,6%** (63,7%) |
-| Gemiddeld (≈6,6) | 6,64 | 85,6 / 89,1 / 90,5 / 90,9 | **18** (74) | clubniveau 11, coins 5, doel 3 | 12 (25) | 18,1 | **46,7%** (41,7%) |
-| Net voldoende (≈6,0) | 5,98 | 84,9 / 87,8 / 89,8 / 90,5 | **18** (59) | clubniveau 11, coins 4, doel 3 | 11 (21) | 16,6 | **48,1%** (40,0%) |
-| Wisselvallig (≈6,3, van 4 tot 8) | 6,30 | 86,2 / 88,9 / 90,3 / 91,0 | **22** (72) | clubniveau 11, coins 5, doel 4, 9,5+ 1 | 12 (26) | 26,7 | **51,9%** (51,0%) |
-| Moeite, wel gemotiveerd (≈5,5) | 5,49 | 86,2 / 88,7 / 90,3 / 90,9 | **21** (61) | clubniveau 12, coins 4, doel 4 | 11 (22) | 21,6 | **52,1%** (36,9%) |
-| Stijger (5,5 → 7,0) | 6,34 | 87,8 / 90,5 / 91,6 / 91,9 | **22** (85) | clubniveau 12, doel 5, coins 5 | 12 (27) | 25,6 | **56,0%** (41,9%) |
-| Oefenaar Academy (≈6,5) | 6,54 | 87,5 / 89,8 / 90,8 / 91,6 | **22** (106) | clubniveau 14, coins 5, doel 3 | 13 (28) | 30,1 | **53,3%** (56,0%) |
-| Alleen invoeren, hoog (≈8,0) ¹ | 7,97 | 86,0 / 89,3 / 90,4 / 91,4 | **19** (84) | clubniveau 10, coins 5, 9,5+ 4 | 11 (32) | 32,4 | **57,9%** (77,1%) |
-| Alleen invoeren, midden (≈6,5) ¹ | 6,44 | 85,4 / 88,0 / 89,6 / 90,6 | **13** (53) | clubniveau 9, coins 4 | 10 (21) | 10,9 | **45,8%** (32,1%) |
-| Alleen invoeren, laag (≈5,8) ¹ | 5,88 | 85,1 / 88,6 / 89,7 / 90,5 | **13** (43) | clubniveau 9, coins 4 | 9 (18) | 12,3 | **48,5%** (30,2%) |
-| Weinig cijfers ingevoerd (≈7,0) ¹ | 7,00 | 80,9 / 85,1 / 87,1 / 88,2 | **9** (32) | clubniveau 6, coins 2 | 6 (16) | 7,3 | **16,7%** (20,4%) |
+| Sterk en stabiel (≈8,1) | 8,16 | 86,2 / 87,3 / 87,7 / 87,9 | **68** (100) | 9,5+ 79, clubniveau 12, coins 6, doel 3 | 14 (22) | 39,8 | **64,2%** (84,0%) |
+| Ruim voldoende (≈7,3) | 7,28 | 85,8 / 86,9 / 87,1 / 87,4 | **38** (89) | 9,5+ 66, clubniveau 11, coins 5, doel 3, herstel 1 | 11 (16) | 21,8 | **56,0%** (58,1%) |
+| Gemiddeld (≈6,6) | 6,64 | 85,3 / 86,6 / 87,1 / 87,3 | **31** (74) | 9,5+ 46, clubniveau 11, herstel 5, coins 5, doel 3 | 11 (14) | 18,1 | **50,0%** (51,7%) |
+| Net voldoende (≈6,0) | 5,98 | 84,4 / 86,4 / 86,6 / 86,8 | **31** (59) | 9,5+ 27, clubniveau 11, herstel 10, coins 4, doel 3 | 10 (12) | 16,6 | **40,8%** (33,1%) |
+| Wisselvallig (≈6,3, van 4 tot 8) | 6,30 | 85,2 / 86,4 / 87,1 / 87,5 | **44** (72) | 9,5+ 36, herstel 11, clubniveau 11, coins 5, doel 4 | 12 (17) | 26,7 | **52,1%** (62,1%) |
+| Moeite, wel gemotiveerd (≈5,5) | 5,49 | 84,8 / 86,1 / 86,7 / 87,1 | **32** (61) | 9,5+ 14, clubniveau 12, herstel 11, coins 4, doel 4 | 11 (13) | 21,6 | **42,1%** (28,1%) |
+| Stijger (5,5 → 7,0) | 6,34 | 85,1 / 86,3 / 86,8 / 87,1 | **34** (85) | 9,5+ 37, clubniveau 12, herstel 8, doel 5, coins 5 | 11 (15) | 25,6 | **37,7%** (45,6%) |
+| Oefenaar Academy (≈6,5) | 6,54 | 85,6 / 86,6 / 87,1 / 87,6 | **34** (106) | 9,5+ 42, clubniveau 14, herstel 6, coins 5, doel 3 | 12 (16) | 30,1 | **52,3%** (50,6%) |
+| Alleen invoeren, hoog (≈8,0) ¹ | 7,97 | 86,3 / 87,3 / 87,8 / 88,0 | **57** (84) | 9,5+ 76, clubniveau 10, coins 5 | 13 (20) | 32,4 | **66,9%** (83,5%) |
+| Alleen invoeren, midden (≈6,5) ¹ | 6,44 | 84,6 / 85,9 / 86,7 / 86,9 | **25** (53) | 9,5+ 40, clubniveau 9, herstel 7, coins 4 | 10 (13) | 10,9 | **39,6%** (35,4%) |
+| Alleen invoeren, laag (≈5,8) ¹ | 5,88 | 84,2 / 86,0 / 86,6 / 87,0 | **26** (43) | 9,5+ 25, herstel 11, clubniveau 9, coins 4 | 10 (12) | 12,3 | **46,5%** (28,3%) |
+| Weinig cijfers ingevoerd (≈7,0) ¹ | 7,00 | 82,8 / 85,1 / 85,9 / 86,4 | **16** (32) | 9,5+ 28, clubniveau 6, coins 2, herstel 1 | 8 (11) | 7,3 | **24,2%** (26,3%) |
 
 ¹ Voert alleen cijfers in (geen doelen, geen Academy), of weinig cijfers.
 
-Winkans van actief meedoende profielen tegen het veld: v3 **46,7% – 59,6%**, v2 36,9% – 80,4%. Starterspacks (brons/zilver) komen er per voldoende bij: 40–81 per jaar.
+Winkans van actief meedoende profielen tegen het veld: v3 **37,7% – 64,2%**, v2 28,1% – 84,0%. Starterspacks (brons/zilver) komen er per voldoende bij: 3–33 per jaar.
 
-Oude configuratie `2026.10-proto.1` (zonder voortgang), ter vergelijking: Goudpacks+ per jaar 20–85, teamrating eind 91,3–97,5.
+Oude configuratie `2026.10-proto.1` (zonder voortgang), ter vergelijking: Goudpacks+ per jaar 20–85, teamrating eind 86,5–91,8.
 
 
 ## Conclusies

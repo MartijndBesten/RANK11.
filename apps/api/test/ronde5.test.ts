@@ -23,7 +23,7 @@ describe('economie v3 op de server', () => {
 
   it('/api/config meldt de actuele economieversies', async () => {
     const res = await createApp().api('GET', '/api/config');
-    expect(res.body.versions).toMatchObject({ rewards: '2026.10-haalbaar.1', progress: '2026.10-voortgang.2', motivation: '2026.10-motivatie.4' });
+    expect(res.body.versions).toMatchObject({ rewards: '2026.11-haalbaar.2', progress: '2026.11-voortgang.3', motivation: '2026.10-motivatie.4' });
   });
 });
 

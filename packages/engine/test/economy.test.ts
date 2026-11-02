@@ -77,12 +77,15 @@ describe('economie v3: positief en haalbaar', () => {
   const xp = (n: number, date = '2026-09-07'): XpEntry => ({ key: `x${n}`, category: 'performance', xp: n, label: 'x', date, source: { kind: 'grade', id: `g${n}` }, configVersion: 'v' });
   const runC = (ledger: XpEntry[], grants: ProgressGrant[] = []) => progressRewards(C, { grades: [], goals: [], ledger, grants, periods, today: '2026-09-07' });
 
-  it('ieder cijfer levert iets op; een voldoende geeft een pack; Goudpack uit cijfers pas bij 9,5+', () => {
+  it('ieder cijfer levert iets op; brons-zilver-goud-ladder met goud al vanaf een 8 (ronde 14)', () => {
     const r = (value: number) => computeReward(ACHIEVABLE_REWARD_CONFIG, { grade: g('wi', value, '2026-10-01'), subjectAvgBefore: null, subjectAvgAfter: null, rewardedToday: 0, rewardedThisWeek: 0 });
-    expect(r(4.1)).toMatchObject({ status: 'support', coins: 150 });
-    for (const v of [5.6, 6.8, 7.9, 8.8]) expect(r(v).packId).toBe('starter');
-    expect(r(9.6)).toMatchObject({ packId: 'gold', vouchers: 1 });
-    expect(r(8.8).vouchers).toBe(1);
+    expect(r(4.1)).toMatchObject({ status: 'support', coins: 150 }); // onvoldoende: herstelkans, geen pack
+    expect(r(5.6).packId).toBe('starter'); // brons: voldoende
+    for (const v of [6.8, 7.9]) expect(r(v).packId).toBe('silver'); // zilver: hier gebeurt het voor de meesten
+    for (const v of [8, 8.8, 9.6]) expect(r(v).packId).toBe('gold'); // goud: "goud mag bij 8"
+    expect(r(8).vouchers).toBe(0); // een 8 geeft goud, nog geen voucher
+    expect(r(8.8).vouchers).toBe(1); // 8,5+ geeft goud plus een draft-voucher
+    expect(r(9.6).vouchers).toBe(1);
     // Coins lopen maar weinig op met het cijfer: hoge cijfers zijn bijzonder, geen voorwaarde.
     expect(r(8.8).coins / r(5.6).coins).toBeLessThanOrEqual(2);
   });
@@ -114,9 +117,18 @@ describe('schooljaar-simulatie (economie v3)', () => {
   const field = rows.flatMap((r) => r.teams);
   const byId = (id: string) => rows.find((r) => r.profileId === id)!;
 
-  it('geen eindeloze stroom topkaarten: hooguit ±30 Goudpacks per jaar en een elftal dat het hele jaar groeit', () => {
-    for (const r of rows) expect(r.topPacks).toBeLessThanOrEqual(30);
+  it('goud is bereikbaar maar geen stortvloed voor de kern-doelgroep; het elftal groeit het hele jaar', () => {
+    // "Goud mag bij 8" (ronde 14): wie structureel 8+ scoort verdient meer goud; dat is bewust en wordt
+    // begrensd doordat de teamsterkte verzadigt (zie de volgende test: spreiding blijft klein). Voor de
+    // kern-doelgroep (gemiddeld t/m een 7,0) is goud bereikbaar via cijfers, inzet en herstel, maar het
+    // blijft bijzonder: geen eindeloze stroom.
+    const core = rows.filter((r) => r.motivated && r.gradeAverage <= 7.0);
+    for (const r of core) {
+      expect(r.topPacks).toBeGreaterThanOrEqual(10); // goud is echt bereikbaar in 5,5–7,0
+      expect(r.topPacks).toBeLessThanOrEqual(50); // maar geen stortvloed
+    }
     for (const r of motivated) expect(r.ratingByWeek[40]!).toBeGreaterThan(r.ratingByWeek[10]!);
+    // Nog altijd veel rustiger dan de oude, extreme configuratie waarin elke 6,5+ al goud gaf.
     const old = simulateSchoolYear(STUDENT_PROFILES.filter((p) => p.id === 'gemiddeld'), { seeds: ['t1'], rewards: FAIR_REWARD_CONFIG, progress: P });
     expect(byId('gemiddeld').topPacks).toBeLessThan(old[0]!.topPacks / 2);
   });

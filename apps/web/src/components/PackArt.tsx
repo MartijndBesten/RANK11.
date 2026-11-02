@@ -3,6 +3,7 @@ import type { PackTheme } from '@rank11/engine';
 
 const THEMES: Record<PackTheme, { a: string; b: string; c: string; ink: string; glow: string }> = {
   bronze: { a: '#f0c69d', b: '#9a6238', c: '#4a2a14', ink: '#2b170a', glow: '#ffb37a' },
+  silver: { a: '#f4f7fb', b: '#aab6c6', c: '#5a6678', ink: '#1f2733', glow: '#dfe8f2' },
   gold: { a: '#fff1c4', b: '#d6a640', c: '#6f4e10', ink: '#2a1b04', glow: '#ffd76a' },
   rare: { a: '#fffbe6', b: '#c9972f', c: '#3a2806', ink: '#2a1b04', glow: '#ffe08a' },
   exam: { a: '#c8ff5a', b: '#6d28d9', c: '#16052f', ink: '#ffffff', glow: '#b8ff3c' },

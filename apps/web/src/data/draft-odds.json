@@ -5,32 +5,32 @@
  "photosOnly": true,
  "groups": {
   "A": {
-   "observed": 0.0004127272727272727,
-   "draftWithOrBetter": 0.0227
+   "observed": 0.0004109090909090909,
+   "draftWithOrBetter": 0.0226
   },
   "B": {
-   "observed": 0.004509090909090909,
-   "draftWithOrBetter": 0.2417
+   "observed": 0.0031527272727272728,
+   "draftWithOrBetter": 0.1838
   },
   "C": {
-   "observed": 0.12191272727272727,
-   "draftWithOrBetter": 0.9995
+   "observed": 0.09032909090909091,
+   "draftWithOrBetter": 0.9948
   },
   "D": {
-   "observed": 0.26057636363636366,
+   "observed": 0.3641563636363636,
    "draftWithOrBetter": 1
   },
   "E": {
-   "observed": 0.6125890909090909,
+   "observed": 0.541950909090909,
    "draftWithOrBetter": 1
   }
  },
  "rating": {
-  "mean": 88.3879,
-  "p10": 86,
-  "p50": 88,
-  "p90": 91,
+  "mean": 85.5656,
+  "p10": 84,
+  "p50": 86,
+  "p90": 87,
   "min": 82,
-  "max": 94
+  "max": 89
  }
 }

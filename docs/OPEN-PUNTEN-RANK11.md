@@ -23,8 +23,9 @@ contactadres liggen bij Martijn. Zie ook [EMAIL-SETUP.md](EMAIL-SETUP.md) en
    - **SPF** (TXT op het subdomein) met de `include` van Resend — **géén tweede SPF-record op de apex**,
      alleen op het subdomein.
    - **MAIL FROM / Return-Path**-record als Resend dat vraagt (voor SPF-alignment onder `aspf=s`).
-4. Stel `EMAIL_FROM` in op een adres op **exact dat geverifieerde (sub)domein**, bijv.
-   `RANK11 <geen-antwoord@rank11.martijndenbesten.com>` — zo matcht de `From:` met `d=` (DKIM strict).
+4. Stel `EMAIL_FROM` in op een afzender op **exact dat geverifieerde (sub)domein**, bijv. een
+   `geen-antwoord`-postbus op `rank11.martijndenbesten.com` (weergegeven als `RANK11 <geen-antwoord@…>`) —
+   zo matcht de `From:` met `d=` (DKIM strict).
 5. Config in de code (na verificatie):
    - in `apps/api/wrangler.toml` onder `[env.prod.vars]`: `EMAIL_PROVIDER = "resend"` en `EMAIL_FROM = "…"`;
    - secret: `wrangler secret put RESEND_API_KEY --env prod` (plak de Resend-sleutel; **niet** in git/logs);

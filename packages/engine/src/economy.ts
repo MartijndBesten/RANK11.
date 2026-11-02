@@ -196,33 +196,45 @@ export function progressRewards(config: ProgressRewardConfig, input: ProgressInp
 /* ———————————— Economie v3: positief en haalbaar (ronde 5) ———————————— */
 
 /**
- * Cijferbeloning v3: ieder ingevoerd cijfer levert iets op (ook een onvoldoende), een voldoende geeft een
- * Starterspack en coins. Goudpacks komen vooral uit inzet en groei (clubniveau, doelen, verbetering, herstel,
- * oefenen); een 8,5+ en 9,5+ blijven extra bijzonder. Zo is een sterk elftal haalbaar zonder achten en negens,
- * en komt er geen eindeloze stroom topkaarten.
+ * Cijferbeloning v4 (ronde 14, speeltest zoon): een zichtbare brons → zilver → goud-ladder, waarbij de
+ * actie in de echte cijferzone 5,5–7,5 zit en een **8 al goud** oplevert.
+ *  - onvoldoende: herstelkans (coins, geen pack);
+ *  - 5,5–6,4: **brons** (Starterspack);
+ *  - 6,5–7,9: **zilver** (Zilverpack, met kans op goud) — hier gebeurt het voor de meeste leerlingen;
+ *  - 8,0+: **goud** (Goudpack) — "goud mag bij 8"; 8,5+ en 9,5+ geven goud plus een draft-voucher.
+ *
+ * Omdat goud nu uit het cijfer zelf komt, geeft de inzet-route (clubniveau) **zilver** in plaats van goud:
+ * oefenen en groei houden iedereen aan sterke zilverkaarten, terwijl de kopkaart (goud) de beloning voor een
+ * echte 8 blijft. Zo blijft 5,5–7,5 competitief en ontstaat er geen eindeloze stroom topkaarten.
  */
 export const ACHIEVABLE_REWARD_CONFIG: RewardConfig = {
   ...DEFAULT_REWARD_CONFIG,
-  version: '2026.10-haalbaar.1',
+  version: '2026.11-haalbaar.2',
   tiers: [
     { id: 'support', label: 'Herstelkans', minGrade: 1, tone: 'support', xp: 15, coins: 150 },
     { id: 'pass', label: 'Voldoende', minGrade: 5.5, tone: 'pass', xp: 50, coins: 200, packId: 'starter' },
-    { id: 'good', label: 'Goed', minGrade: 6.5, tone: 'good', xp: 90, coins: 250, packId: 'starter' },
-    { id: 'great', label: 'Sterk', minGrade: 7.5, tone: 'great', xp: 140, coins: 300, packId: 'starter' },
-    { id: 'elite', label: 'Uitstekend', minGrade: 8.5, tone: 'elite', xp: 200, coins: 350, packId: 'starter', vouchers: 1 },
-    { id: 'legendary', label: 'Legendarisch', minGrade: 9.5, tone: 'legendary', xp: 300, coins: 500, packId: 'gold', vouchers: 1 },
+    { id: 'good', label: 'Goed', minGrade: 6.5, tone: 'good', xp: 90, coins: 250, packId: 'silver' },
+    { id: 'great', label: 'Sterk', minGrade: 7.5, tone: 'great', xp: 140, coins: 300, packId: 'silver' },
+    { id: 'gold', label: 'Goud', minGrade: 8, tone: 'elite', xp: 190, coins: 350, packId: 'gold' },
+    { id: 'elite', label: 'Uitstekend', minGrade: 8.5, tone: 'elite', xp: 230, coins: 400, packId: 'gold', vouchers: 1 },
+    { id: 'legendary', label: 'Legendarisch', minGrade: 9.5, tone: 'legendary', xp: 300, coins: 550, packId: 'gold', vouchers: 1 },
   ],
 };
 
 export const ACHIEVABLE_PROGRESS_CONFIG: ProgressRewardConfig = {
-  version: '2026.10-voortgang.2',
+  version: '2026.11-voortgang.3',
   goal: { vouchers: 1, coins: 300 },
   improvement: { minDelta: 0.6, minGradesInPeriod: 3, packId: 'starter', vouchers: 1, coins: 300 },
-  recovery: { minJump: 1.0, packId: 'starter', vouchers: 0, coins: 300 },
+  // Herstel na een onvoldoende geeft GOUD: dit beloont juist de worstelende-maar-knokkende leerling
+  // (die zelden een 8 haalt) en houdt zo de cijferzone 5,5–7,5 competitief naast de goud-uit-cijfers-route.
+  recovery: { minJump: 1.0, packId: 'gold', vouchers: 0, coins: 300 },
   personalBest: { minAboveAverage: 1.0, minPriorGrades: 2, vouchers: 1, coins: 150 },
   // Oefenen telt al mee voor je clubniveau (Academy-XP); de mijlpalen geven daarom vouchers, geen extra packs.
-  academy: { packEveryXp: 0, packId: 'gold', voucherEveryXp: 400, maxPacksPerWeek: 0 },
+  academy: { packEveryXp: 0, packId: 'silver', voucherEveryXp: 400, maxPacksPerWeek: 0 },
   maxVouchersPerWeek: 1,
+  // Inzet-route (clubniveau, alle XP) blijft goud: dit is de grade-agnostische gelijkmaker die 5,5–7,5
+  // competitief houdt naast de nieuwe goud-uit-cijfers-route. Ieder niveau wordt duurder, dus leerlingen
+  // lopen hier niet ver uit elkaar.
   level: { packId: 'gold', coins: 0 },
 };
 

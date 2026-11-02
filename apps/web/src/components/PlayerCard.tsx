@@ -1,11 +1,13 @@
-import { memo, useRef, type CSSProperties, type PointerEvent } from 'react';
+import { memo, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
 import {
   clubById, nationByCode, POSITION_LABEL, RARITY_LABEL, STAT_KEYS, STAT_LABEL, type Player, type Rarity,
 } from '@rank11/engine';
 import { Portrait } from './Portrait';
 import { Flag } from './Flag';
 import { Crest } from './Crest';
-import { Silhouette, FlagStripes } from './Silhouette';
+import { FlagStripes } from './Silhouette';
+import { ClubBadge, KitPortrait } from './Kit';
+import { playerPhotosEnabled, portraitUrl } from '../lib/features';
 import { CardFrame } from './CardFrame';
 import './card.css';
 
@@ -44,16 +46,22 @@ interface Props {
   onClick?: () => void;
   selected?: boolean;
   label?: string;
+  /** Nooit een foto (bijv. publieke startpagina: foto's alleen achter de login). */
+  noPhoto?: boolean;
 }
 
 export const PlayerCard = memo(function PlayerCard({
-  player, size = 'md', tilt = false, faceDown = false, className = '', style, effective, onClick, selected, label,
+  player, size = 'md', tilt = false, faceDown = false, className = '', style, effective, onClick, selected, label, noPhoto = false,
 }: Props) {
+  const [photoFailed, setPhotoFailed] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const real = !!player.real;
   const club = clubById(player.clubId);
   const nation = nationByCode(player.nation);
-  const photo = player.photo;
+  // Echte spelers: nooit een (AI-)portret van een fictieve persoon. Alleen een Commons-foto als beheer dat
+  // aanzet; anders het eigen RANK11-shirtportret.
+  const photo = real ? undefined : player.photo;
+  const realPhoto = real && !noPhoto && !photoFailed && player.commons && player.qid && playerPhotosEnabled() ? portraitUrl(player.qid) : null;
 
   const onMove = (e: PointerEvent<HTMLDivElement>) => {
     if (!tilt || !ref.current) return;
@@ -85,15 +93,17 @@ export const PlayerCard = memo(function PlayerCard({
       type={onClick ? 'button' : undefined}
       data-rarity={player.rarity}
     >
-      <div ref={ref} className={`pc ${tilt ? 'tilt' : ''} ${faceDown ? 'down' : ''} ${photo ? 'has-photo' : ''}`} onPointerMove={onMove} onPointerLeave={onLeave} data-rarity={player.rarity}>
+      <div ref={ref} className={`pc ${tilt ? 'tilt' : ''} ${faceDown ? 'down' : ''} ${photo || realPhoto ? 'has-photo' : ''} ${real ? 'is-real' : ''}`} onPointerMove={onMove} onPointerLeave={onLeave} data-rarity={player.rarity}>
         <div className="pc-face pc-front" aria-hidden="true">
           <div className="pc-bg" />
           <div className="pc-pattern" />
           <div className="pc-spot" />
           <CardFrame rarity={player.rarity} layer="back" className="pc-frame back" />
           <div className="pc-art">
-            {real ? (
-              <Silhouette className="pc-portrait" colors={player.flagColors} />
+            {realPhoto ? (
+              <img className="pc-photo pc-commons" src={realPhoto} alt="" draggable={false} loading="lazy" decoding="async" onError={() => setPhotoFailed(true)} />
+            ) : real ? (
+              <KitPortrait className="pc-kit" player={player} />
             ) : photo ? (
               <img className="pc-photo" src={photo.src} alt="" draggable={false} loading="lazy" decoding="async" />
             ) : (
@@ -107,7 +117,10 @@ export const PlayerCard = memo(function PlayerCard({
             <div className="pc-pos">{POSITION_LABEL[player.position]}</div>
             <div className="pc-rule" />
             {real ? (
-              <FlagStripes className="pc-flag" colors={player.flagColors} title={player.nationName ?? player.code3} />
+              <>
+                <FlagStripes className="pc-flag" colors={player.flagColors} title={player.nationName ?? player.code3} />
+                <ClubBadge className="pc-crest pc-badge" player={player} title={player.clubName} />
+              </>
             ) : (
               <>
                 <Flag className="pc-flag" code={player.nation} title={nation.name} />
@@ -118,7 +131,13 @@ export const PlayerCard = memo(function PlayerCard({
           {edition && <div className="pc-edition">{edition}</div>}
           <div className="pc-bottom">
             <div className="pc-name">{player.cardName}</div>
-            {real && player.clubName && <div className="pc-club">{player.clubName}</div>}
+            {real && player.clubName && (
+              <div className="pc-club">
+                {player.shirtNumber != null && <b className="pc-num num">#{player.shirtNumber}</b>}
+                <span>{player.clubName}</span>
+              </div>
+            )}
+            {real && player.inPacks === false && <div className="pc-retired">Niet meer actief</div>}
             <div className="pc-stats">
               {STAT_KEYS.map((k) => (
                 <div key={k} className="pc-stat">

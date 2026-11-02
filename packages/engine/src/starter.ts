@@ -4,7 +4,7 @@
  * Vooral brons en zilver in een smalle, eerlijke band; hooguit twee lage goudkaarten. Geen tijdelijke,
  * speciale of legendarische kaarten. Deterministisch per seed (de server logt de seed in de audit).
  */
-import type { Player, Position } from './catalog.ts';
+import { isPackable, type Player, type Position } from './catalog.ts';
 import { createRng } from './rng.ts';
 import { FORMATIONS } from './squad.ts';
 
@@ -29,7 +29,7 @@ const RESERVE_NEEDS: Position[][] = [['GK'], ['CB'], ['LB', 'RB'], ['CM', 'CDM']
 export function starterSquad(catalog: readonly Player[], seed: string, options: StarterOptions = {}): StarterSquad {
   const { band = [61, 72], maxGold = 2, maxGoldRating = 77 } = options;
   const rng = createRng(`starter:${seed}`);
-  const pool = catalog.filter((p) => !p.temporary && (p.rarity === 'bronze' || p.rarity === 'silver' || p.rarity === 'gold') && p.id === p.baseId);
+  const pool = catalog.filter((p) => isPackable(p) && (p.rarity === 'bronze' || p.rarity === 'silver' || p.rarity === 'gold') && p.id === p.baseId);
   const used = new Set<string>();
   let gold = 0;
 

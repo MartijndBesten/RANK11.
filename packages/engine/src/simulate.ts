@@ -3,7 +3,7 @@
  * terugval en garanties te controleren voordat een configuratie live gaat (zie docs/REWARD-ECONOMY.md).
  * Deterministisch per seed, zodat een rapport reproduceerbaar is.
  */
-import { RARITY_RANK, type Player, type Rarity } from './catalog.ts';
+import { pickPool, RARITY_RANK, type Player, type Rarity } from './catalog.ts';
 import { createDraft, draftFormation, draftOdds, groupOf, type DraftEventDef, type PityState } from './draft.ts';
 import { openPack, oddsTable, isWalkout, type PackDef } from './packs.ts';
 import { createRng } from './rng.ts';
@@ -17,7 +17,7 @@ import type { Goal } from './goals.ts';
 import type { Period } from './stats.ts';
 import { categoryTotals, DEFAULT_MOTIVATION_CONFIG, gradeXp, type MotivationConfig, type XpEntry } from './motivation.ts';
 import { academyReward, type LearningEvent } from './academy.ts';
-import { ACHIEVABLE_PROGRESS_CONFIG, ACHIEVABLE_REWARD_CONFIG, progressRewards, type ProgressGrant, type ProgressRewardConfig } from './economy.ts';
+import { CURRENT_PROGRESS_CONFIG, CURRENT_REWARD_CONFIG, progressRewards, type ProgressGrant, type ProgressRewardConfig } from './economy.ts';
 import { starterSquad } from './starter.ts';
 import { battleState, createBattle, duelValue, playCard, type BattleCard, type BattleEvent, type DuelMode, type Side } from './competition/battle.ts';
 
@@ -209,6 +209,23 @@ export const STUDENT_PROFILES: StudentProfile[] = [
   { id: 'weinig', label: 'Weinig cijfers ingevoerd (≈7,0)', mean: 7.0, sd: 0.9, gradesPerWeek: 1, goals: false, academyPerWeek: 0, academySkill: 0.6, academyGrowth: 0, motivated: false },
 ];
 
+/** Ronde 15: profielen voor de cijferladder (gemiddelden 5,5–8,0 plus varianten), zie tools/sim/ladder.ts. */
+const LADDER_BASE = { sd: 0.9, gradesPerWeek: 2, goals: true, academyPerWeek: 1, academySkill: 0.65, academyGrowth: 0.1, motivated: true };
+export const LADDER_PROFILES: StudentProfile[] = [
+  { ...LADDER_BASE, id: 'g55', label: 'Gemiddeld 5,5 (actief)', mean: 5.5, sd: 1.0, academySkill: 0.5, academyGrowth: 0.2 },
+  { ...LADDER_BASE, id: 'g60', label: 'Gemiddeld 6,0 (actief)', mean: 6.0, sd: 1.0, academySkill: 0.55 },
+  { ...LADDER_BASE, id: 'g65', label: 'Gemiddeld 6,5 (actief)', mean: 6.5 },
+  { ...LADDER_BASE, id: 'g70', label: 'Gemiddeld 7,0 (actief)', mean: 7.0, academySkill: 0.7 },
+  { ...LADDER_BASE, id: 'g75', label: 'Gemiddeld 7,5 (actief)', mean: 7.5, sd: 0.8, academySkill: 0.75 },
+  { ...LADDER_BASE, id: 'g80', label: 'Gemiddeld 8,0 (actief)', mean: 8.0, sd: 0.7, academySkill: 0.85, academyGrowth: 0.05 },
+  // Varianten
+  { ...LADDER_BASE, id: 'oef55', label: '5,5 + veel oefenen (3×/week)', mean: 5.5, sd: 1.0, academyPerWeek: 3, academySkill: 0.5, academyGrowth: 0.25 },
+  { ...LADDER_BASE, id: 'groei', label: 'Groeier 4,8 → 6,5', mean: 4.8, endMean: 6.5, sd: 0.8, academyPerWeek: 2, academySkill: 0.45, academyGrowth: 0.3 },
+  { ...LADDER_BASE, id: 'inv65', label: '6,5 alleen invoeren (geen doelen/oefenen)', mean: 6.5, goals: false, academyPerWeek: 0, motivated: false },
+  { ...LADDER_BASE, id: 'inv80', label: '8,0 alleen invoeren', mean: 8.0, sd: 0.7, goals: false, academyPerWeek: 0, motivated: false },
+  { ...LADDER_BASE, id: 'spam', label: '7,0 extreem veel invoeren (8/week)', mean: 7.0, gradesPerWeek: 8, goals: false, academyPerWeek: 0, motivated: false },
+];
+
 export interface SchoolYearOptions {
   weeks?: number;
   seeds?: readonly string[];
@@ -270,6 +287,7 @@ function runYear(profile: StudentProfile, seed: string, opts: Required<Omit<Scho
   const rewardLog: string[] = [];
   const packs: Record<string, number> = {};
   let coins = 0, vouchers = 0, picks = 0, n = 0, wrongPool = 0;
+  const pickMins: number[] = [];
   // Kaarten komen binnen zodra de pack er is, zodat de teamsterkte per periode te volgen is.
   const cardRng = createRng(`kaarten:${profile.id}:${seed}`);
   const squad = starterSquad(opts.catalog, `${profile.id}:${seed}`);
@@ -323,9 +341,10 @@ function runYear(profile: StudentProfile, seed: string, opts: Required<Omit<Scho
           grade, subjectAvgBefore: before, subjectAvgAfter: after,
           rewardedToday: rewardLog.filter((d) => d === today).length,
           rewardedThisWeek: rewardLog.filter((d) => d >= weekKey && d <= isoDay(YEAR_START + (w * 7 + 6) * 864e5)).length,
+          rewardedLast28Days: rewardLog.filter((d) => d > isoDay(ms - 28 * 864e5) && d <= today).length,
         });
         if (r.status === 'rewarded') rewardLog.push(today);
-        coins += r.coins; vouchers += r.vouchers; addPack(r.packId, 'cijfer'); if (r.pick) picks++;
+        coins += r.coins; vouchers += r.vouchers; addPack(r.packId, 'cijfer'); if (r.pick) { picks++; pickMins.push(r.pick.minRating); }
         const fresh = gradeXp(opts.motivation, { grade, before: grades, goals, ledger, enteredOn: today });
         ledger = [...ledger, ...fresh];
         for (const e of fresh) if (e.packId) addPack(e.packId, 'goal'); // doelpack uit de motivatie-engine
@@ -352,7 +371,7 @@ function runYear(profile: StudentProfile, seed: string, opts: Required<Omit<Scho
     if ((w + 1) % 10 === 0) ratingByWeek[w + 1] = teamRating(formation, autoBestLineup(formation, owned));
   }
   for (let i = 0; i < picks; i++) {
-    const options = cardRng.shuffle(opts.catalog.filter((p) => p.rating >= 90 && !p.temporary)).slice(0, 3);
+    const options = cardRng.shuffle(pickPool(opts.catalog, pickMins[i] ?? 90)).slice(0, 3);
     const best = [...options].sort((a, b) => b.rating - a.rating)[0];
     if (best) owned.push(best);
   }
@@ -364,7 +383,7 @@ function runYear(profile: StudentProfile, seed: string, opts: Required<Omit<Scho
     xp: categoryTotals(ledger), teamRating: teamRating(formation, lineup),
     cards85: new Set(owned.filter((p) => p.rating >= 85).map((p) => p.baseId)).size,
     ratingByWeek, team, topSources,
-    topPacks: (packs.gold ?? 0) + (packs.exam ?? 0) + (packs.elite ?? 0),
+    topPacks: (packs.gold ?? 0) + (packs.exam ?? 0) + (packs.elite ?? 0) + (packs.effort ?? 0),
   };
 }
 
@@ -372,8 +391,8 @@ function runYear(profile: StudentProfile, seed: string, opts: Required<Omit<Scho
 export function simulateSchoolYear(profiles: readonly StudentProfile[] = STUDENT_PROFILES, options: SchoolYearOptions = {}): SchoolYearRow[] {
   const opts = {
     weeks: options.weeks ?? 40,
-    rewards: options.rewards ?? ACHIEVABLE_REWARD_CONFIG,
-    progress: options.progress === undefined ? ACHIEVABLE_PROGRESS_CONFIG : options.progress,
+    rewards: options.rewards ?? CURRENT_REWARD_CONFIG,
+    progress: options.progress === undefined ? CURRENT_PROGRESS_CONFIG : options.progress,
     motivation: options.motivation ?? DEFAULT_MOTIVATION_CONFIG,
     catalog: options.catalog ?? generateCatalog(),
     spendCoins: options.spendCoins ?? true,

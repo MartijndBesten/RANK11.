@@ -5,6 +5,7 @@ import { OnlineStoreProvider } from './state/onlineStore';
 import { App } from './App';
 import { Landing } from './screens/Landing';
 import iconUrl from './assets/icon.svg';
+import { setPlayerPhotos } from './lib/features';
 
 type Mode = 'checking' | 'landing' | 'choose' | 'online' | 'demo' | 'unavailable' | 'pending';
 const MODE_KEY = 'rank11-mode';
@@ -15,11 +16,26 @@ const writeMode = (m: string | null) => { try { if (m) localStorage.setItem(MODE
 
 interface Config { registrationEnabled: boolean; openRegistration: boolean; turnstileSiteKey: string | null }
 
+/** Uitnodigingslink: /?uitnodiging=CODE. De code wordt één keer gelezen en direct uit de adresbalk gehaald
+ * (niet in de geschiedenis of bij het delen van de pagina). */
+function readInviteFromUrl(): string {
+  try {
+    const url = new URL(window.location.href);
+    const code = (url.searchParams.get('uitnodiging') ?? url.searchParams.get('invite') ?? '').trim().slice(0, 40);
+    if (code) {
+      url.searchParams.delete('uitnodiging'); url.searchParams.delete('invite');
+      window.history.replaceState(null, '', url.pathname + (url.search || '') + url.hash);
+    }
+    return code;
+  } catch { return ''; }
+}
+const INVITE_FROM_URL = typeof window !== 'undefined' ? readInviteFromUrl() : '';
+
 export function Root() {
   const [mode, setMode] = useState<Mode>(PUBLIC_DEMO ? 'demo' : 'checking');
   const [hasServer, setHasServer] = useState(false);
   const [config, setConfig] = useState<Config>({ registrationEnabled: !ONLINE_ONLY, openRegistration: false, turnstileSiteKey: null });
-  const [authTab, setAuthTab] = useState<'login' | 'register'>('login');
+  const [authTab, setAuthTab] = useState<'login' | 'register'>(INVITE_FROM_URL ? 'register' : 'login');
   const [retry, setRetry] = useState(0);
 
   useEffect(() => {
@@ -32,7 +48,8 @@ export function Root() {
       if (!server) return setMode(ONLINE_ONLY ? 'unavailable' : 'demo');
       if (ONLINE_ONLY) {
         try {
-          const c = await api<Config>('GET', '/config');
+          const c = await api<Config & { playerPhotos?: boolean }>('GET', '/config');
+          setPlayerPhotos(c.playerPhotos === true);
           if (alive) setConfig({ registrationEnabled: c.registrationEnabled === true, openRegistration: c.openRegistration === true, turnstileSiteKey: c.turnstileSiteKey ?? null });
         } catch { if (alive) setConfig({ registrationEnabled: false, openRegistration: false, turnstileSiteKey: null }); }
       }
@@ -41,7 +58,7 @@ export function Root() {
         const me = await api<{ user: { status?: string } }>('GET', '/me');
         if (!alive) return;
         setMode(me.user?.status && me.user.status !== 'active' ? 'pending' : 'online');
-      } catch { if (alive) setMode('landing'); } // niet ingelogd: toon de publieke startpagina
+      } catch { if (alive) setMode(INVITE_FROM_URL ? 'choose' : 'landing'); } // niet ingelogd: startpagina, of direct registreren via een uitnodigingslink
     })();
     return () => { alive = false; };
   }, [retry]);
@@ -60,7 +77,7 @@ export function Root() {
       </div>
     </div>
   );
-  if (mode === 'landing') return <Landing onRegister={() => goAuth('register')} onLogin={() => goAuth('login')} />;
+  if (mode === 'landing') return <Landing onRegister={() => goAuth('register')} onLogin={() => goAuth('login')} inviteOnly={!config.openRegistration} />;
   if (mode === 'pending') return <PendingScreen onLoggedOut={() => { void api('POST', '/auth/logout').catch(() => {}); loggedOut(); }} />;
   if (mode === 'choose') return <AuthScreen config={config} initialTab={authTab}
     onOnline={() => { writeMode('online'); setMode('online'); }}
@@ -145,7 +162,7 @@ function AuthScreen({ onOnline, onPending, onBack, onDemo, config, initialTab }:
   const [tab, setTab] = useState<'login' | 'register'>(initialTab);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [invite, setInvite] = useState('');
+  const [invite, setInvite] = useState(INVITE_FROM_URL);
   const [under16, setUnder16] = useState<boolean | null>(null);
   const [parentEmail, setParentEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -212,7 +229,8 @@ function AuthScreen({ onOnline, onPending, onBack, onDemo, config, initialTab }:
                   <small className="dim">Een ouder moet eerst toestemming geven voordat je kunt spelen.</small></label>
               )}
               {!config.openRegistration && (
-                <label className="field"><span>Uitnodigingscode</span><input className="input" value={invite} placeholder="ABCDE-FGHJK" onChange={(e) => setInvite(e.target.value)} /></label>
+                <label className="field"><span>Uitnodigingscode</span><input className="input" value={invite} placeholder="ABCDE-FGHJK" autoComplete="off" onChange={(e) => setInvite(e.target.value)} />
+                  <small className="dim">RANK11. is besloten: je kunt alleen een account maken met een uitnodiging van de beheerder.</small></label>
               )}
               {config.turnstileSiteKey && <div ref={tsRef} className="cf-turnstile" style={{ marginTop: 4 }} />}
               <p className="hint">Gebruik geen echte naam als gebruikersnaam. Gebruik voorlopig alleen verzonnen cijfers.</p>

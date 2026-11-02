@@ -5,7 +5,8 @@
  * positie afgeleid, zodat de spelmechaniek gelijk blijft. RANK11 is niet gelieerd aan spelers/clubs/bonden.
  */
 import { createRng, type Rng } from './rng.ts';
-import { REAL_PLAYERS, type RealPlayer } from './real-players.generated.ts';
+import { NEW_EDITIONS, REAL_PLAYERS, type RealPlayer } from './real-players.generated.ts';
+import { CARD_LOCK } from './catalog-lock.generated.ts';
 
 export type Position =
   | 'GK' | 'RB' | 'CB' | 'LB' | 'CDM' | 'CM' | 'CAM' | 'RM' | 'LM' | 'RW' | 'LW' | 'ST';
@@ -160,6 +161,33 @@ export interface Player {
   code3?: string;
   /** Dominante vlagkleuren voor het silhouet (geen logo's). */
   flagColors?: readonly [string, string, string];
+  /** Stabiele externe identiteit (Wikidata-QID). Een kaart-id verwijst altijd naar dezelfde QID. */
+  qid?: string;
+  /** Officiële clubkleuren (Wikidata P6364), voor de eigen clubaanduiding — geen logo. */
+  clubColors?: readonly string[];
+  /** Competitie van de huidige club (een van de zeven), of null als de speler niet meer actief is. */
+  league?: string | null;
+  /** Rugnummer bij de huidige club, alleen als het verifieerbaar is. */
+  shirtNumber?: number | null;
+  /**
+   * `false` = speler is niet meer actief in de zeven competities: blijft geldig in bestaande collecties,
+   * maar komt niet meer uit packs, startelftallen of drafts.
+   */
+  inPacks?: boolean;
+  /** Openbare portretfoto met licentiegegevens (Wikimedia Commons). Wordt alleen getoond als beheer dat aanzet. */
+  commons?: CommonsPhoto;
+}
+
+/** Licentie- en bronregistratie van een portret op Wikimedia Commons (vastgelegd per sync). */
+export interface CommonsPhoto {
+  file: string;
+  page: string;
+  license: string;
+  licenseUrl: string | null;
+  artist: string;
+  /** Commons markeert de foto met een portret-/persoonlijkheidsrechtenwaarschuwing. */
+  personalityTag: boolean;
+  checked: string;
 }
 
 /** Positieprofielen: afwijking per vaardigheid t.o.v. de algemene rating. */
@@ -240,61 +268,93 @@ export interface CatalogOptions {
   photosOnly?: boolean;
 }
 
-/** Zet een echte-spelerrecord om naar een Player. De stats-subwaarden en zeldzaamheid volgen deterministisch
- * uit rating + positie, zodat de spelmechaniek gelijk blijft. Geen foto; de UI toont een generiek silhouet. */
-function realToPlayer(rp: RealPlayer, rng: Rng, scale: RatingScale): Player {
+/** Kleine deterministische hash (0..1) per kaart-id, onafhankelijk van de volgorde in de catalogus. */
+function idHash(id: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619) >>> 0;
+  return h / 4294967296;
+}
+
+/** Een stabiele club-id uit de echte clubnaam: zo werkt clubchemie tussen echte clubgenoten (geen logo). */
+export function realClubId(clubName: string): string {
+  return 'rc-' + clubName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
+
+/**
+ * Zeldzaamheid van een basiskaart. Brons/zilver/goud volgen de rating. Collectiebescherming: een kaart die al
+ * bestond (catalog-lock) zakt nooit in zeldzaamheid — een gouden kaart van een kind blijft goud, ook als de
+ * rating van de speler na een update daalt. Nieuwe kaarten: 'Rare' per kaart-id (stabiel, niet per volgorde).
+ */
+const TIER: Rarity[] = ['bronze', 'silver', 'gold', 'rare_gold'];
+function baseRarity(id: string, rating: number): Rarity {
+  const derived: Rarity = rating < 65 ? 'bronze' : rating < 75 ? 'silver' : rating >= 80 && idHash(`rare:${id}`) < 0.35 ? 'rare_gold' : 'gold';
+  const locked = CARD_LOCK[id];
+  if (!locked) return derived;
+  const lockedTier = TIER.indexOf(locked.rarity as Rarity);
+  const fromRating: Rarity = rating < 65 ? 'bronze' : rating < 75 ? 'silver' : 'gold';
+  return TIER[Math.max(lockedTier, TIER.indexOf(fromRating))] as Rarity;
+}
+
+/** Zet een echte-spelerrecord om naar een Player. Stats per kaart-id (eigen RNG), dus een wijziging bij de
+ * ene speler verschuift niets bij een andere. */
+function realToPlayer(rp: RealPlayer, seed: string, scale: RatingScale): Player {
   const position = rp.position as Position;
-  // Een stabiele club-id uit de echte clubnaam: zo werkt clubchemie tussen echte clubgenoten (geen logo).
-  const clubId = 'rc-' + rp.clubName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  const rng = createRng(`${seed}:${rp.id}`);
   return {
-    id: rp.id, baseId: rp.id,
+    id: rp.id, baseId: rp.id, qid: rp.qid,
     firstName: rp.first, lastName: rp.last, cardName: rp.cardName,
     nation: rp.code3, nationName: rp.nationName, code3: rp.code3, flagColors: rp.flagColors,
-    clubId, clubName: rp.clubName, real: true,
-    position,
-    // Niet iedereen krijgt een tweede positie (variatie, en sommige kaarten zijn positiezuiver).
-    altPositions: RELATED_POSITIONS[position].length && rng.next() < 0.6 ? [rng.pick(RELATED_POSITIONS[position])] : [],
-    rating: rp.rating, rarity: rarityForRating(rp.rating, rng),
+    clubId: realClubId(rp.clubName), clubName: rp.clubName, clubColors: rp.clubColors, league: rp.league, real: true,
+    shirtNumber: rp.number, inPacks: rp.active,
+    position, altPositions: rp.altPositions as Position[],
+    rating: rp.rating, rarity: baseRarity(rp.id, rp.rating),
     stats: deriveStats(position, rp.rating, rng, scale),
     portrait: makePortrait(rng, rp.code3), age: rp.age,
+    ...(rp.photo ? { commons: rp.photo } : {}),
   };
 }
 
-/** Deterministische catalogus van ECHTE spelers. Vaste id-slots (p0001..) houden bestaande kaarten geldig. */
+const EDITION_BOOST: Partial<Record<Rarity, number>> = { special: 6, exam: 5, season: 4, legend: 6, gold: 3 };
+
+/**
+ * Catalogus van ECHTE spelers.
+ *  - Basiskaarten: één per slot (p0001…), vast gekoppeld aan een Wikidata-QID. Inactieve spelers blijven
+ *    geldig in collecties (`inPacks: false`).
+ *  - Edities (Electric/Toetsweek/Seizoen, Legend L01–L08, uitgelicht S01): vastgelegd in de catalog-lock,
+ *    altijd bovenop dezelfde basisspeler. Zo verandert een kaart nooit stilzwijgend in een andere speler.
+ */
 export function generateCatalog(options: CatalogOptions = {}): Player[] {
-  const { seed = 'rank11-catalog-v1', size = 200, scale = DEFAULT_RATING_SCALE, photos = {}, photosOnly = false } = options;
-  const rng = createRng(seed);
+  const { seed = 'rank11-catalog-v1', scale = DEFAULT_RATING_SCALE, photos = {}, photosOnly = false } = options;
+  const size = options.size ?? REAL_PLAYERS.length;
   const players: Player[] = [];
-
-  // Basiscatalogus: echte, actieve spelers op vaste id-slots (migratieveilig).
-  for (const rp of REAL_PLAYERS.slice(0, size)) players.push(realToPlayer(rp, rng, scale));
-
-  // Speciale edities bovenop bestaande toppers (zelfde baseId, hogere rating).
-  const promoSources = players.filter((p) => p.rating >= 78).slice(0, 36);
-  promoSources.forEach((src, idx) => {
-    const rarity: Rarity = idx % 3 === 0 ? 'special' : idx % 3 === 1 ? 'exam' : 'season';
-    const boost = rarity === 'special' ? 6 : rarity === 'exam' ? 5 : 4;
-    const rating = clamp(src.rating + boost, scale.min, scale.max - 1);
-    players.push({ ...src, id: `${src.id}-${rarity}`, rating, rarity, stats: deriveStats(src.position, rating, rng, scale) });
-  });
-
-  // Toppers als legend-/featured-editie (eigen id's; worden niet als startkaart uitgedeeld).
-  const top = REAL_PLAYERS.slice(0, 9);
-  top.slice(0, 8).forEach((rp, i) => {
-    const lrng = createRng(`${seed}:L${i}`);
-    const rating = clamp(rp.rating + 6, scale.min, scale.max);
-    players.push({ ...realToPlayer(rp, lrng, scale), id: `L0${i + 1}`, baseId: `L0${i + 1}`, rarity: 'legend', rating, stats: deriveStats(rp.position as Position, rating, lrng, scale) });
-  });
-  // Featured 'S01' = de best gerate echte spits (een herkenbare gold-aanvalskaart).
-  const f = REAL_PLAYERS.find((p) => p.position === 'ST') ?? top[8];
-  if (f) {
-    const frng = createRng(`${seed}:S01`);
-    const rating = clamp(f.rating + 3, scale.min, scale.max - 1);
-    players.push({ ...realToPlayer(f, frng, scale), id: 'S01', baseId: 'S01', rarity: 'gold', rating, stats: deriveStats('ST', rating, frng, scale) });
+  const bySlot = new Map<string, Player>();
+  for (const rp of REAL_PLAYERS.slice(0, size)) {
+    const p = realToPlayer(rp, seed, scale);
+    players.push(p);
+    bySlot.set(p.id, p);
   }
-
+  const editions = [...Object.entries(CARD_LOCK).map(([id, l]) => [id, l] as const), ...NEW_EDITIONS.map((e) => [e.id, e] as const)];
+  for (const [id, lock] of editions) {
+    if (id === lock.slot) continue;
+    const src = bySlot.get(lock.slot);
+    if (!src) continue;
+    const rarity = lock.rarity as Rarity;
+    const rating = clamp(src.rating + (EDITION_BOOST[rarity] ?? 3), scale.min, scale.max - (rarity === 'legend' ? 0 : 1));
+    const own = /^p\d{4}-/.test(id) ? src.baseId : id; // edities delen de baseId; Legends/S01 hebben een eigen baseId
+    players.push({ ...src, id, baseId: own, rarity, rating, stats: deriveStats(src.position, rating, createRng(`${seed}:${id}`), scale) });
+  }
   const withPhotos = players.map((p) => (photos[p.baseId] ? { ...p, photo: photos[p.baseId] } : p));
   return photosOnly ? withPhotos.filter((p) => p.photo) : withPhotos;
+}
+
+/** Keuze-bonus (9+): alleen basiskaarten van actieve spelers vanaf `minRating` — geen edities of Legends. */
+export function pickPool(catalog: readonly Player[], minRating: number): Player[] {
+  return catalog.filter((p) => isPackable(p) && p.id === p.baseId && (p.rarity === 'gold' || p.rarity === 'rare_gold') && p.rating >= minRating);
+}
+
+/** Kaart mag in packs, startelftallen, drafts en keuzes voorkomen. */
+export function isPackable(p: Player): boolean {
+  return !p.temporary && p.inPacks !== false;
 }
 
 export function clubById(id: string): Club {

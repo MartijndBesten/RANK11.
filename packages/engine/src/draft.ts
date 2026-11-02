@@ -104,7 +104,7 @@ type GroupIndex = Map<string, Player[]>;
 function indexGroups(event: DraftEventDef, catalog: readonly Player[]): GroupIndex {
   const index: GroupIndex = new Map(event.groups.map((g) => [g.id, []]));
   for (const p of catalog) {
-    if (p.temporary) continue;
+    if (p.temporary || p.inPacks === false) continue;
     const g = groupOf(event, p);
     if (g) index.get(g.id)?.push(p);
   }

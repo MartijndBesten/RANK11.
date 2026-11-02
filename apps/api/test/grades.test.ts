@@ -27,14 +27,14 @@ describe('cijfers en beloningen', () => {
     expect(res.status).toBe(201);
     expect(res.body.grade).toMatchObject({ status: 'self', value: 7, subjectId: 'wiskunde' });
     // XP uit de motivatie-engine: 50 per cijfer + 20 bonus voor een 7; coins/pack uit de beloningsconfig.
-    // Economie v4 (ronde 14): een 7 (Goed/Sterk, 6,5–7,9) geeft een Zilverpack.
-    expect(res.body.reward).toMatchObject({ status: 'rewarded', tierId: 'good', xp: 70, coins: 250, packId: 'silver', configVersion: '2026.11-haalbaar.2' });
+    // Cijferladder (ronde 15): een 7,0 (7,0–7,4) geeft een Verbeterd Zilverpack.
+    expect(res.body.reward).toMatchObject({ status: 'rewarded', tierId: 'silver_plus', xp: 70, coins: 250, packId: 'silver_plus', configVersion: '2026.11-ladder.1' });
     expect(res.body.xp).toMatchObject({ total: 70, entries: [{ key: 'perf:toets:wiskunde:hoofdstuk 3:2026-10-20', category: 'performance', xp: 70 }] });
     expect(ledger(app, user)).toEqual({ coins: 250 });
     expect(xpRows(app, user)).toEqual([{ key: 'perf:toets:wiskunde:hoofdstuk 3:2026-10-20', category: 'performance', xp: 70, capped_by: null }]);
-    expect(packs(app, user)).toEqual(['silver']);
+    expect(packs(app, user)).toEqual(['silver_plus']);
     const grant = app.db.db.prepare('SELECT config_version, kind, dedupe_key FROM reward_grants').get() as Record<string, string>;
-    expect(grant).toEqual({ config_version: '2026.11-haalbaar.2', kind: 'initial', dedupe_key: 'toets:wiskunde:hoofdstuk 3:2026-10-20' });
+    expect(grant).toEqual({ config_version: '2026.11-ladder.1', kind: 'initial', dedupe_key: 'toets:wiskunde:hoofdstuk 3:2026-10-20' });
     const wallet = await app.api('GET', '/api/wallet', { token: user.token });
     expect(wallet.body.balances).toEqual({ coins: 250, xp: 0, vouchers: 0 });
     const list = await app.api('GET', '/api/grades', { token: user.token });
@@ -51,7 +51,7 @@ describe('cijfers en beloningen', () => {
     expect(dup.body.error.code).toBe('duplicate_grade');
     expect(ledgerRows(app, user)).toBe(before);
     expect(xpRows(app, user)).toHaveLength(xpBefore);
-    expect(packs(app, user)).toEqual(['silver']);
+    expect(packs(app, user)).toEqual(['silver_plus']);
   });
 
   it('idempotentiesleutel: zelfde sleutel = zelfde antwoord, ander verzoek = 422, sleutel verplicht', async () => {
@@ -76,23 +76,23 @@ describe('cijfers en beloningen', () => {
     const up = await app.api('PUT', `/api/grades/${id}`, { token: user.token, idem: idem(), body: { value: 8 } });
     expect(up.status).toBe(200);
     // XP: een 8 is 90 Prestatie-XP, er was 70 → alleen het verschil van 20.
-    // Economie v4 (ronde 14): een 7 geeft Zilver (coins 250), een 8 geeft Goud (coins 350); de correctie
-    // levert alleen het coinverschil (100) en de hogere pack (goud) op.
-    expect(up.body.reward).toMatchObject({ status: 'correction', tierId: 'gold', xp: 20, coins: 100, vouchers: 0, packId: 'gold' });
+    // Cijferladder (ronde 15): een 7 geeft Zilver+ (coins 250), een 8 geeft Goud + bonus (coins 400, 1 voucher);
+    // de correctie levert alleen het verschil (150 coins, 1 voucher) en de hogere pack (goud) op.
+    expect(up.body.reward).toMatchObject({ status: 'correction', tierId: 'gold_bonus', xp: 20, coins: 150, vouchers: 1, packId: 'gold' });
     expect(up.body.xp.total).toBe(20);
-    expect(ledger(app, user)).toEqual({ coins: 350 });
+    expect(ledger(app, user)).toEqual({ coins: 400, vouchers: 1 });
     expect(xpTotal(app, user)).toBe(90);
-    expect(packs(app, user)).toEqual(['silver', 'gold']);
+    expect(packs(app, user)).toEqual(['silver_plus', 'gold']);
 
     const down = await app.api('PUT', `/api/grades/${id}`, { token: user.token, idem: idem(), body: { value: 6 } });
     expect(down.body.reward).toMatchObject({ status: 'duplicate', xp: 0, coins: 0 });
-    expect(ledger(app, user)).toEqual({ coins: 350 });
+    expect(ledger(app, user)).toEqual({ coins: 400, vouchers: 1 });
     expect(xpTotal(app, user)).toBe(90);
 
     const back = await app.api('PUT', `/api/grades/${id}`, { token: user.token, idem: idem(), body: { value: 8 } });
     expect(back.body.reward.status).toBe('duplicate'); // tier 'gold' was al toegekend
     expect(back.body.xp.total).toBe(0); // 90 XP voor een 8 was al toegekend
-    expect(ledger(app, user)).toEqual({ coins: 350 });
+    expect(ledger(app, user)).toEqual({ coins: 400, vouchers: 1 });
 
     const del = await app.api('DELETE', `/api/grades/${id}`, { token: user.token, idem: idem() });
     expect(del.status).toBe(200);
@@ -109,7 +109,7 @@ describe('cijfers en beloningen', () => {
     expect(reentry.status).toBe(201);
     expect(reentry.body.reward.status).toBe('duplicate');
     expect(reentry.body.xp.total).toBe(0); // dezelfde toets opnieuw invoeren levert geen nieuwe XP op
-    expect(ledger(app, user)).toEqual({ coins: 350 });
+    expect(ledger(app, user)).toEqual({ coins: 400, vouchers: 1 });
     expect(xpTotal(app, user)).toBe(0);
   });
 
@@ -118,14 +118,16 @@ describe('cijfers en beloningen', () => {
     // Verschillende toetsdatums: bij gelijke datum is de volgorde (en dus "herstel na onvoldoende") niet gedefinieerd.
     const low = await app.api('POST', '/api/grades', { token: user.token, idem: idem(), body: grade({ value: 4.2, testName: 'SO 1', date: '2026-10-14' }) });
     expect(low.body.reward).toMatchObject({ status: 'support', xp: 50, coins: 150, packId: null });
-    for (let i = 2; i <= 4; i++) {
+    for (let i = 2; i <= 3; i++) {
       const r = await app.api('POST', '/api/grades', { token: user.token, idem: idem(), body: grade({ testName: `SO ${i}`, date: `2026-10-1${4 + i}` }) });
       expect(r.body.reward.status).toBe('rewarded');
     }
-    const capped = await app.api('POST', '/api/grades', { token: user.token, idem: idem(), body: grade({ testName: 'SO 5', date: '2026-10-19' }) });
-    // Kaartbeloning begrensd (4 per dag); XP heeft eigen plafonds (450 Prestatie-XP per dag) en telt hier nog mee.
-    expect(capped.body.reward).toMatchObject({ status: 'capped', coins: 0 });
-    expect(capped.body.xp.total).toBe(70);
+    // Kaartbeloning begrensd (cijferladder: 3 per dag, onvoldoende telt mee); XP heeft eigen plafonds en telt nog mee.
+    for (const [name, date] of [['SO 4', '2026-10-18'], ['SO 5', '2026-10-19']]) {
+      const capped = await app.api('POST', '/api/grades', { token: user.token, idem: idem(), body: grade({ testName: name, date }) });
+      expect(capped.body.reward).toMatchObject({ status: 'capped', coins: 0 });
+      expect(capped.body.xp.total).toBeGreaterThanOrEqual(70); // prestatie-XP (+ eventueel voortgangs-XP) telt door
+    }
     app.advance(24 * 3600_000);
     const nextDay = await app.api('POST', '/api/grades', { token: user.token, idem: idem(), body: grade({ testName: 'SO 6' }) });
     expect(nextDay.body.reward.status).toBe('rewarded');

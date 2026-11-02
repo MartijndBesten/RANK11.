@@ -10,7 +10,7 @@ import { createContext, useCallback, useContext, useMemo, useRef, useState, type
 import {
   academyReward, applyGradeEvents, autoBestLineup, categoryTotals, checkNewGrade, clubLevel, compareAverages, computeReward,
   correctionXp, createDraft, createRng, DEFAULT_MOTIVATION_CONFIG, CURRENT_PROGRESS_CONFIG, CURRENT_REWARD_CONFIG, deletionXp, progressRewards, quickSellValue, DRAFT_EVENTS, FORMATIONS,
-  generateCatalog, gradeKey, gradeXp, openPack, PACKS, resolvePlayer, subjectAverages, validateEvent, weightedAverage,
+  generateCatalog, gradeKey, gradeXp, openPack, PACKS, pickPool, resolvePlayer, subjectAverages, validateEvent, weightedAverage,
   type AcademyDecision, type AccountLink, type BattleEvent, type DraftSession, type LeagueResult, type Goal, type Grade, type GradeEvent, type LearningEvent,
   type PackResult, type Player, type ProgressGrant, type PityState, type RewardResult, type Scenario, type UpcomingTest, type XpEntry,
 } from '@rank11/engine';
@@ -474,6 +474,7 @@ export function StoreProvider({ children, onExit }: { children: ReactNode; onExi
       subjectAvgAfter: subjectAfter,
       rewardedToday: state.rewardLog.filter((r) => r.date === day).length,
       rewardedThisWeek: state.rewardLog.filter((r) => r.date >= weekAgo).length,
+      rewardedLast28Days: state.rewardLog.filter((r) => r.date > new Date(Date.parse(day) - 28 * 864e5).toISOString().slice(0, 10)).length,
       previous: state.rewards[key],
     });
     // XP komt uit de motivatie-engine (categorieën, plafonds); coins, packs en vouchers uit de beloningsconfig.
@@ -483,7 +484,7 @@ export function StoreProvider({ children, onExit }: { children: ReactNode; onExi
     let pickOptions: Player[] | undefined;
     if (reward.pick) {
       const rng = createRng(freshSeed());
-      pickOptions = rng.shuffle(CATALOG.filter((p) => p.rating >= reward.pick!.minRating && !p.temporary)).slice(0, reward.pick.options);
+      pickOptions = rng.shuffle(pickPool(CATALOG, reward.pick.minRating)).slice(0, reward.pick.options);
     }
     const counts = reward.status === 'rewarded' || reward.status === 'correction';
     const progress = withProgress(state, [...revealed, g], [...state.xpLedger, ...xpEntries]).grants;

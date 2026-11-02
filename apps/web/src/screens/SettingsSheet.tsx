@@ -14,7 +14,10 @@ function InviteAdmin() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [maxUses, setMaxUses] = useState(5);
-  const [days, setDays] = useState(14);
+  const [days, setDays] = useState(7);
+  const [note, setNote] = useState('');
+  const [linkCopied, setLinkCopied] = useState(false);
+  const inviteLink = newCode ? `${window.location.origin}/?uitnodiging=${encodeURIComponent(newCode)}` : '';
 
   const load = useCallback(async () => {
     try { const r = await api<{ invites: AdminInvite[] }>('GET', '/admin/platform-invites'); setInvites(r.invites); setErr(null); }
@@ -25,8 +28,8 @@ function InviteAdmin() {
   const create = async () => {
     setBusy(true); setErr(null); setNewCode(null); setCopied(false);
     try {
-      const r = await api<{ code: string }>('POST', '/admin/platform-invites', { maxUses, expiresInHours: days * 24 });
-      setNewCode(r.code); await load();
+      const r = await api<{ code: string }>('POST', '/admin/platform-invites', { maxUses, expiresInHours: days * 24, note: note.trim() || undefined });
+      setNewCode(r.code); setLinkCopied(false); setNote(''); await load();
     } catch (e) { setErr(e instanceof ApiError ? e.message : 'Aanmaken mislukt.'); } finally { setBusy(false); }
   };
   const revoke = async (id: string) => {
@@ -35,10 +38,14 @@ function InviteAdmin() {
     catch (e) { setErr(e instanceof ApiError ? e.message : 'Intrekken mislukt.'); } finally { setBusy(false); }
   };
   const copy = async () => { if (!newCode) return; try { await navigator.clipboard.writeText(newCode); setCopied(true); } catch { /* selecteren mag ook */ } };
+  const copyLink = async () => { if (!inviteLink) return; try { await navigator.clipboard.writeText(inviteLink); setLinkCopied(true); } catch { /* selecteren mag ook */ } };
   const fmt = (ms: number) => new Date(ms).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
 
   return (
     <div className="invite-admin">
+      <p className="hint" style={{ marginTop: 6 }}>Nieuwe accounts kunnen alleen met een uitnodiging. Geef iedere uitnodiging een korte notitie (bijv. "neef Tim") zodat je het overzicht houdt; onder-16 blijft daarna wachten op ouderlijke toestemming.</p>
+      <label className="field" style={{ marginTop: 6 }}><span>Voor wie (notitie, geen achternaam nodig)</span>
+        <input className="input" maxLength={80} value={note} placeholder="bijv. vriend van Senn, klas 2B" onChange={(e) => setNote(e.target.value)} /></label>
       <div className="form-row" style={{ marginTop: 8, alignItems: 'end' }}>
         <label className="field"><span>Aantal keer bruikbaar</span>
           <input className="input" type="number" min={1} max={100} value={maxUses} onChange={(e) => setMaxUses(Math.max(1, Math.min(100, Number(e.target.value) || 1)))} /></label>
@@ -52,6 +59,10 @@ function InviteAdmin() {
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 6, flexWrap: 'wrap' }}>
             <code className="invite-code" style={{ fontSize: '1.2em', letterSpacing: '0.08em', userSelect: 'all' }}>{newCode}</code>
             <button className="btn ghost small" onClick={() => void copy()}>{copied ? 'Gekopieerd' : 'Kopiëren'}</button>
+          </div>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>
+            <code className="small" style={{ userSelect: 'all', wordBreak: 'break-all' }}>{inviteLink}</code>
+            <button className="btn ghost small" onClick={() => void copyLink()}>{linkCopied ? 'Link gekopieerd' : 'Kopieer uitnodigingslink'}</button>
           </div>
           <p className="hint" style={{ marginTop: 6 }}>De code is hierna niet meer op te vragen; maak zo nodig een nieuwe aan.</p>
         </div>

@@ -98,3 +98,17 @@ Zolang e-mail nog niet aanstaat, keurt een **beheerder** een kind onder 16 goed 
 
 16+ hoeft dit niet; die spelen meteen. Een kind kan zichzelf **niet** goedkeuren met de code — dat kan alleen
 een ingelogde beheerder (of straks de ouder via de e-maillink).
+
+---
+
+## Ronde 15 (2-11-2026) — nieuwe open punten
+
+| # | Punt | Wie | Toelichting |
+|---|---|---|---|
+| R15-1 | **Akkoord op uitrol** van PR "Ronde 15" naar test en daarna prod | Martijn | Volgorde: herstelpunt → frontend-assets → worker. Zie HANDOFF ronde 15. |
+| R15-2 | **Portretrecht spelersfoto's** | Martijn | Foto's staan aan (keuze Martijn), alleen achter login. Vrije licentie ≠ toestemming van de speler. Bij bezwaar: `PLAYER_PHOTOS = "false"` + worker-deploy. Zie [BEELDRECHTEN.md](BEELDRECHTEN.md). |
+| R15-3 | **Ongebruikte AI-portretten verwijderen** | volgende sessie met push-rechten | `apps/web/public/portraits/*.webp` (209 bestanden, fictieve personen) worden niet meer gebruikt. Via de GitHub-webinterface niet in één keer te verwijderen. |
+| R15-4 | **Live eindcontrole** na uitrol | Martijn / volgende sessie | Inloggen, 7,5 invoeren → Goudpack; kaart van een oude speler (bijv. p0008 Adrián) toont "Niet meer actief" en blijft in de collectie; foto's laden. |
+| R15-5 | **Collectiecontrole op prod** | volgende sessie met D1-toegang | `SELECT card_def_id, COUNT(*) FROM card_instances GROUP BY 1` — alle id's moeten in de catalog-lock of de nieuwe catalogus staan (verwacht: 0 onbekend). Deze sessie had geen D1-toegang. |
+| R15-6 | **Periodieke catalogus-sync** | later | `tools/real-players/sync.mjs` opnieuw draaien (bijv. na de transferperiode). Bestaande kaarten veranderen nooit van speler; ratings max. ±5 per sync. |
+| R15-7 | **Demo-worker** `rank11-demo` + DNS-record verwijderen | Martijn | Ongewijzigd openstaand uit ronde 14b. |

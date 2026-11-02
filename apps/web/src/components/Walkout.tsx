@@ -6,6 +6,9 @@ import { Crest } from './Crest';
 import { Portrait } from './Portrait';
 import { PlayerCard, RIM } from './PlayerCard';
 import { Sparks } from './Sparks';
+import { FlagStripes } from './Silhouette';
+import { ClubBadge, KitPortrait } from './Kit';
+import { playerPhotosEnabled, portraitUrl } from '../lib/features';
 import { sfx } from '../lib/sound';
 import './walkout.css';
 
@@ -18,7 +21,10 @@ const DURATIONS = [700, 1300, 1100, 1100, 1500, 1400, 0];
  */
 export function Walkout({ player, reduced, onDone, doneLabel = 'Verder' }: { player: Player; reduced: boolean; onDone: () => void; doneLabel?: string }) {
   // Zonder foto is er geen 'licht op'-stap: dan volgt de kaart direct na het silhouet.
-  const CARD = player.photo ? 6 : 5;
+  // Echte spelers: nooit het (AI-)portret van een fictieve persoon; vlag, club en shirt komen uit de echte gegevens.
+  const real = !!player.real;
+  const photo = real ? (player.commons && player.qid && playerPhotosEnabled() ? { src: portraitUrl(player.qid) } : undefined) : player.photo;
+  const CARD = photo || real ? 6 : 5;
   const [stage, setStage] = useState(reduced ? CARD : 0);
   const timer = useRef<number | undefined>(undefined);
   const club = clubById(player.clubId);
@@ -64,8 +70,8 @@ export function Walkout({ player, reduced, onDone, doneLabel = 'Verder' }: { pla
       <div className="wo-stage" aria-live="polite">
         {stage >= 1 && stage < 5 && (
           <div className="wo-clue wo-flag" key="flag">
-            <Flag code={player.nation} className="wo-flag-svg" />
-            <span>{nation.name}</span>
+            {real ? <FlagStripes colors={player.flagColors} className="wo-flag-svg" /> : <Flag code={player.nation} className="wo-flag-svg" />}
+            <span>{real ? player.nationName ?? player.code3 : nation.name}</span>
           </div>
         )}
         {stage >= 2 && stage < 5 && (
@@ -76,14 +82,16 @@ export function Walkout({ player, reduced, onDone, doneLabel = 'Verder' }: { pla
         )}
         {stage >= 3 && stage < 5 && (
           <div className="wo-clue wo-club" key="club">
-            <Crest data={club} className="wo-crest" />
-            <span>{club.name}</span>
+            {real ? <ClubBadge player={player} className="wo-crest" /> : <Crest data={club} className="wo-crest" />}
+            <span>{real ? player.clubName : club.name}</span>
           </div>
         )}
         {(stage === 4 || (stage === 5 && CARD === 6)) && (
-          <div className={`wo-silhouette ${player.photo ? 'photo' : ''} ${stage === 5 ? 'lit' : ''}`} key="sil">
-            {player.photo ? (
-              <img src={player.photo.src} alt="" draggable={false} />
+          <div className={`wo-silhouette ${photo || real ? 'photo' : ''} ${real && !photo ? 'kit' : ''} ${stage === 5 ? 'lit' : ''}`} key="sil">
+            {real && !photo ? (
+              <KitPortrait player={player} />
+            ) : photo ? (
+              <img src={photo.src} alt="" draggable={false} />
             ) : (
               <Portrait data={player.portrait} club={club} silhouette rim={accent} />
             )}

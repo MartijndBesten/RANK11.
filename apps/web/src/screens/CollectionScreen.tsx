@@ -5,6 +5,9 @@ import {
 } from '@rank11/engine';
 import type { Nav } from '../App';
 import { quickSellValue, useStore } from '../state/store';
+import { ClubBadge } from '../components/Kit';
+import { FlagStripes } from '../components/Silhouette';
+import { playerPhotosEnabled } from '../lib/features';
 import { PlayerCard, RIM } from '../components/PlayerCard';
 import { Sheet } from '../components/Sheet';
 import { Flag } from '../components/Flag';
@@ -186,8 +189,19 @@ function CardDetail({ entry, onClose, onSell }: { entry: Entry; onClose: () => v
             <div><dt>Positie</dt><dd>{POSITION_NAME[p.position]} <span className="dim">({POSITION_LABEL[p.position]})</span></dd></div>
             {p.altPositions.length > 0 && <div><dt>Ook</dt><dd>{p.altPositions.map((x) => POSITION_NAME[x]).join(', ')}</dd></div>}
             <div><dt>Leeftijd</dt><dd className="num">{p.age} jaar</dd></div>
-            <div><dt>Land</dt><dd className="cd-inline"><Flag code={p.nation} className="cd-flag" /> {nation.name}</dd></div>
-            <div><dt>Club</dt><dd className="cd-inline"><Crest data={club} className="cd-crest" /> {club.name}</dd></div>
+            {p.real ? (
+              <>
+                <div><dt>Land</dt><dd className="cd-inline"><FlagStripes colors={p.flagColors} className="cd-flag" /> {p.nationName ?? p.code3}</dd></div>
+                <div><dt>Club</dt><dd className="cd-inline"><ClubBadge player={p} className="cd-crest" /> {p.clubName}{p.league ? <span className="dim"> · {p.league}</span> : null}</dd></div>
+                {p.shirtNumber != null && <div><dt>Rugnummer</dt><dd className="num">{p.shirtNumber}</dd></div>}
+                {p.inPacks === false && <div><dt>Status</dt><dd>Niet meer actief in de zeven competities — je kaart blijft gewoon van jou.</dd></div>}
+              </>
+            ) : (
+              <>
+                <div><dt>Land</dt><dd className="cd-inline"><Flag code={p.nation} className="cd-flag" /> {nation.name}</dd></div>
+                <div><dt>Club</dt><dd className="cd-inline"><Crest data={club} className="cd-crest" /> {club.name}</dd></div>
+              </>
+            )}
             <div><dt>Serie</dt><dd className="cd-inline"><i className="cd-swatch" style={{ background: RIM[p.rarity] }} aria-hidden="true" /> {RARITY_LABEL[p.rarity]}</dd></div>
             <div><dt>Rating</dt><dd className="num"><b>{p.rating}</b></dd></div>
           </dl>
@@ -228,7 +242,14 @@ function CardDetail({ entry, onClose, onSell }: { entry: Entry; onClose: () => v
         <p className="hint">Coins zijn alleen spelvaluta; ze zijn niet te kopen of in te wisselen.</p>
       </div>
 
-      {p.photo && (
+      {p.real ? (
+        <p className="cd-credit">
+          {p.commons && playerPhotosEnabled() ? (
+            <>Foto: {p.commons.artist} · <a href={p.commons.licenseUrl ?? p.commons.page} target="_blank" rel="noreferrer noopener">{p.commons.license}</a> · bijgesneden · via <a href={p.commons.page} target="_blank" rel="noreferrer noopener">Wikimedia Commons</a>. </>
+          ) : 'Shirtportret: eigen RANK11-illustratie in clubkleuren (geen foto, geen clublogo). '}
+          Gegevens: Wikidata en Wikipedia. Rating: eigen RANK11-berekening. RANK11. is niet gelieerd aan spelers, clubs of bonden.
+        </p>
+      ) : p.photo && (
         <p className="cd-credit">
           {p.photo.aiGenerated ? 'AI-gegenereerd portret van een fictieve speler' : p.photo.credit} · {p.photo.license}
         </p>

@@ -37,7 +37,7 @@ const toBattleCard = (owner: string, p: Player, chem = 0): BattleCard => ({ id: 
 /** Elftal van een computertegenstander: beste opstelling uit een deterministische selectie rond zijn sterkte. */
 export function botTeam(bot: Bot): BattleCard[] {
   const rng = createRng(`team:${bot.id}`);
-  const pool = rng.shuffle(CATALOG.filter((p) => !p.temporary && Math.abs(p.rating - bot.strength) <= 7)).slice(0, 40);
+  const pool = rng.shuffle(CATALOG.filter((p) => !p.temporary && p.inPacks !== false && Math.abs(p.rating - bot.strength) <= 7)).slice(0, 40);
   const lineup = autoBestLineup(FORMATIONS['4-3-3']!, pool);
   return Object.values(lineup).filter((p): p is Player => !!p).map((p) => toBattleCard(bot.id, p));
 }

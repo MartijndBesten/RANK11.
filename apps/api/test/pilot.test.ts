@@ -87,7 +87,7 @@ describe('besloten pilot', () => {
 
 // Publieke modus (prod): geen Basic Auth-poort; publieke routes open, persoonlijke/admin via sessie.
 function publicSite() {
-  const app = createApp({ ENVIRONMENT: 'prod', REGISTRATION_ENABLED: 'true', OPEN_REGISTRATION: 'true' });
+  const app = createApp({ ENVIRONMENT: 'prod', REGISTRATION_ENABLED: 'true', OPEN_REGISTRATION: 'true', REG_MAX_PER_IP: '15' });
   const assets = vi.fn(async () => ({ body: '<html>home</html>', httpEtag: 'test', writeHttpMetadata: (h: Headers) => h.set('Content-Type', 'text/html') }));
   app.env.ASSETS = { get: assets } as unknown as R2Bucket;
   const request = (path: string, opts: RequestInit = {}) => servePilot(new Request(`https://rank11.test${path}`, opts), app.env, handle);

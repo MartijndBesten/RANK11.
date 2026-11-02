@@ -80,7 +80,7 @@ describe('packs', () => {
     expect(leg.perSlot[4]).toBeCloseTo(0.02, 10);
     expect(leg.atLeastOne).toBeCloseTo(0.02, 10);
     const spc = rows.find((r) => r.bucketId === 'spc')!;
-    expect(spc.atLeastOne).toBeCloseTo(1 - 0.99 ** 4 * 0.92, 10);
+    expect(spc.atLeastOne).toBeCloseTo(1 - 0.995 ** 4 * 0.92, 10); // ronde 15: 'spc' 0,5% per gewone plek
     for (let slot = 0; slot < 5; slot++) {
       expect(rows.reduce((s, r) => s + (r.perSlot[slot] ?? 0), 0)).toBeCloseTo(1, 10);
     }

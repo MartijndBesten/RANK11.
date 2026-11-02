@@ -101,3 +101,14 @@
 @keyframes card-in { from { opacity: 0; transform: scale(0.6); } }
 @keyframes card-flip { from { transform: rotateY(540deg) scale(0.8); } }
 @keyframes flash { from { opacity: 1; transform: scale(0.4); } to { opacity: 0; transform: scale(2.2); } }
+
+/* Ronde 15 — echte speler: eerst het donkere silhouet in het clubshirt (randlicht in seriekleur),
+   dan gaat het licht aan en verschijnen de clubkleuren en het rugnummer. */
+.wo-silhouette.kit svg {
+  border-radius: 18px;
+  filter: brightness(0) drop-shadow(0 0 1.5px var(--accent)) drop-shadow(0 0 16px color-mix(in srgb, var(--accent) 70%, transparent));
+  -webkit-mask: linear-gradient(180deg, #000 72%, transparent 100%);
+  mask: linear-gradient(180deg, #000 72%, transparent 100%);
+}
+.wo-silhouette.kit.lit svg { animation: light-up 1.3s var(--ease-out) forwards; }
+@media (prefers-reduced-motion: reduce) { .wo-silhouette.kit.lit svg { animation: none; filter: none; } }

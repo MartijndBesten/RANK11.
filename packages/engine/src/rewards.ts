@@ -35,6 +35,8 @@ export interface RewardConfig {
   limits: {
     maxRewardedPerDay: number;
     maxRewardedPerWeek: number;
+    /** Rollend venster van 28 dagen (sinds `ladder.1`): staat een drukke toetsweek toe, maar geen week-in-week-uit spam. */
+    maxRewardedPer28Days?: number;
     /** Niet-geverifieerde (handmatige) cijfers krijgen maximaal deze tier. */
     unverifiedMaxTierId: string | null;
   };
@@ -86,6 +88,8 @@ export interface RewardInput {
   subjectAvgAfter: number | null;
   rewardedToday: number;
   rewardedThisWeek: number;
+  /** Beloonde cijfers in de afgelopen 28 dagen (alleen nodig als de configuratie dat limiet heeft). */
+  rewardedLast28Days?: number;
   /** Eerder toegekende beloning voor dezelfde toets-sleutel, indien aanwezig. */
   previous?: RewardResult;
 }
@@ -150,7 +154,8 @@ export function computeReward(config: RewardConfig, input: RewardInput): RewardR
     };
   }
 
-  if (input.rewardedToday >= config.limits.maxRewardedPerDay || input.rewardedThisWeek >= config.limits.maxRewardedPerWeek) {
+  if (input.rewardedToday >= config.limits.maxRewardedPerDay || input.rewardedThisWeek >= config.limits.maxRewardedPerWeek ||
+      (config.limits.maxRewardedPer28Days !== undefined && (input.rewardedLast28Days ?? 0) >= config.limits.maxRewardedPer28Days)) {
     return empty('capped', key, config, 'Dagelijkse of wekelijkse beloningslimiet bereikt. Het cijfer telt wel mee in je gemiddelde.');
   }
 

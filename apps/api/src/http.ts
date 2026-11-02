@@ -52,7 +52,11 @@ export function allowedOrigins(env: Env): string[] {
 export function finalize(res: Response, req: Request, env: Env): Response {
   if (res.status === 101) return res; // WebSocket-upgrade: headers niet aanpassen
   const out = new Response(res.body, res);
-  for (const [k, v] of Object.entries(SECURITY_HEADERS)) out.headers.set(k, v);
+  const isImage = (out.headers.get('Content-Type') ?? '').startsWith('image/');
+  for (const [k, v] of Object.entries(SECURITY_HEADERS)) {
+    if (k === 'Cache-Control' && isImage) continue; // spelersportretten (privé) mogen in de browsercache
+    out.headers.set(k, v);
+  }
   const origin = req.headers.get('Origin');
   if (origin && allowedOrigins(env).includes(origin)) {
     out.headers.set('Access-Control-Allow-Origin', origin);

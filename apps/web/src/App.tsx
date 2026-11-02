@@ -76,11 +76,13 @@ export function App() {
   const reduced = useReducedMotion();
 
   useEffect(() => setSoundEnabled(state.settings.sound), [state.settings.sound]);
+  // Eén keer per sessie markeren; markNotified is in de online store geen stabiele functie.
   useEffect(() => {
     if (toastIds.length) markNotified(toastIds);
     const t = setTimeout(() => setToast(false), 5200);
     return () => clearTimeout(t);
-  }, [toastIds, markNotified]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toastIds]);
   useEffect(() => {
     const onHash = () => { setRoute(parse(location.hash.replace('#', ''), academyOn)); document.querySelector('.main')?.scrollTo({ top: 0 }); };
     addEventListener('hashchange', onHash);

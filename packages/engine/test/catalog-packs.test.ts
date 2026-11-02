@@ -34,7 +34,9 @@ describe('portretten', () => {
   });
   it('voorbeeldspeler S01 is een Gold-spits', () => {
     const s01 = catalog.find((p) => p.id === 'S01')!;
-    expect([s01.rarity, s01.position, s01.rating]).toEqual(['gold', 'ST', 86]);
+    expect(s01.rarity).toBe('gold');
+    expect(s01.position).toBe('ST');
+    expect(s01.real).toBe(true);
   });
 });
 

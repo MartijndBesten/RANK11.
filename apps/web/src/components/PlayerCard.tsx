@@ -5,6 +5,7 @@ import {
 import { Portrait } from './Portrait';
 import { Flag } from './Flag';
 import { Crest } from './Crest';
+import { Silhouette, FlagStripes } from './Silhouette';
 import { CardFrame } from './CardFrame';
 import './card.css';
 
@@ -49,6 +50,7 @@ export const PlayerCard = memo(function PlayerCard({
   player, size = 'md', tilt = false, faceDown = false, className = '', style, effective, onClick, selected, label,
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
+  const real = !!player.real;
   const club = clubById(player.clubId);
   const nation = nationByCode(player.nation);
   const photo = player.photo;
@@ -71,7 +73,7 @@ export const PlayerCard = memo(function PlayerCard({
 
   const Tag = onClick ? 'button' : 'div';
   const shown = effective ?? player.rating;
-  const ariaLabel = label ?? `${player.firstName} ${player.lastName}, ${RARITY_LABEL[player.rarity]}, rating ${player.rating}, ${POSITION_LABEL[player.position]}`;
+  const ariaLabel = label ?? `${player.firstName} ${player.lastName}, ${RARITY_LABEL[player.rarity]}, rating ${player.rating}, ${POSITION_LABEL[player.position]}${real && player.clubName ? `, ${player.clubName}` : ''}${real && player.nationName ? `, ${player.nationName}` : ''}`;
   const edition = EDITION[player.rarity];
 
   return (
@@ -90,7 +92,9 @@ export const PlayerCard = memo(function PlayerCard({
           <div className="pc-spot" />
           <CardFrame rarity={player.rarity} layer="back" className="pc-frame back" />
           <div className="pc-art">
-            {photo ? (
+            {real ? (
+              <Silhouette className="pc-portrait" colors={player.flagColors} />
+            ) : photo ? (
               <img className="pc-photo" src={photo.src} alt="" draggable={false} loading="lazy" decoding="async" />
             ) : (
               <Portrait className="pc-portrait" data={player.portrait} club={club} rim={RIM[player.rarity]} />
@@ -102,8 +106,14 @@ export const PlayerCard = memo(function PlayerCard({
             <div className={`pc-rating num ${effective !== undefined && effective < player.rating ? 'penalty' : ''}`}>{shown}</div>
             <div className="pc-pos">{POSITION_LABEL[player.position]}</div>
             <div className="pc-rule" />
-            <Flag className="pc-flag" code={player.nation} title={nation.name} />
-            <Crest className="pc-crest" data={club} title={club.name} />
+            {real ? (
+              <FlagStripes className="pc-flag" colors={player.flagColors} title={player.nationName ?? player.code3} />
+            ) : (
+              <>
+                <Flag className="pc-flag" code={player.nation} title={nation.name} />
+                <Crest className="pc-crest" data={club} title={club.name} />
+              </>
+            )}
           </div>
           {edition && <div className="pc-edition">{edition}</div>}
           <div className="pc-bottom">

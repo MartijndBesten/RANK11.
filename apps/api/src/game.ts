@@ -1,12 +1,14 @@
 /**
- * Server-side spelgegevens: de (fictieve) catalogus uit de engine, het startelftal en de omzetting
- * van kaartinstanties naar battlekaarten. De catalogus is deterministisch (seed), dus een
- * kaartinstantie verwijst alleen naar `card_def_id` + catalogusversie.
+ * Server-side spelgegevens: de catalogus van ECHTE spelers uit de engine, het startelftal en de omzetting
+ * van kaartinstanties naar battlekaarten. De catalogus is deterministisch (seed) en gebruikt dezelfde
+ * id-slots (p0001..), dus een kaartinstantie verwijst alleen naar `card_def_id` + catalogusversie en
+ * bestaande collecties blijven geldig.
  */
 import { generateCatalog, starterSquad as engineStarterSquad, type BattleCard, type Player } from './engine.ts';
 
 export const CATALOG_SEED = 'rank11-catalog-v1';
-export const CATALOG_VERSION = `${CATALOG_SEED}:200`;
+// Versie opgehoogd bij de overgang naar echte spelers (zelfde id-slots; collecties blijven geldig).
+export const CATALOG_VERSION = `${CATALOG_SEED}:real-2026-11`;
 
 let catalog: Player[] | null = null;
 let byId: Map<string, Player> | null = null;

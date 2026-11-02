@@ -1,9 +1,11 @@
 /**
- * Spelerscatalogus. Bewust verwisselbaar: het prototype gebruikt een deterministisch
- * gegenereerde FICTIEVE catalogus. Een eventuele gelicentieerde bron implementeert later
- * dezelfde `Player`-vorm. Alle namen en clubs hier zijn verzonnen.
+ * Spelerscatalogus. De basiscatalogus bestaat uit ECHTE, actieve spelers (zie real-players.generated.ts,
+ * gegenereerd uit openbare bronnen — Wikidata + Wikipedia — met een eigen ratingformule; geen EA FC/FIFA,
+ * geen spelersfoto's). De stats-subwaarden en zeldzaamheidslagen worden deterministisch uit de rating en
+ * positie afgeleid, zodat de spelmechaniek gelijk blijft. RANK11 is niet gelieerd aan spelers/clubs/bonden.
  */
 import { createRng, type Rng } from './rng.ts';
+import { REAL_PLAYERS, type RealPlayer } from './real-players.generated.ts';
 
 export type Position =
   | 'GK' | 'RB' | 'CB' | 'LB' | 'CDM' | 'CM' | 'CAM' | 'RM' | 'LM' | 'RW' | 'LW' | 'ST';
@@ -146,36 +148,19 @@ export interface Player {
   temporary?: boolean;
   /** Fotoportret; ontbreekt het, dan toont de UI het parametrische portret. */
   photo?: PortraitAsset;
-  /** Leeftijd (fictief), stuurt onder meer het portret. */
+  /** Leeftijd, stuurt onder meer het portret. */
   age: number;
+  /** Echte speler (uit de openbare catalogus). Toont een generiek silhouet i.p.v. een gezicht. */
+  real?: boolean;
+  /** Echte clubnaam (alleen tekst; geen logo). */
+  clubName?: string;
+  /** Volledige nationaliteitsnaam. */
+  nationName?: string;
+  /** 3-letter nationaliteitscode (voor op de kaart). */
+  code3?: string;
+  /** Dominante vlagkleuren voor het silhouet (geen logo's). */
+  flagColors?: readonly [string, string, string];
 }
-
-const NAME_POOLS: Record<string, { first: string[]; last: string[] }> = {
-  NL: { first: ['Daan', 'Sem', 'Lucas', 'Milan', 'Thijs', 'Jesse', 'Bram', 'Noah', 'Levi', 'Ruben', 'Stijn', 'Joep'], last: ['de Vries', 'Bakker', 'Visser', 'Smit', 'Meijer', 'van Dam', 'Kuipers', 'Vermeer', 'Hoekstra', 'van Leeuwen', 'Brouwer', 'Dekker'] },
-  BE: { first: ['Arne', 'Wout', 'Senne', 'Jules', 'Lander', 'Emiel'], last: ['Peeters', 'Janssens', 'Maes', 'Claes', 'Wouters', 'Goossens'] },
-  DE: { first: ['Jonas', 'Leon', 'Finn', 'Lukas', 'Niklas', 'Tim'], last: ['Krämer', 'Hoffmann', 'Brandt', 'Seidel', 'Vogt', 'Lindner'] },
-  FR: { first: ['Théo', 'Hugo', 'Enzo', 'Mathis', 'Nolan', 'Yanis'], last: ['Moreau', 'Laurent', 'Garnier', 'Chevalier', 'Rousseau', 'Fontaine'] },
-  ES: { first: ['Álvaro', 'Pablo', 'Iker', 'Sergio', 'Hugo', 'Marcos'], last: ['Navarro', 'Ortega', 'Castillo', 'Romero', 'Iglesias', 'Medina'] },
-  PT: { first: ['Tiago', 'Rafael', 'Duarte', 'Gonçalo', 'Rúben', 'Diogo'], last: ['Almeida', 'Carvalho', 'Teixeira', 'Pinto', 'Moreira', 'Correia'] },
-  IT: { first: ['Matteo', 'Lorenzo', 'Davide', 'Riccardo', 'Tommaso', 'Andrea'], last: ['Marchetti', 'Galli', 'Rinaldi', 'Ferraro', 'Colombo', 'Moretti'] },
-  EN: { first: ['Harry', 'Oliver', 'Jack', 'Mason', 'Callum', 'Reece'], last: ['Whitaker', 'Fletcher', 'Holloway', 'Pryce', 'Ashdown', 'Marsh'] },
-  BR: { first: ['Thiago', 'Gabriel', 'Vinícius', 'Matheus', 'Caio', 'Renan'], last: ['Oliveira', 'Santos', 'Barbosa', 'Ribeiro', 'Araújo', 'Cardoso'] },
-  AR: { first: ['Facundo', 'Lautaro', 'Nicolás', 'Thiago', 'Bruno', 'Agustín'], last: ['Benítez', 'Acosta', 'Sosa', 'Funes', 'Quiroga', 'Ledesma'] },
-  MA: { first: ['Yassine', 'Amine', 'Ilias', 'Hamza', 'Bilal', 'Anas'], last: ['El Idrissi', 'Bennani', 'Amrani', 'Tahiri', 'Ouali', 'Chraibi'] },
-  SN: { first: ['Moussa', 'Cheikh', 'Pape', 'Ismaïla', 'Abdou', 'Lamine'], last: ['Diallo', 'Ndiaye', 'Sarr', 'Faye', 'Cissé', 'Gueye'] },
-  NG: { first: ['Chidi', 'Tunde', 'Emeka', 'Samuel', 'Kelechi', 'Victor'], last: ['Okafor', 'Adeyemi', 'Eze', 'Nwosu', 'Balogun', 'Ibe'] },
-  GH: { first: ['Kwame', 'Kofi', 'Yaw', 'Kojo', 'Ebo', 'Nana'], last: ['Mensah', 'Asante', 'Boateng', 'Owusu', 'Adjei', 'Ofori'] },
-  JP: { first: ['Haruto', 'Ren', 'Sota', 'Yuto', 'Kaito', 'Riku'], last: ['Tanaka', 'Kobayashi', 'Nakamura', 'Fujita', 'Ishida', 'Sakai'] },
-  DK: { first: ['Mads', 'Oliver', 'Magnus', 'Emil', 'Rasmus', 'Victor'], last: ['Nørgaard', 'Holm', 'Lund', 'Skov', 'Dahl', 'Bech'] },
-  NO: { first: ['Sander', 'Henrik', 'Jakob', 'Eirik', 'Tobias', 'Aksel'], last: ['Haugen', 'Berg', 'Strand', 'Lie', 'Moen', 'Solberg'] },
-  SE: { first: ['Elias', 'Hugo', 'Albin', 'Viktor', 'Isak', 'Melker'], last: ['Lindqvist', 'Ekström', 'Sjöberg', 'Nyberg', 'Holmgren', 'Wallin'] },
-  PL: { first: ['Jakub', 'Kacper', 'Szymon', 'Filip', 'Mateusz', 'Bartosz'], last: ['Nowicki', 'Zieliński', 'Kowal', 'Wróbel', 'Mazur', 'Pawlak'] },
-  HR: { first: ['Luka', 'Ivan', 'Marko', 'Josip', 'Ante', 'Mario'], last: ['Horvat', 'Babić', 'Kovač', 'Jurić', 'Novak', 'Perić'] },
-  TR: { first: ['Emir', 'Arda', 'Kerem', 'Yusuf', 'Mert', 'Baran'], last: ['Yılmaz', 'Demir', 'Aydın', 'Kaya', 'Şahin', 'Öztürk'] },
-  CO: { first: ['Juan', 'Santiago', 'Andrés', 'Camilo', 'Jhon', 'Duván'], last: ['Rentería', 'Valencia', 'Mosquera', 'Cuesta', 'Murillo', 'Palacios'] },
-  UY: { first: ['Federico', 'Rodrigo', 'Matías', 'Gastón', 'Maximiliano', 'Facundo'], last: ['Pereira', 'Silveira', 'Olivera', 'Píriz', 'Viera', 'Techera'] },
-  AT: { first: ['Florian', 'Maximilian', 'David', 'Philipp', 'Stefan', 'Patrick'], last: ['Gruber', 'Huber', 'Wagner', 'Pichler', 'Steiner', 'Moser'] },
-};
 
 /** Positieprofielen: afwijking per vaardigheid t.o.v. de algemene rating. */
 const ARCHETYPES: Record<Position, Stats> = {
@@ -207,11 +192,6 @@ export const RELATED_POSITIONS: Record<Position, Position[]> = {
   LW: ['LM', 'ST'],
   ST: ['CAM', 'RW', 'LW'],
 };
-
-const POSITION_WEIGHTS: [Position, number][] = [
-  ['GK', 8], ['CB', 16], ['RB', 7], ['LB', 7], ['CDM', 8], ['CM', 12], ['CAM', 8],
-  ['RM', 5], ['LM', 5], ['RW', 7], ['LW', 7], ['ST', 12],
-];
 
 const HAIR: HairStyle[] = ['buzz', 'short', 'short', 'curly', 'fade', 'fade', 'bald', 'afro', 'mohawk', 'bun'];
 const HAIR_COLORS = ['#141414', '#2b1d14', '#4a2f1d', '#7a5230', '#b88a4a', '#d9c08c', '#8a2f16'];
@@ -250,13 +230,6 @@ function makePortrait(rng: Rng, nation: string): Portrait {
   };
 }
 
-function ratingRoll(rng: Rng, scale: RatingScale): number {
-  // Piramide: veel 60-78, steeds minder bovenin.
-  const r = rng.next();
-  const skew = Math.pow(r, 1.7);
-  return Math.round(scale.min + skew * (scale.max - 3 - scale.min));
-}
-
 export interface CatalogOptions {
   seed?: string;
   size?: number;
@@ -267,44 +240,34 @@ export interface CatalogOptions {
   photosOnly?: boolean;
 }
 
-/** Deterministische fictieve catalogus. Zelfde seed = zelfde spelers. */
+/** Zet een echte-spelerrecord om naar een Player. De stats-subwaarden en zeldzaamheid volgen deterministisch
+ * uit rating + positie, zodat de spelmechaniek gelijk blijft. Geen foto; de UI toont een generiek silhouet. */
+function realToPlayer(rp: RealPlayer, rng: Rng, scale: RatingScale): Player {
+  const position = rp.position as Position;
+  // Een stabiele club-id uit de echte clubnaam: zo werkt clubchemie tussen echte clubgenoten (geen logo).
+  const clubId = 'rc-' + rp.clubName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  return {
+    id: rp.id, baseId: rp.id,
+    firstName: rp.first, lastName: rp.last, cardName: rp.cardName,
+    nation: rp.code3, nationName: rp.nationName, code3: rp.code3, flagColors: rp.flagColors,
+    clubId, clubName: rp.clubName, real: true,
+    position,
+    // Niet iedereen krijgt een tweede positie (variatie, en sommige kaarten zijn positiezuiver).
+    altPositions: RELATED_POSITIONS[position].length && rng.next() < 0.6 ? [rng.pick(RELATED_POSITIONS[position])] : [],
+    rating: rp.rating, rarity: rarityForRating(rp.rating, rng),
+    stats: deriveStats(position, rp.rating, rng, scale),
+    portrait: makePortrait(rng, rp.code3), age: rp.age,
+  };
+}
+
+/** Deterministische catalogus van ECHTE spelers. Vaste id-slots (p0001..) houden bestaande kaarten geldig. */
 export function generateCatalog(options: CatalogOptions = {}): Player[] {
   const { seed = 'rank11-catalog-v1', size = 200, scale = DEFAULT_RATING_SCALE, photos = {}, photosOnly = false } = options;
   const rng = createRng(seed);
-  const regularClubs = CLUBS.filter((c) => c.id !== 'leg');
   const players: Player[] = [];
-  const usedNames = new Set<string>();
 
-  for (let i = 0; players.length < size && i < size * 4; i++) {
-    const nation = rng.pick(NATIONS).code;
-    const pool = NAME_POOLS[nation];
-    if (!pool) continue;
-    const firstName = rng.pick(pool.first);
-    const lastName = rng.pick(pool.last);
-    const fullName = `${firstName} ${lastName}`;
-    if (usedNames.has(fullName)) continue;
-    usedNames.add(fullName);
-    const position = rng.weighted(POSITION_WEIGHTS, ([, w]) => w)[0];
-    const rating = ratingRoll(rng, scale);
-    const id = `p${String(players.length + 1).padStart(4, '0')}`;
-    const related = RELATED_POSITIONS[position];
-    players.push({
-      id,
-      baseId: id,
-      firstName,
-      lastName,
-      cardName: lastName.toUpperCase(),
-      nation,
-      clubId: rng.pick(regularClubs).id,
-      position,
-      altPositions: related.length && rng.next() < 0.6 ? [rng.pick(related)] : [],
-      rating,
-      rarity: rarityForRating(rating, rng),
-      stats: deriveStats(position, rating, rng, scale),
-      portrait: makePortrait(rng, nation),
-      age: rng.int(18, 34),
-    });
-  }
+  // Basiscatalogus: echte, actieve spelers op vaste id-slots (migratieveilig).
+  for (const rp of REAL_PLAYERS.slice(0, size)) players.push(realToPlayer(rp, rng, scale));
 
   // Speciale edities bovenop bestaande toppers (zelfde baseId, hogere rating).
   const promoSources = players.filter((p) => p.rating >= 78).slice(0, 36);
@@ -312,73 +275,27 @@ export function generateCatalog(options: CatalogOptions = {}): Player[] {
     const rarity: Rarity = idx % 3 === 0 ? 'special' : idx % 3 === 1 ? 'exam' : 'season';
     const boost = rarity === 'special' ? 6 : rarity === 'exam' ? 5 : 4;
     const rating = clamp(src.rating + boost, scale.min, scale.max - 1);
-    players.push({
-      ...src,
-      id: `${src.id}-${rarity}`,
-      rating,
-      rarity,
-      stats: deriveStats(src.position, rating, rng, scale),
-    });
+    players.push({ ...src, id: `${src.id}-${rarity}`, rating, rarity, stats: deriveStats(src.position, rating, rng, scale) });
   });
 
-  for (const f of FEATURED) {
-    const frng = createRng(`${seed}:${f.id}`);
-    players.push({
-      id: f.id,
-      baseId: f.id,
-      firstName: f.firstName,
-      lastName: f.lastName,
-      cardName: f.lastName.toUpperCase(),
-      nation: f.nation,
-      clubId: f.clubId,
-      position: f.position,
-      altPositions: RELATED_POSITIONS[f.position].slice(0, 1),
-      rating: f.rating,
-      rarity: f.rarity,
-      stats: deriveStats(f.position, f.rating, frng, scale),
-      portrait: f.portrait,
-      age: f.age,
-    });
+  // Toppers als legend-/featured-editie (eigen id's; worden niet als startkaart uitgedeeld).
+  const top = REAL_PLAYERS.slice(0, 9);
+  top.slice(0, 8).forEach((rp, i) => {
+    const lrng = createRng(`${seed}:L${i}`);
+    const rating = clamp(rp.rating + 6, scale.min, scale.max);
+    players.push({ ...realToPlayer(rp, lrng, scale), id: `L0${i + 1}`, baseId: `L0${i + 1}`, rarity: 'legend', rating, stats: deriveStats(rp.position as Position, rating, lrng, scale) });
+  });
+  // Featured 'S01' = de best gerate echte spits (een herkenbare gold-aanvalskaart).
+  const f = REAL_PLAYERS.find((p) => p.position === 'ST') ?? top[8];
+  if (f) {
+    const frng = createRng(`${seed}:S01`);
+    const rating = clamp(f.rating + 3, scale.min, scale.max - 1);
+    players.push({ ...realToPlayer(f, frng, scale), id: 'S01', baseId: 'S01', rarity: 'gold', rating, stats: deriveStats('ST', rating, frng, scale) });
   }
 
-  for (const legend of LEGENDS) {
-    const lrng = createRng(`${seed}:${legend.id}`);
-    players.push({
-      id: legend.id,
-      baseId: legend.id,
-      firstName: legend.firstName,
-      lastName: legend.lastName,
-      cardName: legend.lastName.toUpperCase(),
-      nation: legend.nation,
-      clubId: 'leg',
-      position: legend.position,
-      altPositions: RELATED_POSITIONS[legend.position].slice(0, 1),
-      rating: legend.rating,
-      rarity: 'legend',
-      stats: deriveStats(legend.position, legend.rating, lrng, scale),
-      portrait: legend.portrait,
-      age: 31,
-    });
-  }
   const withPhotos = players.map((p) => (photos[p.baseId] ? { ...p, photo: photos[p.baseId] } : p));
   return photosOnly ? withPhotos.filter((p) => p.photo) : withPhotos;
 }
-
-/** Vaste, fictieve voorbeeldspelers (onder meer voor de reviewkaarten). */
-const FEATURED: { id: string; firstName: string; lastName: string; nation: string; clubId: string; position: Position; rating: number; rarity: Rarity; age: number; portrait: Portrait }[] = [
-  { id: 'S01', firstName: 'Jesse', lastName: 'Hoekstra', nation: 'NL', clubId: 'hvs', position: 'ST', rating: 86, rarity: 'gold', age: 25, portrait: { skin: 0, hair: 'fade', hairColor: '#b88a4a', beard: 1, build: 2 } },
-];
-
-const LEGENDS: { id: string; firstName: string; lastName: string; nation: string; position: Position; rating: number; portrait: Portrait }[] = [
-  { id: 'L01', firstName: 'Marco', lastName: 'Steenhuis', nation: 'NL', position: 'ST', rating: 97, portrait: { skin: 1, hair: 'short', hairColor: '#4a2f1d', beard: 0, build: 1 } },
-  { id: 'L02', firstName: 'Lucien', lastName: 'Darrieux', nation: 'FR', position: 'CAM', rating: 96, portrait: { skin: 2, hair: 'bald', hairColor: '#141414', beard: 1, build: 1 } },
-  { id: 'L03', firstName: 'Paulo', lastName: 'Vierenes', nation: 'BR', position: 'LW', rating: 96, portrait: { skin: 3, hair: 'curly', hairColor: '#141414', beard: 0, build: 0 } },
-  { id: 'L04', firstName: 'Franz', lastName: 'Kellermann', nation: 'DE', position: 'CB', rating: 95, portrait: { skin: 0, hair: 'short', hairColor: '#7a5230', beard: 0, build: 2 } },
-  { id: 'L05', firstName: 'Gianluca', lastName: 'Ferrante', nation: 'IT', position: 'GK', rating: 95, portrait: { skin: 1, hair: 'fade', hairColor: '#2b1d14', beard: 2, build: 2 } },
-  { id: 'L06', firstName: 'Diego', lastName: 'Lazcano', nation: 'AR', position: 'RW', rating: 97, portrait: { skin: 2, hair: 'fade', hairColor: '#141414', beard: 2, build: 0 } },
-  { id: 'L07', firstName: 'Andrés', lastName: 'Ibarrola', nation: 'ES', position: 'CM', rating: 95, portrait: { skin: 1, hair: 'buzz', hairColor: '#2b1d14', beard: 1, build: 0 } },
-  { id: 'L08', firstName: 'Samuel', lastName: 'Okonjo', nation: 'NG', position: 'CDM', rating: 94, portrait: { skin: 5, hair: 'buzz', hairColor: '#141414', beard: 0, build: 2 } },
-];
 
 export function clubById(id: string): Club {
   return CLUBS.find((c) => c.id === id) ?? (CLUBS[0] as Club);

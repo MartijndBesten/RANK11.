@@ -51,6 +51,15 @@ export function starterSquad(catalog: readonly Player[], seed: string, options: 
         return pick;
       }
     }
+    // Laatste redmiddel: de laagst gerate passende speler, ongeacht zeldzaamheid. Voorkomt een crash als een
+    // positie geen brons/zilver meer heeft (de echte-spelercatalogus kan per positie hoger uitvallen).
+    const rest = pool.filter((p) => !used.has(p.baseId) && fits(p, false));
+    if (rest.length) {
+      const pick = rest.reduce((a, b) => (b.rating < a.rating ? b : a));
+      used.add(pick.baseId);
+      if (pick.rarity === 'gold') gold++;
+      return pick;
+    }
     throw new Error(`Geen startspeler voor ${positions.join('/')}`);
   };
 

@@ -276,6 +276,9 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
           </div>
         </>
       )}
+
+      <div className="eyebrow" style={{ marginTop: 18 }}>Over de spelerskaarten</div>
+      <p className="hint">RANK11. is niet gelieerd aan spelers, clubs of bonden. Namen, clubs en nationaliteiten komen uit openbare bronnen; de ratings zijn eigen berekeningen (geen officiële of commerciële cijfers). Geen spelersfoto's of clublogo's — kaarten tonen een generiek silhouet in vlagkleuren.</p>
     </Sheet>
   );
 }

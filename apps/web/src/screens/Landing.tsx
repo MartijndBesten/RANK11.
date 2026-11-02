@@ -3,8 +3,6 @@ import { PlayerCard } from '../components/PlayerCard';
 import iconUrl from '../assets/icon.svg';
 import './landing.css';
 
-const DEMO_URL = 'https://rank11-demo.martijndenbesten.com';
-
 // Een paar aansprekende voorbeeldkaarten voor het voorproefje (hoogst gerate echte spelers).
 const preview: Player[] = generateCatalog()
   .filter((p) => p.real && p.id === p.baseId)
@@ -34,9 +32,8 @@ export function Landing({ onRegister, onLogin }: { onRegister: () => void; onLog
           <div className="landing-cta">
             <button className="btn" onClick={onRegister}>Account maken</button>
             <button className="btn ghost" onClick={onLogin}>Inloggen</button>
-            <a className="btn ghost" href={DEMO_URL} target="_blank" rel="noopener noreferrer">Probeer de demo</a>
           </div>
-          <p className="landing-note">Rondkijken kan zonder account. Een account is pas nodig als je echt wilt spelen.</p>
+          <p className="landing-note">Een account maken is gratis en duurt een minuut. Jouw cijfers blijven privé.</p>
         </header>
 
         <section className="landing-sec" aria-label="Voorbeeldkaarten">

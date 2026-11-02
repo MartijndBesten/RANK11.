@@ -1,9 +1,10 @@
 # E-mail voor oudertoestemming — instellen
 
 De oudertoestemming is volledig gebouwd en werkt, **behalve het daadwerkelijk versturen van de e-mail**.
-Zolang er geen e-mailprovider is ingesteld, wordt er geen mail verzonden (`emailSent: false`) en kan de
-toestemmingslink alleen via de beheerder worden opgehaald (Instellingen → beheer, of de API
-`POST /api/admin/consents/:userId/link`). Dat is bewust: er wordt nooit stilzwijgend geactiveerd.
+Zolang er geen e-mailprovider is ingesteld, wordt er geen mail verzonden (`emailSent: false`) en verloopt
+toestemming via de **beheerder-route**: het kind toont een koppelcode (Instellingen → wachtscherm), die een
+ingelogde beheerder invoert bij *Ouderlijke goedkeuringen* (API `POST /api/admin/consents/approve`). Een
+koppelcode leidt nooit tot zelfgoedkeuring en de interface beweert nooit dat er een e-mail is verstuurd.
 
 ## Waarom een externe provider?
 
@@ -14,9 +15,19 @@ HTTPS-API; een andere provider is later in `apps/api/src/modules/email.ts` eenvo
 ## Eenmalig instellen (handeling van de accountbeheerder)
 
 1. Maak een account op https://resend.com (gratis laag volstaat voor een gezin/kleine groep).
-2. Voeg het domein `martijndenbesten.com` toe en zet de door Resend opgegeven **DNS-records** klaar
-   (SPF/DKIM, en DMARC aanbevolen). *Let op:* het sessietoken in deze omgeving heeft geen DNS-schrijfrecht,
-   dus deze DNS-records zet de beheerder zelf in het Cloudflare-dashboard.
+2. Verifieer het **exacte afzenderdomein** in Resend en zet de opgegeven **DNS-records** (SPF/DKIM) klaar.
+   *Let op:* het sessietoken in deze omgeving heeft geen DNS-schrijfrecht, dus deze records zet de beheerder
+   zelf in het Cloudflare-dashboard.
+
+   > ⚠️ **Belangrijk (DNS-strengheid sinds 02-11-2026).** `martijndenbesten.com` heeft nu **SPF `-all`**
+   > (hardfail) en **DMARC `p=reject; sp=reject; adkim=s; aspf=s`** — dit geldt óók voor subdomeinen (`sp`,
+   > strikte alignment). Gevolg: elke mail van een niet-geverifieerd/niet-uitgelijnd afzenderadres wordt
+   > **geweigerd**. Verifieer daarom in Resend het **precieze** afzenderdomein dat je in `EMAIL_FROM` gebruikt
+   > (bijvoorbeeld een subdomein als `rank11.martijndenbesten.com`) met een **eigen SPF-record en eigen
+   > DKIM-sleutel** op dat (sub)domein. Door de strikte DMARC-alignment (`adkim=s`, `aspf=s`) moet het
+   > DKIM-`d=`-domein én het SPF-/envelope-domein exact overeenkomen met het afzenderdomein; anders faalt
+   > DMARC en wordt de toestemmingsmail door ontvangers verworpen. Test met een echte ouder-mailbox vóór
+   > de publieke afhankelijkheid van e-mail.
 3. Maak in Resend een **API-sleutel** aan.
 4. Zet de Worker-variabelen en -secret (per omgeving: `--env test` en/of `--env prod`), vanuit `apps/api`:
    ```bash

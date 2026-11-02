@@ -141,6 +141,31 @@ describe('publieke site (geen Basic Auth-poort)', () => {
     for (let i = 0; i < 17; i++) { if ((await signup(i)).status === 429) { throttled = true; break; } }
     expect(throttled).toBe(true);
   });
+
+  it('onder-16 via OPEN registratie (zonder code): wachtstatus, geen data, geen spel-toegang, geen zelfgoedkeuring', async () => {
+    const { app, request } = publicSite();
+    const res = await request('/api/auth/register', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'KindOpen', password: 'synthetic-account-password', under16: true, parentEmail: 'ouder@example.nl', cookie: true }),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json() as { pending?: boolean; user: { id: string }; claimCode: string };
+    expect(body.pending).toBe(true);
+    const cookie = res.headers.get('Set-Cookie')!.split(';')[0]!;
+    // Wachtstatus, geen club/startelftal (geen persoonlijke spel-data aangemaakt).
+    expect((app.db.db.prepare('SELECT status FROM users WHERE id = ?').get(body.user.id) as { status: string }).status).toBe('pending_parent_approval');
+    expect((app.db.db.prepare('SELECT COUNT(*) AS n FROM clubs WHERE user_id = ?').get(body.user.id) as { n: number }).n).toBe(0);
+    // Geen spel-toegang, ook niet via de eigen sessie.
+    expect((await request('/api/grades', { headers: { Cookie: cookie } })).status).toBe(403);
+    expect((await request('/api/collection', { headers: { Cookie: cookie } })).status).toBe(403);
+    // Kan zichzelf niet goedkeuren met de eigen koppelcode via de publieke route.
+    const self = await request('/api/consent/decide', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ claimCode: body.claimCode, decision: 'approve', guardianConfirmed: true }),
+    });
+    expect(self.status).toBe(400);
+    expect((app.db.db.prepare('SELECT status FROM users WHERE id = ?').get(body.user.id) as { status: string }).status).toBe('pending_parent_approval');
+  });
 });
 
 // De echte Worker-ingang moet ook zonder PILOT_MODE gesloten blijven in env.test.

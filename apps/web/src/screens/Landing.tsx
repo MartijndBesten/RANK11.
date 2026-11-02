@@ -1,14 +1,13 @@
 import { generateCatalog, type Player } from '@rank11/engine';
 import { PlayerCard } from '../components/PlayerCard';
-import { PORTRAITS } from '../portraits/registry';
 import iconUrl from '../assets/icon.svg';
 import './landing.css';
 
 const DEMO_URL = 'https://rank11-demo.martijndenbesten.com';
 
-// Een paar aansprekende voorbeeldkaarten voor het voorproefje (hoogste ratings, met portret).
-const preview: Player[] = generateCatalog({ photos: PORTRAITS })
-  .filter((p) => p.photo)
+// Een paar aansprekende voorbeeldkaarten voor het voorproefje (hoogst gerate echte spelers).
+const preview: Player[] = generateCatalog()
+  .filter((p) => p.real && p.id === p.baseId)
   .sort((a, b) => b.rating - a.rating)
   .slice(0, 5);
 
@@ -74,6 +73,7 @@ export function Landing({ onRegister, onLogin }: { onRegister: () => void; onLog
           <a href="/privacy">Privacyverklaring</a>
           <a href="/privacy">Contact &amp; vragen</a>
           <span className="landing-note">RANK11. · schoolcijfers blijven privé</span>
+          <span className="landing-note" style={{ flexBasis: '100%' }}>RANK11. is niet gelieerd aan spelers, clubs of bonden; ratings zijn eigen berekeningen.</span>
         </footer>
       </div>
     </div>

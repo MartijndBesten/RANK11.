@@ -99,6 +99,7 @@ ${decideScript('token', esc(token!), '/api/consent/revoke', true)}`);
 <li>Rechten: inzage, correctie en verwijdering; het account kan in de app worden verwijderd.</li>
 <li>Toestemming kan later worden ingetrokken via een beveiligde e-maillink.</li>
 <li>Niet-goedgekeurde accounts worden na een korte periode opgeruimd.</li></ul>
+<div class="note"><b>Spelerskaarten:</b> RANK11. is niet gelieerd aan spelers, clubs of bonden. Namen, clubs en nationaliteiten komen uit openbare bronnen; de ratings zijn eigen berekeningen (geen officiële of commerciële cijfers). Er worden geen spelersfoto's of clublogo's gebruikt — kaarten tonen een generiek silhouet in vlagkleuren.</div>
 <p class="muted">Vragen? Neem contact op met de beheerder.</p>`);
   }
   return null;

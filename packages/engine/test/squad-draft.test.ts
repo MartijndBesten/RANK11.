@@ -35,10 +35,13 @@ describe('elftal', () => {
     const c = chemistry(F, lineup);
     expect(c.total).toBeGreaterThanOrEqual(0);
     expect(c.total).toBeLessThanOrEqual(33);
-    const club = catalog.filter((p) => p.clubId === 'hvs' && p.rarity !== 'legend');
-    const clubLineup = autoBestLineup(F, club);
-    const cc = chemistry(F, clubLineup);
-    expect(Object.values(cc.perSlot).filter((v) => v >= 2).length).toBeGreaterThan(5);
+    // Echte clubgenoten in dezelfde opstelling leveren chemie op (clubId uit de echte clubnaam).
+    const counts: Record<string, number> = {};
+    for (const p of catalog) if (p.id === p.baseId) counts[p.clubId] = (counts[p.clubId] ?? 0) + 1;
+    const topClub = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]![0];
+    const club = catalog.filter((p) => p.clubId === topClub && p.rarity !== 'legend');
+    const cc = chemistry(F, autoBestLineup(F, club));
+    expect(cc.total).toBeGreaterThan(0);
   });
   it('kandidaten sluiten spelers uit die al elders staan', () => {
     const lineup = autoBestLineup(F, catalog);

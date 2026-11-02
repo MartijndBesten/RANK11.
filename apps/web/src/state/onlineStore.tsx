@@ -289,7 +289,9 @@ export function OnlineStoreProvider({ children, onLoggedOut }: { children: React
       setNotify: (changes: Partial<NotifySettings>) => updatePrefs((p) => ({ ...p, settings: { ...p.settings, notify: { ...p.settings.notify, ...changes } } })),
       setTipsOn: (on) => updateTips((t) => (t.on === on ? t : { ...t, on })),
       markTipSeen: (id) => updateTips((t) => (t.seen.includes(id) ? t : { ...t, seen: [...t.seen, id] })),
-      markNotified: (ids) => updatePrefs((p) => ({ ...p, notified: [...new Set([...p.notified, ...ids])] })),
+      // Alleen bijwerken als er echt nieuwe id's zijn: anders ontstaat via App een eindeloze render-lus
+      // (ronde 15-bugfix: "Maximum update depth exceeded" na herladen met een wachtende beloning).
+      markNotified: (ids) => updatePrefs((p) => (ids.every((id) => p.notified.includes(id)) ? p : { ...p, notified: [...new Set([...p.notified, ...ids])] })),
       reset: () => undefined,
       logout: async () => { await api('POST', '/auth/logout').catch(() => undefined); onLoggedOut(); },
     };

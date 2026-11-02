@@ -5,7 +5,7 @@ import './landing.css';
 
 // Een paar aansprekende voorbeeldkaarten voor het voorproefje (hoogst gerate echte spelers).
 const preview: Player[] = generateCatalog()
-  .filter((p) => p.real && p.id === p.baseId)
+  .filter((p) => p.real && p.id === p.baseId && p.inPacks !== false)
   .sort((a, b) => b.rating - a.rating)
   .slice(0, 5);
 
@@ -17,7 +17,7 @@ const STEPS: { title: string; text: string }[] = [
 ];
 
 /** Publieke startpagina: zichtbaar zonder inloggen. Een account is pas nodig om echt te spelen. */
-export function Landing({ onRegister, onLogin }: { onRegister: () => void; onLogin: () => void }) {
+export function Landing({ onRegister, onLogin, inviteOnly = true }: { onRegister: () => void; onLogin: () => void; inviteOnly?: boolean }) {
   return (
     <div className="landing">
       <div className="stadium" />
@@ -30,15 +30,17 @@ export function Landing({ onRegister, onLogin }: { onRegister: () => void; onLog
           <div className="landing-tag">Your grades. Your squad.</div>
           <p className="landing-lead">Haal cijfers, verdien spelerskaarten, bouw je eigen elftal en speel tegen vrienden. Jouw cijfers blijven privé.</p>
           <div className="landing-cta">
-            <button className="btn" onClick={onRegister}>Account maken</button>
-            <button className="btn ghost" onClick={onLogin}>Inloggen</button>
+            <button className="btn" onClick={onLogin}>Inloggen</button>
+            <button className="btn ghost" onClick={onRegister}>{inviteOnly ? 'Ik heb een uitnodiging' : 'Account maken'}</button>
           </div>
-          <p className="landing-note">Een account maken is gratis en duurt een minuut. Jouw cijfers blijven privé.</p>
+          <p className="landing-note">{inviteOnly
+            ? 'RANK11. is besloten: een account maken kan alleen met een uitnodiging. Jouw cijfers blijven privé.'
+            : 'Een account maken is gratis en duurt een minuut. Jouw cijfers blijven privé.'}</p>
         </header>
 
         <section className="landing-sec" aria-label="Voorbeeldkaarten">
           <div className="landing-cards">
-            {preview.map((p) => <PlayerCard key={p.id} player={p} size="md" />)}
+            {preview.map((p) => <PlayerCard key={p.id} player={p} size="md" noPhoto />)}
           </div>
         </section>
 

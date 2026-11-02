@@ -121,8 +121,8 @@ export async function register(ctx: Ctx): Promise<Response> {
 
   // Open registratie (zelfregistratie) heeft geen uitnodigingscode nodig; anders wel.
   const openReg = ctx.env.OPEN_REGISTRATION === 'true';
-  // Basis-misbruikrem alleen bij open registratie: beperk registraties per IP per uur.
-  if (openReg && await registrationThrottled(ctx.env, ctx.ip, ctx.now)) {
+  // Misbruikrem: beperk registratiepogingen per IP per uur — ook met uitnodigingscode (raden van codes).
+  if (await registrationThrottled(ctx.env, ctx.ip, ctx.now)) {
     throw new ApiError(429, 'rate_limited', 'Te veel registraties vanaf dit netwerk. Probeer het later opnieuw.');
   }
   const invite = openReg ? null : await findUsableInvite(ctx.env, typeof body.inviteCode === 'string' ? body.inviteCode : '', ctx.now);

@@ -1,3 +1,19 @@
+> **Ronde 15 (2-11-2026) — cijferladder `2026.11-ladder.1` + voortgang `2026.11-voortgang.4` (actueel):**
+>
+> | Cijfer | Beloning |
+> |---|---|
+> | < 5,5 | geen cijferpack; herstelkans (150 coins + XP). Groei onder de voldoende (bijv. 4,8 → 5,4, ≥ 0,5 hoger, 1× per vak per periode): Bronspack + 150 coins |
+> | 5,5–5,9 | Bronspack |
+> | 6,0–6,9 | Zilverpack |
+> | 7,0–7,4 | Verbeterd Zilverpack (laatste kaart minstens goud) |
+> | 7,5–7,9 | Goudpack |
+> | 8,0–8,9 | Goudpack + draft-voucher + extra coins |
+> | 9,0–10 | Goudpack + voucher + kies 1 uit 3 topspelers (basiskaart 82+) |
+>
+> Gelijkmaker: clubniveau omhoog en herstel na een onvoldoende geven een **Inzetpack** (2× goud 80+, 1× gegarandeerd 85+).
+> Limieten: 3 beloonde cijfers per dag, 8 per week, 14 per 28 dagen. Simulatie: [SIMULATIES.md](SIMULATIES.md).
+> De oude configuraties hieronder blijven gelden voor eerder toegekende beloningen (configVersion per toekenning).
+
 # RANK11. — Beloningseconomie
 
 **Stand:** 26-10-2026 · **Code:** `packages/engine/src/rewards.ts`, `economy.ts`, `starter.ts`, `packs.ts`, `draft.ts`, `market.ts`, `simulate.ts`; snel verkopen in `apps/web/src/state/store.tsx` · **Simulaties:** `docs/SIMULATIES.md` (`node --experimental-transform-types tools/sim/balans.ts`)

@@ -1,32 +1,32 @@
 {
  "eventId": "toetsweek1",
  "drafts": 10000,
- "catalogSize": 245,
- "photosOnly": true,
+ "catalogSize": 508,
+ "photosOnly": false,
  "groups": {
   "A": {
-   "observed": 0.0004109090909090909,
-   "draftWithOrBetter": 0.0226
+   "observed": 0.0004327272727272727,
+   "draftWithOrBetter": 0.0238
   },
   "B": {
-   "observed": 0.0031527272727272728,
-   "draftWithOrBetter": 0.1838
+   "observed": 0.0036981818181818183,
+   "draftWithOrBetter": 0.21
   },
   "C": {
-   "observed": 0.09032909090909091,
-   "draftWithOrBetter": 0.9948
+   "observed": 0.09269272727272727,
+   "draftWithOrBetter": 0.9974
   },
   "D": {
-   "observed": 0.3641563636363636,
+   "observed": 0.38883454545454543,
    "draftWithOrBetter": 1
   },
   "E": {
-   "observed": 0.541950909090909,
+   "observed": 0.5143418181818182,
    "draftWithOrBetter": 1
   }
  },
  "rating": {
-  "mean": 85.5656,
+  "mean": 85.5838,
   "p10": 84,
   "p50": 86,
   "p90": 87,

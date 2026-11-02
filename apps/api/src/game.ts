@@ -4,17 +4,18 @@
  * id-slots (p0001..), dus een kaartinstantie verwijst alleen naar `card_def_id` + catalogusversie en
  * bestaande collecties blijven geldig.
  */
-import { generateCatalog, starterSquad as engineStarterSquad, type BattleCard, type Player } from './engine.ts';
+import { CATALOG_SYNC_DATE, generateCatalog, starterSquad as engineStarterSquad, type BattleCard, type Player } from './engine.ts';
 
 export const CATALOG_SEED = 'rank11-catalog-v1';
-// Versie opgehoogd bij de overgang naar echte spelers (zelfde id-slots; collecties blijven geldig).
-export const CATALOG_VERSION = `${CATALOG_SEED}:real-2026-11`;
+// Versie opgehoogd bij iedere catalogus-sync. Kaart-id's zijn stabiel (catalog-lock): een bestaande
+// kaartinstantie verwijst altijd naar dezelfde speler (QID), ook na een sync. Zie tools/real-players/README.
+export const CATALOG_VERSION = `${CATALOG_SEED}:real-${CATALOG_SYNC_DATE}`;
 
 let catalog: Player[] | null = null;
 let byId: Map<string, Player> | null = null;
 
 export function getCatalog(): Player[] {
-  catalog ??= generateCatalog({ seed: CATALOG_SEED, size: 200 });
+  catalog ??= generateCatalog({ seed: CATALOG_SEED });
   return catalog;
 }
 

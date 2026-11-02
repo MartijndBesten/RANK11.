@@ -2,7 +2,8 @@
  * Publieke spelconfiguratie en feature flags. Flags komen uit de omgeving (wrangler.toml), zodat een
  * functie per omgeving aan of uit kan zonder codewijziging. Standaard staat de transfermarkt UIT (V-015).
  */
-import { CURRENT_PROGRESS_CONFIG, CURRENT_REWARD_CONFIG, DEFAULT_MOTIVATION_CONFIG } from '../engine.ts';
+import { CATALOG_SYNC_DATE, CURRENT_PROGRESS_CONFIG, CURRENT_REWARD_CONFIG, DEFAULT_MOTIVATION_CONFIG } from '../engine.ts';
+import { CATALOG_VERSION } from '../game.ts';
 import { intVar, type Env } from '../env.ts';
 import { ApiError, json, type Ctx } from '../http.ts';
 
@@ -28,6 +29,8 @@ export async function getConfig(ctx: Ctx): Promise<Response> {
     registrationEnabled: ctx.env.REGISTRATION_ENABLED === 'true',
     openRegistration: ctx.env.OPEN_REGISTRATION === 'true', // zelfregistratie zonder uitnodigingscode
     turnstileSiteKey: ctx.env.TURNSTILE_SITE_KEY ?? null,   // publieke captcha-sleutel (mag zichtbaar zijn)
+    playerPhotos: ctx.env.PLAYER_PHOTOS === 'true',          // Commons-portretten (standaard uit)
+    catalog: { version: CATALOG_VERSION, syncDate: CATALOG_SYNC_DATE },
     asyncDeadlineHours: asyncDeadlineHours(ctx.env),
     versions: { rewards: CURRENT_REWARD_CONFIG.version, progress: CURRENT_PROGRESS_CONFIG.version, motivation: DEFAULT_MOTIVATION_CONFIG.version },
   });

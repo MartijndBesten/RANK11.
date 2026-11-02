@@ -14,6 +14,7 @@ import { correctGrade, createGrade, deleteGrade, gradeHistory, importGrades, lis
 import { accept, challenge, decline, getMatch, getMatchEvents, listPoolMatches, matchSocket, move, resignMatch } from './modules/matches.ts';
 import { academyOverview, createSession, submitSession } from './modules/academy.ts';
 import { getConfig } from './modules/config.ts';
+import { getPortrait } from './modules/portraits.ts';
 import { getSettings, putSettings } from './modules/settings.ts';
 import { connectIntegration, disconnectIntegration, getIntegration, listIntegrations, syncIntegration } from './modules/integrations/routes.ts';
 import { adminDeleteUser, deleteAccount, exportAccount } from './modules/account.ts';
@@ -33,6 +34,7 @@ const req = { required: true };
 export const router = new Router()
   .add('GET', '/api/health', async () => new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } }))
   .add('GET', '/api/config', getConfig)
+  .add('GET', '/api/portrait/:qid', getPortrait)
   .add('GET', '/api/settings', getSettings)
   .add('PUT', '/api/settings', putSettings)
   // koppelingen (externe cijferbronnen)

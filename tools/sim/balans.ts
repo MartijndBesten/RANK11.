@@ -1,12 +1,12 @@
 // Balansrapport: node --experimental-transform-types tools/sim/balans.ts > docs/SIMULATIES.md
 // Draait dezelfde engine als het spel; deterministisch per seed.
 import { CURRENT_PROGRESS_CONFIG, CURRENT_REWARD_CONFIG, DEFAULT_MOTIVATION_CONFIG, DEFAULT_PROGRESS_CONFIG, DEFAULT_REWARD_CONFIG, DRAFT_EVENTS, FAIR_REWARD_CONFIG, generateCatalog, matchupWinRate, PACKS, simulateDrafts, simulateEconomy, simulatePacks, simulateSchoolYear, STUDENT_PROFILES, type SchoolYearRow } from '../../packages/engine/src/index.ts';
-import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { ladderMarkdown, runLadder } from './ladder.ts';
 
-const photoIds = readdirSync(new URL('../../apps/web/public/portraits/', import.meta.url)).filter((f) => f.endsWith('.webp')).map((f) => f.slice(0, -5));
-const photosOnly = photoIds.length >= 150;
-const photos = Object.fromEntries(photoIds.map((id) => [id, { src: '', kind: 'ai-fictional' as const, license: '', credit: '', aiGenerated: true }]));
-const catalog = generateCatalog({ photos, photosOnly });
+// Ronde 15: de catalogus is de echte-spelerscatalogus (geen portretfilter meer).
+const photosOnly = false;
+const catalog = generateCatalog();
 const p = (x: number) => `${(x * 100).toFixed(x < 0.01 ? 2 : 1).replace('.', ',')}%`;
 const n = (x: number, d = 1) => x.toFixed(d).replace('.', ',');
 const out: string[] = [];
@@ -37,6 +37,11 @@ for (const id of Object.keys(PACKS)) {
   out.push('');
 }
 
+// Ronde 15: cijferladder (7,5 = goud) over 40 schoolweken, profielen 5,5–8,0 + varianten.
+const ladder = runLadder();
+out.push('## Cijferladder (ronde 15) — 40 schoolweken', '', 'Gemiddelden 5,5 / 6,0 / 6,5 / 7,0 / 7,5 / 8,0 (actief: doelen + 1× per week oefenen), plus varianten. 6 seeds; winkans = 240 wedstrijden tegen de eindelftallen van alle actieve profielen, zonder en met "vorm van de dag" (0..3, zoals live). 50% = gemiddeld, meetruis ±5 procentpunt.', '');
+out.push(ladderMarkdown(ladder), '');
+out.push('Lezen: elke trede geeft merkbaar meer (goud stijgt van ~12 bij een 5,5 naar ~68 bij een 8,0), maar de teamsterkte blijft dicht bij elkaar doordat clubniveau en herstel een **Inzetpack** (gegarandeerde 85+) geven. Een 5,5-leerling die oefent of groeit komt op ongeveer gemiddeld niveau; extreem veel invoeren wordt begrensd door het rollende limiet van 14 beloonde cijfers per 28 dagen.', '');
 out.push('## Kaarteconomie per week (beloningsconfiguratie)', '');
 out.push('| Profiel | XP | Coins | Vouchers | Spelerskeuzes | Packs | Geweigerd door limiet |', '|---|---:|---:|---:|---:|---:|---:|');
 for (const [label, mean, sd, gpw] of [['Gemiddeld 6,8 · 3 cijfers/week', 6.8, 1.2, 3], ['Sterk 8,0 · 3 cijfers/week', 8.0, 0.9, 3], ['Moeite 5,6 · 3 cijfers/week', 5.6, 1.1, 3], ['Toetsweek 7,0 · 8 cijfers/week', 7.0, 1.2, 8]] as const) {
@@ -75,7 +80,7 @@ out.push('', '## Conclusies', '',
   '2. **Garanties werken**: de langste reeks zonder Groep B of beter blijft onder de garantiegrens.',
   '3. **Packkansen kloppen** met de getoonde kansentabel (verschillen binnen de meetruis).',
   '4. **Battles zijn gevoelig voor kleine verschillen**: 1-2 punten teamrating geeft al een duidelijk lagere winkans. Daarom moet de economie actieve leerlingen dicht bij elkaar houden; packgeluk alleen zorgt al voor zo\'n verschil.',
-  '5. **Economie v3**: Goudpacks komen vooral uit het clubniveau (alle XP: inzet, vooruitgang, oefenen). Omdat ieder niveau duurder wordt, lopen leerlingen niet ver uit elkaar. Een voldoende geeft een Starterspack, een 8,5+ een voucher, een 9,5+ een Goudpack: bijzonder, maar geen voorwaarde.',
-  '6. **Geen eindeloze stroom**: ongeveer een Goudpack per twee à drie weken in plaats van twee à drie per week (v2). Het elftal groeit het hele jaar door.',
+  '5. **Cijferladder (ronde 15)**: 5,5 brons · 6,0 zilver · 7,0 zilver+ · 7,5 goud · 8,0 goud + voucher · 9,0 goud + voucher + spelerskeuze. Elke trede geeft merkbaar meer; een 8 is geen voorwaarde voor topkaarten.',
+  '6. **Gelijkmaker**: clubniveau en herstel na een onvoldoende geven een Inzetpack met gegarandeerde 85+. Daardoor blijven actieve 5,5–7,5-profielen ≥ 35% winkans tegen het veld houden en ligt de teamsterkte binnen ±1 punt.',
   '7. **Wie alleen cijfers invoert**, krijgt minder dan wie doelen stelt of oefent; dat is bedoeld (inzet telt), maar het verschil tussen hoge en lage cijfers blijft binnen die groep klein.');
 console.log(out.join('\n'));

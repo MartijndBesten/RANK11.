@@ -2,7 +2,7 @@
  * Packs: transparante kansen per kaartplek, deterministisch te reproduceren met een seed.
  * Geen betaalde packs: packs komen alleen uit cijferbeloningen, events en coins die in het spel zijn verdiend.
  */
-import { compareCardValue, RARITY_RANK, type Player, type Rarity } from './catalog.ts';
+import { compareCardValue, isPackable, RARITY_RANK, type Player, type Rarity } from './catalog.ts';
 import type { Rng } from './rng.ts';
 
 export interface OddsBucket {
@@ -20,7 +20,7 @@ export interface PackSlot {
   buckets: OddsBucket[];
 }
 
-export type PackTheme = 'bronze' | 'silver' | 'gold' | 'rare' | 'exam' | 'legend';
+export type PackTheme = 'bronze' | 'silver' | 'silverplus' | 'gold' | 'rare' | 'exam' | 'legend';
 
 export interface PackDef {
   id: string;
@@ -32,26 +32,28 @@ export interface PackDef {
   coinPrice?: number;
 }
 
+// Ronde 15: 85+ en edities iets zeldzamer in de gewone plekken; de inzet-route (Inzetpack) garandeert 85+.
 const GOLD_BASE: OddsBucket[] = [
-  { id: 'g75', label: 'Goud 75-79', weight: 68, rarities: ['gold'], minRating: 75, maxRating: 79 },
+  { id: 'g75', label: 'Goud 75-79', weight: 72, rarities: ['gold'], minRating: 75, maxRating: 79 },
   { id: 'g80', label: 'Goud 80-84', weight: 24, rarities: ['gold', 'rare_gold'], minRating: 80, maxRating: 84 },
-  { id: 'g85', label: 'Goud 85+', weight: 7, rarities: ['gold', 'rare_gold'], minRating: 85 },
-  { id: 'spc', label: 'Speciale kaart', weight: 1, rarities: ['special', 'season', 'exam'] },
+  { id: 'g85', label: 'Goud 85+', weight: 3.5, rarities: ['gold', 'rare_gold'], minRating: 85 },
+  { id: 'spc', label: 'Speciale kaart', weight: 0.5, rarities: ['special', 'season', 'exam'] },
 ];
 
 export const PACKS: Record<string, PackDef> = {
   starter: {
     id: 'starter',
-    name: 'Starterspack',
-    tagline: '3 spelers · brons en zilver',
+    name: 'Bronspack',
+    tagline: '3 spelers · brons en zilver, kans op goud',
     theme: 'bronze',
     coinPrice: 750,
     slots: Array.from({ length: 3 }, (_, i): PackSlot => ({
       label: `Kaart ${i + 1}`,
       buckets: [
-        { id: 'b', label: 'Brons', weight: 60, rarities: ['bronze'] },
-        { id: 's', label: 'Zilver', weight: 36, rarities: ['silver'] },
-        { id: 'g', label: 'Goud', weight: 4, rarities: ['gold'] },
+        // Ronde 15: echte catalogus heeft weinig bronzen spelers; minder brons voorkomt eindeloze dubbelen.
+        { id: 'b', label: 'Brons', weight: 35, rarities: ['bronze'] },
+        { id: 's', label: 'Zilver', weight: 59, rarities: ['silver'] },
+        { id: 'g', label: 'Goud', weight: 6, rarities: ['gold'] },
       ],
     })),
   },
@@ -70,6 +72,30 @@ export const PACKS: Record<string, PackDef> = {
       ],
     })),
   },
+  silver_plus: {
+    id: 'silver_plus',
+    name: 'Verbeterd Zilverpack',
+    tagline: '3 spelers · zilver+ · grote kans op goud, laatste kaart minstens goud',
+    theme: 'silverplus',
+    coinPrice: 2600,
+    slots: [
+      ...Array.from({ length: 2 }, (_, i): PackSlot => ({
+        label: `Kaart ${i + 1}`,
+        buckets: [
+          { id: 's', label: 'Zilver', weight: 52, rarities: ['silver'] },
+          { id: 'g', label: 'Goud', weight: 40, rarities: ['gold'] },
+          { id: 'gh', label: 'Goud 82+', weight: 8, rarities: ['gold', 'rare_gold'], minRating: 82 },
+        ],
+      })),
+      {
+        label: 'Topkaart',
+        buckets: [
+          { id: 'g', label: 'Goud', weight: 84, rarities: ['gold'] },
+          { id: 'gh', label: 'Goud 82+', weight: 16, rarities: ['gold', 'rare_gold'], minRating: 82 },
+        ],
+      },
+    ],
+  },
   gold: {
     id: 'gold',
     name: 'Goudpack',
@@ -81,9 +107,28 @@ export const PACKS: Record<string, PackDef> = {
       {
         label: 'Topkaart',
         buckets: [
-          { id: 'g80', label: 'Goud 80-84', weight: 78, rarities: ['gold', 'rare_gold'], minRating: 80, maxRating: 84 },
-          { id: 'g85', label: 'Goud 85+', weight: 19, rarities: ['gold', 'rare_gold'], minRating: 85 },
-          { id: 'spc', label: 'Speciale kaart', weight: 3, rarities: ['special', 'season', 'exam'] },
+          { id: 'g80', label: 'Goud 80-84', weight: 88, rarities: ['gold', 'rare_gold'], minRating: 80, maxRating: 84 },
+          { id: 'g85', label: 'Goud 85+', weight: 10, rarities: ['gold', 'rare_gold'], minRating: 85 },
+          { id: 'spc', label: 'Speciale kaart', weight: 2, rarities: ['special', 'season', 'exam'] },
+        ],
+      },
+    ],
+  },
+  effort: {
+    id: 'effort',
+    name: 'Inzetpack',
+    tagline: '3 spelers · voor inzet, oefenen en herstel · 1× 85+ gegarandeerd',
+    theme: 'rare',
+    slots: [
+      ...Array.from({ length: 2 }, (_, i): PackSlot => ({
+        label: `Kaart ${i + 1}`,
+        buckets: [{ id: 'g80', label: 'Goud 80-84', weight: 1, rarities: ['gold', 'rare_gold'], minRating: 80, maxRating: 84 }],
+      })),
+      {
+        label: 'Topspeler',
+        buckets: [
+          { id: 'g85', label: 'Goud 85+', weight: 92, rarities: ['gold', 'rare_gold'], minRating: 85 },
+          { id: 'spc', label: 'Speciale kaart', weight: 8, rarities: ['special', 'season', 'exam'] },
         ],
       },
     ],
@@ -134,7 +179,7 @@ export const PACKS: Record<string, PackDef> = {
 export function bucketCandidates(bucket: OddsBucket, catalog: readonly Player[]): Player[] {
   return catalog.filter(
     (p) =>
-      !p.temporary &&
+      isPackable(p) &&
       bucket.rarities.includes(p.rarity) &&
       (bucket.minRating === undefined || p.rating >= bucket.minRating) &&
       (bucket.maxRating === undefined || p.rating <= bucket.maxRating),

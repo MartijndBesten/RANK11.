@@ -40,6 +40,12 @@ export interface ProgressRewardConfig {
   improvement: { minDelta: number; minGradesInPeriod: number; packId: string; vouchers: number; coins: number };
   /** Voldoende na een onvoldoende, minstens `minJump` hoger (één keer per vak per periode). */
   recovery: { minJump: number; packId: string; vouchers: number; coins: number };
+  /**
+   * Groei onder de voldoende (sinds `ladder.1`): een onvoldoende die minstens `minJump` hoger is dan de
+   * vorige onvoldoende in hetzelfde vak (bijv. 4,8 → 5,4). Eén keer per vak per periode. Positief gewaardeerd,
+   * zonder te doen alsof het cijfer voldoende is: geen cijferpack, wel een kleine groeibeloning.
+   */
+  growth?: { minJump: number; packId?: string; coins: number };
   /** Persoonlijk topcijfer: minstens `minAboveAverage` boven je eigen vakgemiddelde van daarvoor (één keer per vak per periode). */
   personalBest: { minAboveAverage: number; minPriorGrades: number; vouchers: number; coins: number };
   /** Academy-mijlpalen op basis van totale Academy-XP. */
@@ -63,7 +69,7 @@ export const DEFAULT_PROGRESS_CONFIG: ProgressRewardConfig = {
   maxVouchersPerWeek: 2,
 };
 
-export type ProgressKind = 'goal' | 'improvement' | 'recovery' | 'personalBest' | 'academy' | 'level';
+export type ProgressKind = 'goal' | 'improvement' | 'recovery' | 'growth' | 'personalBest' | 'academy' | 'level';
 
 export interface ProgressGrant {
   /** Idempotente sleutel: een sleutel wordt nooit twee keer toegekend. */
@@ -147,6 +153,18 @@ export function progressRewards(config: ProgressRewardConfig, input: ProgressInp
         if (prev.value < DUTCH_SCALE.pass && cur.value >= DUTCH_SCALE.pass && cur.value - prev.value >= config.recovery.minJump) {
           add({ ...base, key: `pr-herstel:${period.id}:${s}`, kind: 'recovery', label: `Herstel: van ${fmt(prev.value)} naar ${fmt(cur.value)}`, packId: config.recovery.packId, vouchers: config.recovery.vouchers, coins: config.recovery.coins, subjectId: s });
           break;
+        }
+      }
+      // 5. Groei onder de voldoende: hogere onvoldoende na een onvoldoende (4,8 → 5,4). Geen voldoende-claim.
+      if (config.growth) {
+        for (let i = 1; i < chron.length; i++) {
+          const cur = chron[i] as Grade;
+          const prev = chron[i - 1] as Grade;
+          if (cur.date < period.start || cur.date > period.end) continue;
+          if (prev.value < DUTCH_SCALE.pass && cur.value < DUTCH_SCALE.pass && cur.value - prev.value >= config.growth.minJump - 1e-9) {
+            add({ ...base, key: `pr-groei:${period.id}:${s}`, kind: 'growth', label: `Groei: van ${fmt(prev.value)} naar ${fmt(cur.value)} — op weg naar een voldoende`, packId: config.growth.packId, vouchers: 0, coins: config.growth.coins, subjectId: s });
+            break;
+          }
         }
       }
     }
@@ -238,6 +256,54 @@ export const ACHIEVABLE_PROGRESS_CONFIG: ProgressRewardConfig = {
   level: { packId: 'gold', coins: 0 },
 };
 
+/* ———————————— Cijferladder v5 (ronde 15): elke stap tussen 5,5 en 7,5 voelbaar, 7,5 = goud ———————————— */
+
+/**
+ * Ontwerpregel: kinderen tussen 5,5 en 7,5 moeten vooruitgang en beloningen ervaren; een 8 is uitzonderlijk
+ * en is GEEN voorwaarde voor aantrekkelijke kaarten.
+ *
+ * | Cijfer    | Beloning                                                        |
+ * |-----------|-----------------------------------------------------------------|
+ * | < 5,5     | geen cijferpack; herstelkans (coins/XP) + groei-/herstelbeloning |
+ * | 5,5–5,9   | Bronspack                                                       |
+ * | 6,0–6,9   | Zilverpack                                                      |
+ * | 7,0–7,4   | Verbeterd Zilverpack (grotere kans op goud)                     |
+ * | 7,5–7,9   | Goudpack                                                        |
+ * | 8,0–8,9   | Goudpack + extra bonus (draft-voucher + coins)                  |
+ * | 9,0–10    | Goudpack + bijzondere bonus (voucher + kies 1 uit 3 topspelers) |
+ *
+ * Economie-bewaking (zie docs/SIMULATIES.md, 40 schoolweken): clubniveau en herstel geven een Inzetpack
+ * (gegarandeerde 85+), de Goudpack heeft minder 85+ in de gewone plekken en een 9+-keuze is altijd een
+ * basiskaart (geen editie). Limieten: 3 beloonde cijfers per dag, 8 per week (toetsweek) en 14 per 28 dagen
+ * (geen week-in-week-uit beloning voor extreem veel invoeren). Het cijfer telt altijd mee in je gemiddelde.
+ */
+export const LADDER_REWARD_CONFIG: RewardConfig = {
+  ...DEFAULT_REWARD_CONFIG,
+  version: '2026.11-ladder.1',
+  tiers: [
+    { id: 'support', label: 'Herstelkans', minGrade: 1, tone: 'support', xp: 15, coins: 150 },
+    { id: 'bronze', label: 'Brons', minGrade: 5.5, tone: 'pass', xp: 50, coins: 200, packId: 'starter' },
+    { id: 'silver', label: 'Zilver', minGrade: 6, tone: 'good', xp: 75, coins: 225, packId: 'silver' },
+    { id: 'silver_plus', label: 'Zilver+', minGrade: 7, tone: 'good', xp: 100, coins: 250, packId: 'silver_plus' },
+    { id: 'gold', label: 'Goud', minGrade: 7.5, tone: 'great', xp: 140, coins: 300, packId: 'gold' },
+    { id: 'gold_bonus', label: 'Goud + bonus', minGrade: 8, tone: 'elite', xp: 180, coins: 400, packId: 'gold', vouchers: 1 },
+    { id: 'gold_special', label: 'Goud + topbonus', minGrade: 9, tone: 'legendary', xp: 240, coins: 450, packId: 'gold', vouchers: 1, pick: { options: 3, minRating: 82 } },
+  ],
+  limits: { ...DEFAULT_REWARD_CONFIG.limits, maxRewardedPerDay: 3, maxRewardedPerWeek: 8, maxRewardedPer28Days: 14 },
+};
+
+export const LADDER_PROGRESS_CONFIG: ProgressRewardConfig = {
+  ...ACHIEVABLE_PROGRESS_CONFIG,
+  version: '2026.11-voortgang.4',
+  // 4,8 → 5,4: positief, maar geen cijferpack. Klein Bronspack + coins, één keer per vak per periode.
+  growth: { minJump: 0.5, packId: 'starter', coins: 150 },
+  // Inzet-route = de gelijkmaker: clubniveau (alle XP: cijfers invoeren, doelen, oefenen) en herstel na een
+  // onvoldoende geven een Inzetpack met een gegarandeerde 85+-speler. Zo bereikt iedere actieve leerling
+  // de top van de catalogus; hoge cijfers geven vooral eerder en vaker goud (zie docs/SIMULATIES.md).
+  recovery: { minJump: 1.0, packId: 'effort', vouchers: 0, coins: 300 },
+  level: { packId: 'effort', coins: 150 },
+};
+
 /** De economie die app en server nu gebruiken. Wisselen gebeurt alleen hier; oude toekenningen houden hun versie. */
-export const CURRENT_REWARD_CONFIG = ACHIEVABLE_REWARD_CONFIG;
-export const CURRENT_PROGRESS_CONFIG = ACHIEVABLE_PROGRESS_CONFIG;
+export const CURRENT_REWARD_CONFIG = LADDER_REWARD_CONFIG;
+export const CURRENT_PROGRESS_CONFIG = LADDER_PROGRESS_CONFIG;

@@ -12,7 +12,7 @@ import { progressStatements, progressView } from '../progress.ts';
 import { auditStmt, isConstraintError, many, one, stmt } from '../db.ts';
 import {
   categoryTotals, clubLevel, computeReward, createRng, correctionXp, DEFAULT_MOTIVATION_CONFIG, deletionXp, CURRENT_REWARD_CONFIG, gradeKey,
-  GradeValidationError, gradeXp, overallAverage, sortedTiers, subjectAverages, validateGrade, weightedAverage,
+  GradeValidationError, gradeXp, overallAverage, pickPool, sortedTiers, subjectAverages, validateGrade, weightedAverage,
   type Grade, type MotivationConfig, type RewardConfig, type RewardResult, type XpEntry,
 } from '../engine.ts';
 import { ApiError, badRequest, conflict, json, notFound, readJson, type Ctx } from '../http.ts';
@@ -199,10 +199,10 @@ export async function insertGrade(ctx: Ctx, userId: string, input: GradeInput, o
   };
   const existing = await activeGrades(db, userId);
   const subject = existing.filter((g) => g.subject_id === input.subjectId).map(toEngine);
-  const counts = await one<{ today: number; week: number }>(db,
-    `SELECT SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) AS today, COUNT(*) AS week
+  const counts = await one<{ today: number; week: number; d28: number }>(db,
+    `SELECT SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) AS today, SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) AS week, COUNT(*) AS d28
      FROM reward_grants WHERE user_id = ? AND kind = 'initial' AND status IN ('rewarded', 'support') AND created_at >= ?`,
-    startOfUtcDay(ctx.now), userId, startOfUtcWeek(ctx.now));
+    startOfUtcDay(ctx.now), startOfUtcWeek(ctx.now), userId, Math.min(startOfUtcWeek(ctx.now), ctx.now - 28 * 864e5));
   const previous = await effectivePrevious(db, userId, key, null);
   const result = computeReward(REWARD_CONFIG, {
     grade: toEngine(row),
@@ -210,6 +210,7 @@ export async function insertGrade(ctx: Ctx, userId: string, input: GradeInput, o
     subjectAvgAfter: weightedAverage([...subject, toEngine(row)]),
     rewardedToday: Number(counts?.today ?? 0),
     rewardedThisWeek: Number(counts?.week ?? 0),
+    rewardedLast28Days: Number(counts?.d28 ?? 0),
     previous,
   });
   const goals = await activeGoals(db, userId);
@@ -222,7 +223,7 @@ export async function insertGrade(ctx: Ctx, userId: string, input: GradeInput, o
   }, { kind: 'grade', id }, ctx.now);
   const rewarded: RewardResult & { pickOptions?: string[] } = { ...result, xp: xpEntries.reduce((sum, e) => sum + e.xp, 0) };
   if (rewarded.pick) {
-    const pool = getCatalog().filter((p) => !p.temporary && p.rating >= rewarded.pick!.minRating);
+    const pool = pickPool(getCatalog(), rewarded.pick!.minRating);
     rewarded.pickOptions = createRng(randomSeed()).shuffle(pool).slice(0, rewarded.pick.options).map((p) => p.id);
   }
   const reward = rewardStatements(db, userId, id, rewarded, previous, ctx.now);

@@ -22,6 +22,8 @@ export interface Env {
   /** Feature flags: 'true'/'false'. Transfermarkt staat standaard uit (V-015). */
   FEATURE_MARKET?: string;
   FEATURE_ACADEMY?: string;
+  /** 'true' = Commons-portretten tonen (standaard uit; zie docs/BEELDRECHTEN.md). */
+  PLAYER_PHOTOS?: string;
   /** Deadline in uren voor asynchrone wedstrijden (per zet en voor accepteren); standaard 48 (V-014). */
   ASYNC_DEADLINE_HOURS?: string;
   /** Secret voor het versleutelen van koppelingstokens (AES-GCM). Dev gebruikt een niet-geheime placeholder. */

@@ -22,3 +22,5 @@ export * from './competition/index.ts';
 export * from './periods.ts';
 export * from './sell.ts';
 export * from './import.ts';
+export * from './catalog-lock.generated.ts';
+export * from './real-players.generated.ts';

@@ -13,7 +13,8 @@ import './reveal.css';
 import { Help } from '../components/Help';
 
 type Tone = 'elite' | 'good' | 'pass' | 'support';
-const toneFor = (v: number): Tone => (v >= 8.5 ? 'elite' : v >= 6.5 ? 'good' : v >= 5.5 ? 'pass' : 'support');
+// Ronde 15: de onthulling volgt de cijferladder — 7,5 voelt als goud, 6,0 als zilver, 5,5 als brons.
+const toneFor = (v: number): Tone => (v >= 7.5 ? 'elite' : v >= 6 ? 'good' : v >= 5.5 ? 'pass' : 'support');
 
 const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
 

@@ -142,6 +142,7 @@ export function createApp(overrides: Partial<Env> = {}): TestApp {
     ALLOWED_ORIGINS: 'https://app.rank11.test',
     PBKDF2_ITERATIONS: '1000', // snel in tests; standaard (productie) 100.000
     INTEGRATION_KEY: 'test-integratie-sleutel',
+    REG_MAX_PER_IP: '1000', // tests registreren veel accounts vanaf één IP; de limiet zelf heeft een eigen test
     ...overrides,
   };
   dos.env = env;

@@ -11,9 +11,10 @@ describe('economie v3 op de server', () => {
     // Een 9 = 110 XP; na de derde (330 XP) is niveau 2 (250 XP) bereikt.
     for (let i = 1; i <= 3; i++) await app.api('POST', '/api/grades', { token: u.token, idem: idem(), body: grade(i) });
     const rows = app.db.db.prepare(`SELECT key, kind, pack_id FROM progress_grants WHERE user_id = ? AND kind = 'level'`).all(u.id);
-    expect(rows).toEqual([{ key: 'pr-niveau:2', kind: 'level', pack_id: 'gold' }]);
+    // Cijferladder (ronde 15): clubniveau geeft een Inzetpack (gegarandeerde 85+).
+    expect(rows).toEqual([{ key: 'pr-niveau:2', kind: 'level', pack_id: 'effort' }]);
     const packs = await app.api('GET', '/api/packs', { token: u.token });
-    expect(packs.body.unopened.filter((p: { packId: string; source: string }) => p.packId === 'gold' && p.source === 'progress')).toHaveLength(1);
+    expect(packs.body.unopened.filter((p: { packId: string; source: string }) => p.packId === 'effort' && p.source === 'progress')).toHaveLength(1);
     const vault = await app.api('GET', '/api/vault', { token: u.token });
     expect(vault.body.items.flatMap((x: { progress: { kind: string }[] }) => x.progress).filter((p: { kind: string }) => p.kind === 'level')).toHaveLength(1);
     // Nog een cijfer: geen tweede niveaubeloning voor hetzelfde niveau.
@@ -23,7 +24,7 @@ describe('economie v3 op de server', () => {
 
   it('/api/config meldt de actuele economieversies', async () => {
     const res = await createApp().api('GET', '/api/config');
-    expect(res.body.versions).toMatchObject({ rewards: '2026.11-haalbaar.2', progress: '2026.11-voortgang.3', motivation: '2026.10-motivatie.4' });
+    expect(res.body.versions).toMatchObject({ rewards: '2026.11-ladder.1', progress: '2026.11-voortgang.4', motivation: '2026.10-motivatie.4' });
   });
 });
 

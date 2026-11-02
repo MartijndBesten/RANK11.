@@ -1,4 +1,9 @@
 /**
+ * RONDE 15: LEEG. De catalogus bestaat uit echte spelers; AI-portretten van fictieve personen worden nooit
+ * meer aan een echte speler gekoppeld (manifest.json = []). Echte spelers tonen het RANK11-shirtportret of,
+ * als beheer dat aanzet, een gelicentieerde Commons-foto via `player.commons` (zie lib/features.ts).
+ * De bestanden in public/portraits/ zijn niet meer in gebruik en kunnen worden verwijderd.
+ *
  * Portretregister: koppelt een speler (baseId) aan een fotoportret.
  * Vervangen door gelicentieerde foto's = alleen dit register (of de serverbron) aanpassen;
  * kaarten, packs en draft lezen uitsluitend `player.photo`.

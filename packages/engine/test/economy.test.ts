@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ACHIEVABLE_PROGRESS_CONFIG, ACHIEVABLE_REWARD_CONFIG, DEFAULT_PROGRESS_CONFIG as P, DEFAULT_REWARD_CONFIG, FAIR_REWARD_CONFIG, computeReward, matchupWinRate,
-  progressRewards, simulateSchoolYear, STUDENT_PROFILES,
+  progressRewards, simulateSchoolYear, STUDENT_PROFILES, LADDER_PROFILES,
   type Goal, type Grade, type Period, type ProgressGrant, type XpEntry,
 } from '../src/index.ts';
 
@@ -111,41 +111,38 @@ describe('economie v3: positief en haalbaar', () => {
   });
 });
 
-describe('schooljaar-simulatie (economie v3)', () => {
-  const rows = simulateSchoolYear(STUDENT_PROFILES, { seeds: ['t1', 't2', 't3', 't4'] });
+describe('schooljaar-simulatie (cijferladder ronde 15, 40 weken)', () => {
+  const rows = simulateSchoolYear(LADDER_PROFILES, { seeds: ['t1', 't2', 't3', 't4', 't5', 't6'] });
   const motivated = rows.filter((r) => r.motivated);
-  const field = rows.flatMap((r) => r.teams);
+  const field = motivated.flatMap((r) => r.teams);
   const byId = (id: string) => rows.find((r) => r.profileId === id)!;
+  const win = (id: string) => matchupWinRate(byId(id).teams, field, 240, `t:${id}`, 3);
 
-  it('goud is bereikbaar maar geen stortvloed voor de kern-doelgroep; het elftal groeit het hele jaar', () => {
-    // "Goud mag bij 8" (ronde 14): wie structureel 8+ scoort verdient meer goud; dat is bewust en wordt
-    // begrensd doordat de teamsterkte verzadigt (zie de volgende test: spreiding blijft klein). Voor de
-    // kern-doelgroep (gemiddeld t/m een 7,0) is goud bereikbaar via cijfers, inzet en herstel, maar het
-    // blijft bijzonder: geen eindeloze stroom.
-    const core = rows.filter((r) => r.motivated && r.gradeAverage <= 7.0);
-    for (const r of core) {
-      expect(r.topPacks).toBeGreaterThanOrEqual(10); // goud is echt bereikbaar in 5,5–7,0
-      expect(r.topPacks).toBeLessThanOrEqual(50); // maar geen stortvloed
-    }
-    for (const r of motivated) expect(r.ratingByWeek[40]!).toBeGreaterThan(r.ratingByWeek[10]!);
-    // Nog altijd veel rustiger dan de oude, extreme configuratie waarin elke 6,5+ al goud gaf.
-    const old = simulateSchoolYear(STUDENT_PROFILES.filter((p) => p.id === 'gemiddeld'), { seeds: ['t1'], rewards: FAIR_REWARD_CONFIG, progress: P });
-    expect(byId('gemiddeld').topPacks).toBeLessThan(old[0]!.topPacks / 2);
+  it('elke stap op de ladder is merkbaar: meer goud bij een hoger gemiddelde', () => {
+    const gold = ['g55', 'g60', 'g65', 'g70', 'g75', 'g80'].map((id) => byId(id).packs.gold ?? 0);
+    for (let i = 1; i < gold.length; i++) expect(gold[i]!).toBeGreaterThan(gold[i - 1]!);
+    expect(byId('g75').packs.gold ?? 0).toBeGreaterThanOrEqual(35); // een 7,5 is goud waard
+    for (const r of motivated) expect(r.ratingByWeek[40]!).toBeGreaterThan(r.ratingByWeek[10]!); // het elftal groeit
   });
 
-  it('cijfers tussen 5,5 en 7,5 geven een competitief elftal: elk actief profiel ≥ 35% winkans tegen het veld', () => {
-    for (const r of motivated) expect(matchupWinRate(r.teams, field, 120, `t:${r.profileId}`)).toBeGreaterThanOrEqual(0.35);
+  it('5,5–7,5 blijft competitief: elk actief profiel ≥ 35% winkans tegen het veld; kleine spreiding in teamsterkte', () => {
+    for (const r of motivated.filter((x) => x.gradeAverage <= 7.6)) expect(win(r.profileId), r.profileId).toBeGreaterThanOrEqual(0.35);
     const t = motivated.map((r) => r.teamRating);
-    expect(Math.max(...t) - Math.min(...t)).toBeLessThanOrEqual(3);
+    expect(Math.max(...t) - Math.min(...t)).toBeLessThanOrEqual(2);
   });
 
-  it('hoge cijfers blijven extra bijzonder (meer vouchers), maar zonder grote voorsprong in teamsterkte', () => {
-    expect(byId('sterk').vouchers).toBeGreaterThan(byId('gemiddeld').vouchers);
-    expect(byId('sterk').teamRating - byId('netvoldoende').teamRating).toBeLessThanOrEqual(3);
+  it('inzet telt: oefenen en doelen stellen helpt, ook bij lage cijfers', () => {
+    expect(byId('oef55').teamRating).toBeGreaterThanOrEqual(byId('g55').teamRating - 0.25);
+    expect(byId('g65').topPacks).toBeGreaterThan(byId('inv65').topPacks);
+    expect(byId('groei').packs.effort ?? 0).toBeGreaterThan(byId('g80').packs.effort ?? 0);
   });
 
-  it('inzet telt: wie doelen stelt en oefent, staat er beter voor dan wie alleen invoert', () => {
-    expect(byId('gemiddeld').topPacks).toBeGreaterThan(byId('invoer-midden').topPacks);
+  it('extreem veel invoeren levert begrensd voordeel op (rollend 28-dagen-limiet)', () => {
+    const spam = byId('spam');
+    const normal = byId('g70');
+    const rewardedGrades = (r: typeof spam) => (r.packs.starter ?? 0) + (r.packs.silver ?? 0) + (r.packs.silver_plus ?? 0) + (r.packs.gold ?? 0);
+    expect(rewardedGrades(spam)).toBeLessThanOrEqual(320 / 2); // 8 cijfers/week ingevoerd, hooguit de helft levert een pack op
+    expect(spam.teamRating - normal.teamRating).toBeLessThanOrEqual(1.5);
   });
 
   it('de oude economie was wel extreem (ter vergelijking)', () => {

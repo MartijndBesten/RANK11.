@@ -362,11 +362,14 @@ button.pc-wrap:active .pc { scale: 0.97; }
 /* ——— Ronde 15: echte spelers — RANK11-shirtportret, eigen clubaanduiding, rugnummer ——— */
 .pc-kit { position: absolute; right: -2cqw; top: -3cqw; width: 80cqw; height: auto; aspect-ratio: 200 / 290; }
 .pc-commons {
-  /* Commons-foto (alleen als beheer dat aanzet): uitsnede op het hoofd, nooit vervormd. */
-  top: 0; left: auto; right: 0; transform: none; width: 78cqw; height: 92cqw; object-fit: cover; object-position: 50% 18%;
-  -webkit-mask-image: linear-gradient(180deg, #000 70%, transparent 98%); mask-image: linear-gradient(180deg, #000 70%, transparent 98%);
+  /* Commons-foto (alleen als beheer dat aanzet): vult de hele kaart recht (full-bleed), uitsnede op het
+     hoofd, nooit vervormd. Geen rechts-verankering meer (gaf een scheve halve foto). */
+  top: 0; left: 0; right: 0; bottom: 0; transform: none; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%;
+  -webkit-mask-image: linear-gradient(180deg, #000 78%, transparent 99%); mask-image: linear-gradient(180deg, #000 78%, transparent 99%);
   filter: drop-shadow(0 0 1.2cqw rgba(0, 0, 0, 0.35)) saturate(1.05);
 }
+/* Kleine kaarten: ook de Commons-foto full-bleed houden (overschrijft de .pc-photo-regel voor sm/xs). */
+.size-sm .pc-commons, .size-xs .pc-commons { top: 0; left: 0; width: 100%; height: 100%; transform: none; }
 .pc-badge { width: 13cqw; margin-top: 2cqw; }
 .pc-club { display: flex; justify-content: center; align-items: baseline; gap: 1.6cqw; }
 .pc-club > span { overflow: hidden; text-overflow: ellipsis; }

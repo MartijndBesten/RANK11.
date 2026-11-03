@@ -101,7 +101,16 @@ export const PlayerCard = memo(function PlayerCard({
           <CardFrame rarity={player.rarity} layer="back" className="pc-frame back" />
           <div className="pc-art">
             {realPhoto ? (
-              <img className="pc-photo pc-commons" src={realPhoto} alt="" draggable={false} loading="lazy" decoding="async" onError={() => setPhotoFailed(true)} />
+              <img
+                className="pc-photo pc-commons" src={realPhoto} alt="" draggable={false} loading="lazy" decoding="async"
+                onError={() => setPhotoFailed(true)}
+                onLoad={(e) => {
+                  // Nette fallback: te kleine of liggende (actie)foto's snijden slecht bij tot een staand
+                  // portret → val terug op het shirtportret voor een rustig, consistent beeld.
+                  const img = e.currentTarget;
+                  if (img.naturalWidth && (img.naturalHeight < 300 || img.naturalWidth > img.naturalHeight * 1.15)) setPhotoFailed(true);
+                }}
+              />
             ) : real ? (
               <KitPortrait className="pc-kit" player={player} />
             ) : photo ? (

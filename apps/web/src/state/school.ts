@@ -7,15 +7,27 @@ import { DEFAULT_PERIODS, type Goal, type Grade, type Period, type UpcomingTest 
 
 export interface Subject { id: string; name: string; short: string; color: string }
 
+// Gangbare vakken in het Nederlandse voortgezet onderwijs. Bestaande id's (wis, ne, en, fa, bi, gs,
+// nask, ak) blijven ongewijzigd zodat eerder ingevoerde cijfers geldig blijven.
 export const SUBJECTS: Subject[] = [
   { id: 'wis', name: 'Wiskunde', short: 'WI', color: '#3aa8ff' },
   { id: 'ne', name: 'Nederlands', short: 'NE', color: '#ff8a3d' },
   { id: 'en', name: 'Engels', short: 'EN', color: '#e84a5f' },
+  { id: 'du', name: 'Duits', short: 'DU', color: '#e0b020' },
   { id: 'fa', name: 'Frans', short: 'FA', color: '#5b6cff' },
+  { id: 'sp', name: 'Spaans', short: 'SPA', color: '#ff5a3c' },
   { id: 'bi', name: 'Biologie', short: 'BI', color: '#2fe39a' },
-  { id: 'gs', name: 'Geschiedenis', short: 'GS', color: '#d9a441' },
+  { id: 'sk', name: 'Scheikunde', short: 'SK', color: '#2fd0c3' },
   { id: 'nask', name: 'Natuurkunde', short: 'NA', color: '#9b6bff' },
   { id: 'ak', name: 'Aardrijkskunde', short: 'AK', color: '#20c3c3' },
+  { id: 'gs', name: 'Geschiedenis', short: 'GS', color: '#d9a441' },
+  { id: 'ec', name: 'Economie', short: 'EC', color: '#38c172' },
+  { id: 'ml', name: 'Maatschappijleer', short: 'MAW', color: '#c0792f' },
+  { id: 'lv', name: 'Levensbeschouwing', short: 'LB', color: '#9a7bd0' },
+  { id: 'inf', name: 'Informatica', short: 'INF', color: '#4aa0ff' },
+  { id: 'lo', name: 'Lichamelijke opvoeding', short: 'LO', color: '#ff7aa8' },
+  { id: 'ckv', name: 'Kunst / CKV', short: 'KU', color: '#ff9f43' },
+  { id: 'mu', name: 'Muziek', short: 'MU', color: '#b36bff' },
 ];
 
 export const subjectById = (id: string): Subject =>

@@ -380,10 +380,10 @@ button.pc-wrap:active .pc { scale: 0.97; }
 .size-sm .pc-kit, .size-xs .pc-kit { width: 92cqw; right: -12cqw; top: -2cqw; }
 .size-sm .pc-badge { width: 17cqw; margin-top: 2cqw; }
 .size-xs .pc-badge { display: none; }
-/* Kleine kaarten: rugnummer en clubafkorting blijven zichtbaar i.p.v. de volle clubnaam. */
-.size-sm .pc-club { display: flex; font-size: 9cqw; margin-top: 0.8cqw; }
-.size-sm .pc-club > span { display: none; }
-.size-sm .pc-num { font-size: 9cqw; }
+/* Kleine kaarten (pitch/bank/collectie): rugnummer én volledige clubnaam zichtbaar (verzoek Senn). */
+.size-sm .pc-club { display: flex; font-size: 6cqw; margin-top: 1cqw; max-width: 94%; }
+.size-sm .pc-club > span { display: inline; }
+.size-sm .pc-num { font-size: 7cqw; }
 
 /* Duidelijker verschil brons / zilver / goud: metaalglans op de naamplaat en een gekleurde onderrand. */
 .pc[data-rarity='bronze'] .pc-plate { box-shadow: inset 0 0.8cqw 0 rgba(255, 196, 140, 0.55); }
